@@ -657,7 +657,7 @@ const Cognito = () => {
             {config?.chatMode === "page" && (
                    (<div
                       className={cn(
-                        "fixed bottom-14 left-1/2 -translate-x-1/2",
+                        "fixed bottom-16 left-1/2 -translate-x-1/2",
                         "flex flex-row justify-center",
                         "w-fit h-8 z-[2]",
                         "transition-all duration-200 ease-in-out",
