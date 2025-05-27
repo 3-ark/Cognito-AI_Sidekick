@@ -419,7 +419,7 @@ export const Header: React.FC<HeaderProps> = ({
                       aria-label="Reset Chat"
                       variant="ghost"
                       size="sm"
-                      className="text-[var(--text)] hover:bg-transparent rounded-md group"
+                      className="text-[var(--text)] hover:bg-black/10 dark:hover:bg-white/10 rounded-md group"
                       onClick={reset}
                     >
                       <TbReload 

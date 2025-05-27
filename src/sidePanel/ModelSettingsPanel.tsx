@@ -29,9 +29,9 @@ export const ModelSettingsPanel = () => {
     <AccordionItem
       value="model-params"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md", // Standard container styles
-        "transition-all duration-150 ease-in-out", // Common transition
-        "hover:border-[var(--active)] hover:brightness-105" // Common hover
+        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md",
+        "transition-all duration-150 ease-in-out",
+        "hover:border-[var(--active)] hover:brightness-105"
       )}
     >
       <AccordionTrigger
@@ -53,10 +53,10 @@ export const ModelSettingsPanel = () => {
             </Label>
             <Slider
               id="temperature"
-              min={0} max={1} step={0.01}
+              min={0} max={2} step={0.01}
               value={[temperature]}
               onValueChange={handleChange('temperature')}
-              variant="themed" // Apply themed variant
+              variant="themed" 
             />
           </div>
 
@@ -86,7 +86,7 @@ export const ModelSettingsPanel = () => {
               min={0} max={1} step={0.01}
               value={[topP]}
               onValueChange={handleChange('topP')}
-              variant="themed" // Apply themed variant
+              variant="themed"
             />
           </div>
 
@@ -101,7 +101,7 @@ export const ModelSettingsPanel = () => {
               step={0.01}
               value={[presence_penalty]}
               onValueChange={handleChange('presencepenalty')}
-              variant="themed" // Apply themed variant
+              variant="themed"
             />
           </div>
         </div>
