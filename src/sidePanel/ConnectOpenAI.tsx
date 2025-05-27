@@ -96,8 +96,8 @@ export const ConnectOpenAI = () => {
       {!isConnected && (
         <Button
           onClick={onConnect}
-          variant="connect" // Use the new variant
-          size="sm" // Standardize size
+          variant="connect"
+          size="sm"
           disabled={connectButtonDisabled}
         >
           {isLoading ? "..." : "Save"}

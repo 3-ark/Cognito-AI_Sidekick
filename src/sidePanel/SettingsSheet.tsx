@@ -143,7 +143,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     }
   }, [inputFocused]);
 
-  // Optional: recalculate on window resize/scroll
   useEffect(() => {
     if (!inputFocused) return;
     const handle = () => {

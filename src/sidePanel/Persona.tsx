@@ -119,10 +119,10 @@ const PersonaModal = ({
           />
         </div>
         <DialogFooter className="sm:justify-end">
-          <Button type="button" variant="outline-subtle" size="sm" // Use new variant
+          <Button type="button" variant="outline-subtle" size="sm"
             onClick={onModalClose}
           > Cancel </Button>
-          <Button type="button" variant="active-bordered" size="sm" // Use new variant
+          <Button type="button" variant="active-bordered" size="sm"
             className={cn(
             )}
             disabled={!name.trim()} onClick={handleCreate}
@@ -171,7 +171,7 @@ const DeleteModal = ({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="sm:justify-end pt-4">
-           <Button type="button" variant="outline-subtle" size="sm" // Use new variant
+           <Button type="button" variant="outline-subtle" size="sm"
             onClick={onModalClose}
           > Cancel </Button>
           <Button type="button" variant="destructive" size="sm"
@@ -196,16 +196,16 @@ const PersonaSelect = ({
       onValueChange={(value) => updateConfig({ persona: value })}
     >
       <SelectTrigger
-        variant="settings" // Use the new "settings" variant
+        variant="settings"
         className={cn(
           "flex w-full",
-          "data-[placeholder]:text-muted-foreground" // Keep if specific, though variant might cover similar placeholder needs
+          "data-[placeholder]:text-muted-foreground"
         )}
       >
         <SelectValue placeholder="Select persona" />
       </SelectTrigger>
       <SelectContent
-        variant="settingsPanel" // Using existing variant for content that matches style
+        variant="settingsPanel"
         className={cn(
         )}
       >
@@ -236,7 +236,7 @@ const PersonaTextareaWrapper = ({
 
   return (
     <Textarea
-      autosize // Enable autosize mode
+      autosize
       minRows={3}
       maxRows={8}
       value={personaPrompt}
@@ -244,17 +244,17 @@ const PersonaTextareaWrapper = ({
         if (!isEditing) setIsEditing(true);
         setPersonaPrompt(e.target.value);
       }}
-      readOnly={!isEditing} // Map isEffectivelyReadOnly to readOnly
-      {...onFocusProp} // Spread the onFocus handling
+      readOnly={!isEditing}
+      {...onFocusProp}
       placeholder="Define the persona's characteristics and instructions here..."
       className={cn(
         "w-full min-h-[80px] border border-[var(--text)]/10 px-3 py-2 text-sm ring-offset-[var(--bg)] placeholder:text-[var(--muted-foreground)] rounded-[12px]",
-        "text-[var(--text)]", // Text color
-        "no-scrollbar", // Scrollbar preference
+        "text-[var(--text)]",
+        "no-scrollbar",
         "focus-visible:outline-none focus-visible:ring-0 focus-visible:box-shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),_0_0_8px_rgba(168,123,255,0.3)]",
         !isEditing
-          ? "opacity-75 cursor-default" // Styles for read-only
-          : "hover:border-[var(--active)] focus:border-[var(--active)]", // Styles for editable
+          ? "opacity-75 cursor-default"
+          : "hover:border-[var(--active)] focus:border-[var(--active)]",
       )}
     />
   );
@@ -303,9 +303,9 @@ export const Persona = () => {
     <AccordionItem
       value="persona"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md", // Standard container styles
-        "transition-all duration-150 ease-in-out", // Common transition
-        "hover:border-[var(--active)] hover:brightness-105" // Common hover
+        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md",
+        "transition-all duration-150 ease-in-out",
+        "hover:border-[var(--active)] hover:brightness-105"
       )}
     >
       <AccordionTrigger

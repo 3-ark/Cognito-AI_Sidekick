@@ -657,7 +657,7 @@ const Cognito = () => {
             {config?.chatMode === "page" && (
                    (<div
                       className={cn(
-                        "fixed bottom-14 left-1/2 -translate-x-1/2", // Changed positioning
+                        "fixed bottom-14 left-1/2 -translate-x-1/2",
                         "flex flex-row justify-center",
                         "w-fit h-8 z-[2]",
                         "transition-all duration-200 ease-in-out",
@@ -668,7 +668,7 @@ const Cognito = () => {
                       onMouseEnter={() => setIsPageActionsHovering(true)}
                       onMouseLeave={() => setIsPageActionsHovering(false)}
                    >
-                     <div className="flex items-center space-x-6 max-w-full overflow-x-auto px-4">
+                     <div className="flex items-center space-x-6 max-w-full overflow-x-auto px-0">
                         <Tooltip>
                           <TooltipTrigger>
                             <MessageTemplate onClick={() => onSend('Provide your summary.')}>
@@ -715,7 +715,7 @@ const Cognito = () => {
             {config?.chatMode === "web" && (
               <div
                 className={cn(
-                  "fixed bottom-14 left-1/2 -translate-x-1/2", // Changed positioning
+                  "fixed bottom-14 left-1/2 -translate-x-1/2",
                   "flex flex-row justify-center",
                   "w-fit h-10 z-[2]",
                   "transition-all duration-200 ease-in-out",

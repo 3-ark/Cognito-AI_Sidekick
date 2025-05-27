@@ -24,7 +24,7 @@ const ContextLimitSlider = ({ size, updateConfig }: ContextLimitSliderProps) => 
       max={128}
       min={1}
       step={1}
-      variant="themed" // Apply themed variant
+      variant="themed"
       onValueChange={(value: number[]) => updateConfig({ contextLimit: value[0] })}
     />
   </div>
@@ -38,10 +38,10 @@ export const PageContext = () => {
     <AccordionItem
       value="page-context"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md", // Standard container styles
-        "overflow-hidden", // Specific to this instance
-        "transition-all duration-150 ease-in-out", // Common transition
-        "hover:border-[var(--active)] hover:brightness-105" // Common hover
+        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md",
+        "overflow-hidden",
+        "transition-all duration-150 ease-in-out",
+        "hover:border-[var(--active)] hover:brightness-105"
       )}
     >
       <AccordionTrigger
