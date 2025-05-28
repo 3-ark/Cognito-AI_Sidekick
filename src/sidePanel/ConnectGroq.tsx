@@ -42,6 +42,7 @@ export const ConnectGroq = () => {
             models: (config?.models || []).filter(m => !m.id.startsWith('groq_')).concat(
               data.data.map((model: any) => ({ id: `groq_${model.id}`, name: model.id, host: 'groq', active: true }))
             ),
+            selectedModel: config?.selectedModel || `groq_${data.data[0].id}`,
           });
           toast.dismiss();
           toast.success('Connected to Groq');
@@ -78,9 +79,7 @@ export const ConnectGroq = () => {
           type={visibleApiKey ? 'text' : 'password'}
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
-          className={cn(
-            {"pr-8": true} 
-          )}
+          className="pr-8"
           disabled={isLoading}
         />
         <Button

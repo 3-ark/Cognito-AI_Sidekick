@@ -33,9 +33,13 @@ export const ConnectOllama = () => {
             ollamaConnected: true,
             ollamaUrl: url,
             ollamaError: undefined,
+            models: (config?.models || []).filter(m => m.id !== 'ollama_generic').concat([
+              { id: 'ollama_generic', host: 'ollama', active: true, name: 'Ollama Model' }
+            ]),
+            selectedModel: 'ollama_generic'
           });
           toast.dismiss();
-          toast.success('Connected to Ollama');
+          toast.success("Connected to ollama");
         } else if (data?.error) {
           updateConfig({ ollamaError: data.error, ollamaConnected: false });
           toast.dismiss();
@@ -46,6 +50,7 @@ export const ConnectOllama = () => {
           toast.error('Unexpected response from Ollama');
         }
       })
+
       .catch(err => {
         toast.dismiss();
         toast.error(err.message || "Failed to connect to Ollama");
@@ -75,11 +80,13 @@ export const ConnectOllama = () => {
       />
       {!isConnected && (
         <Button
-          onClick={onConnect}
-          variant="connect"
-          size="sm"
+          onClick={onConnect} className={cn(
+            "px-2 h-8 text-sm font-medium whitespace-nowrap",
+            "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]  text-[var(--text)] dark:hover:bg-[var(--active)]/90 hover:bg-[var(--active)]/90 rounded-md shadow-sm",
+            "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
+          )}
           disabled={isLoading}
-        >
+          >
           {isLoading ? "..." : "Connect"}
         </Button>
       )}
@@ -87,14 +94,11 @@ export const ConnectOllama = () => {
         <Button
           variant="ghost"
           size="sm"
-          aria-label="Connected to Ollama"
-          className={cn(
-            "w-8",
-            "rounded-md",
-            "text-[var(--success)]"
+          aria-label="Connected to Ollama" className={cn(
+            "w-8 rounded-md text-[var(--success)]"
           )}
-          onClick={onConnect}
           disabled={isLoading}
+          onClick={onConnect}
         >
           <FiCheck className="h-5 w-5" />
         </Button>

@@ -1,7 +1,7 @@
 {
   "name": "cognito",
   "displayName": "Cognito - AI Sidekick",
-  "version": "3.6.3",
+  "version": "3.6.4",
   "description": "Cognito uses AI to interpret your needs, letting you guide, query, and control your Chrome browser through natural interaction.",
   "main": "index.js",
   "scripts": {
@@ -46,7 +46,7 @@
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@reduxjs/toolkit": "^2.8.2",
-    "@types/react": "19.1.5",
+    "@types/react": "19.1.6",
     "@types/react-dom": "19.1.5",
     "@types/redux-logger": "^3.0.13",
     "class-variance-authority": "^0.7.1",
@@ -63,7 +63,7 @@
     "localforage": "^1.10.0",
     "lucide-react": "^0.511.0",
     "mini-css-extract-plugin": "^2.9.2",
-    "motion": "^12.14.0",
+    "motion": "^12.15.0",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^5.2.133",
     "prop-types": "^15.8.1",
@@ -91,7 +91,7 @@
     "@stylistic/eslint-plugin-ts": "^4.4.0",
     "@tailwindcss/postcss": "^4.1.7",
     "@types/chrome": "^0.0.323",
-    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.27.0",
     "eslint-plugin-react": "^7.37.5",
@@ -105,7 +105,7 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.32.1",
+    "typescript-eslint": "^8.33.0",
     "webpack": "^5.99.9",
     "webpack-cli": "^6.0.1"
   }

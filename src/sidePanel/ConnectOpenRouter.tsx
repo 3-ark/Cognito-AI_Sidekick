@@ -13,8 +13,6 @@ export const ConnectOpenRouter = () => {
   const [visibleApiKey, setVisibleApiKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const buttonHeightClass = 'h-8';
-
   const onConnect = () => {
     if (!apiKey) {
       toast.error("API key is required for OpenRouter.");
@@ -94,7 +92,7 @@ export const ConnectOpenRouter = () => {
         />
         <Button
             variant="ghost" size="sm"
-            className={cn("absolute inset-y-0 right-0 flex items-center justify-center", buttonHeightClass, "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")}
+            className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")}
             onClick={() => setVisibleApiKey(!visibleApiKey)}
             aria-label={visibleApiKey ? "Hide API key" : "Show API key"}
             disabled={isLoading}
@@ -107,7 +105,7 @@ export const ConnectOpenRouter = () => {
         <Button
           onClick={onConnect}
           className={cn(
-            buttonHeightClass, "text-sm font-medium whitespace-nowrap",
+            "text-sm font-medium h-8 whitespace-nowrap",
             "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]  text-[var(--text)] dark:hover:bg-[var(--active)]/90 hover:bg-[var(--active)]/90 rounded-md shadow-sm",
             "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
           )}
@@ -119,7 +117,7 @@ export const ConnectOpenRouter = () => {
       {isConnected && (
         <Button
           variant="ghost" size="sm" aria-label="Connected to OpenRouter"
-          className={cn(buttonHeightClass, "w-8 rounded-md text-[var(--success)]")}
+          className={cn("w-8 rounded-md text-[var(--success)]")}
           onClick={onConnect}
           disabled={isLoading}
         >

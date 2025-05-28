@@ -11,8 +11,6 @@ export const ConnectLmStudio = () => {
   const [url, setUrl] = useState(config?.lmStudioUrl || 'http://localhost:1234');
   const [isLoading, setIsLoading] = useState(false);
 
-  const buttonHeightClass = 'h-8';
-
   const onConnect = () => {
     setIsLoading(true);
     toast.dismiss();
@@ -38,7 +36,7 @@ export const ConnectLmStudio = () => {
             models: (config?.models || []).filter(m => m.id !== 'lmstudio_generic').concat([
               { id: 'lmstudio_generic', host: 'lmstudio', active: true, name: 'LM Studio Model' }
             ]),
-            selectedModel: 'lmstudio'
+            selectedModel: 'lmstudio_generic'
           });
           toast.dismiss();
           toast.success("Connected to LM Studio");
@@ -80,7 +78,7 @@ export const ConnectLmStudio = () => {
         <Button
           onClick={onConnect}
           className={cn(
-            buttonHeightClass, "px-2 text-sm font-medium whitespace-nowrap",
+            "px-2 h-8 text-sm font-medium whitespace-nowrap",
             "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]  text-[var(--text)] dark:hover:bg-[var(--active)]/90 hover:bg-[var(--active)]/90 rounded-md shadow-sm",
             "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
           )}
@@ -92,7 +90,7 @@ export const ConnectLmStudio = () => {
       {isConnected && (
         <Button
           variant="ghost" size="sm" aria-label="Connected to LM Studio"
-          className={cn(buttonHeightClass, "w-8 rounded-md text-[var(--success)]")}
+          className={cn("w-8 rounded-md text-[var(--success)]")}
           disabled={isLoading}
           onClick={onConnect}
         >
