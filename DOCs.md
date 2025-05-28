@@ -23,10 +23,6 @@ While most users won't need to interact with these files directly, understanding
 *   `components/`: Houses reusable UI elements used throughout the extension.
 *   `public/`: Static assets like images and fonts.
 *   `config/`: Configuration files, including settings for how the extension is built and how it behaves.
-*   `README.md`: The main introductory file for the project.
-*   `package.json`: Lists project dependencies and scripts for developers.
-*   `LICENSE`: Contains the software license information (MIT License).
-*   `DOCUMENTATION.md`: This file! Your comprehensive guide to Cognito.
 
 ## 3. Installation and Setup
 
@@ -148,9 +144,6 @@ This document aims to be a comprehensive guide. If you encounter issues not cove
 4.  **Extract Main Content:** Parse the fetched HTML and try to extract the meaningful text content, stripping out boilerplate (headers, footers, ads, navigation). This is the trickiest part and often requires heuristics.
 5.  **Combine Results:** Format the output to include the original snippet *and* the extracted content from the visited page.
 6.  **Concurrency:** Fetch the linked pages concurrently to speed things up; it's much faster than clicking on them.
-
-![image](./docs/websearch.png)
-![image](./docs/contextualwebsearch1.png)
 
 **Detailed Explanation**
 
