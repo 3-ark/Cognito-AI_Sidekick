@@ -113,6 +113,7 @@ This setup allows Cognito to understand the context of your browsing and provide
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
 *   Improved local TTS/STT integration (e.g., exploring options like StreamingKokoroJS).
 *   Potential support for image and voice API interactions for multimodal capabilities.
+*   Add some shortcuts like modes shifting, cancel editing or saving editing.
 
 *(This section will be regularly updated based on project progress)*
 
