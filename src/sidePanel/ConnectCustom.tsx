@@ -93,14 +93,10 @@ export const ConnectCustom = () => {
 
         {!isConnected && (
           <Button
-            variant="ghost" size="sm"
-            onClick={onSaveSettings}
-            className={cn(
-              "px-2 text-sm h-8 font-medium whitespace-nowrap",
-              "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]  text-[var(--text)] dark:hover:bg-[var(--active)]/90 hover:bg-[var(--active)]/90 rounded-md shadow-sm",
-              "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
-            )}
-            disabled={saveButtonDisabled}
+          onClick={onSaveSettings}
+          variant="connect"
+          size="sm"            
+          disabled={saveButtonDisabled}
           >
             {isLoading ? "..." : "Save"}
           </Button>

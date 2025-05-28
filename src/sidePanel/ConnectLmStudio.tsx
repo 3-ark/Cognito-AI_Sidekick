@@ -69,19 +69,14 @@ export const ConnectLmStudio = () => {
         value={url}
         onChange={e => setUrl(e.target.value)}
         placeholder="http://localhost:1234"
-        className={cn(
-           {"pr-8": true}
-        )}
+        className="pr-8"
         disabled={isLoading}
       />
       {!isConnected && (
         <Button
           onClick={onConnect}
-          className={cn(
-            "px-2 h-8 text-sm font-medium whitespace-nowrap",
-            "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]  text-[var(--text)] dark:hover:bg-[var(--active)]/90 hover:bg-[var(--active)]/90 rounded-md shadow-sm",
-            "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
-          )}
+          variant="connect"
+          size="sm"
           disabled={isLoading}
         >
           {isLoading ? "..." : "Connect"}

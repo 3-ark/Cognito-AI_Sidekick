@@ -50,14 +50,10 @@ export const ConnectOllama = () => {
           toast.error('Unexpected response from Ollama');
         }
       })
-
       .catch(err => {
         toast.dismiss();
         toast.error(err.message || "Failed to connect to Ollama");
-        updateConfig({
-          ollamaError: err.message,
-          ollamaConnected: false,
-        });
+        updateConfig({ollamaError: err.message, ollamaConnected: false });
       })
       .finally(() => {
         setIsLoading(false);
@@ -73,18 +69,14 @@ export const ConnectOllama = () => {
         value={url}
         onChange={e => setUrl(e.target.value)}
         placeholder="http://localhost:11434"
-        className={cn(
-          {"pr-8": true}
-        )}
+        className="pr-8"
         disabled={isLoading}
       />
       {!isConnected && (
         <Button
-          onClick={onConnect} className={cn(
-            "px-2 h-8 text-sm font-medium whitespace-nowrap",
-            "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]  text-[var(--text)] dark:hover:bg-[var(--active)]/90 hover:bg-[var(--active)]/90 rounded-md shadow-sm",
-            "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
-          )}
+          onClick={onConnect} 
+          variant="connect"
+          size="sm"
           disabled={isLoading}
           >
           {isLoading ? "..." : "Connect"}
@@ -92,11 +84,8 @@ export const ConnectOllama = () => {
       )}
       {isConnected && (
         <Button
-          variant="ghost"
-          size="sm"
-          aria-label="Connected to Ollama" className={cn(
-            "w-8 rounded-md text-[var(--success)]"
-          )}
+          variant="ghost" size="sm" aria-label="Connected to Ollama" 
+          className={cn("w-8 rounded-md text-[var(--success)]")}
           disabled={isLoading}
           onClick={onConnect}
         >
