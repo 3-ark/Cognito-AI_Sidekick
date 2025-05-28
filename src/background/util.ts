@@ -35,35 +35,26 @@ export async function injectContentScript(tabId: number) {
  */
 export const normalizeApiEndpoint = (endpoint?: string): string => {
   if (!endpoint) {
-    return ''; // Return empty for empty/undefined input
+    return '';
   }
 
-  let urlStr = endpoint.trim(); // Trim whitespace
+  let urlStr = endpoint.trim();
 
-  // The URL constructor requires a scheme (like http:// or https://).
-  // Prepend https:// if it's missing, unless it looks like a local address.
   if (!urlStr.startsWith('http://') && !urlStr.startsWith('https://')) {
-     // Simple check for localhost or IP addresses - assume http for these
      if (urlStr.startsWith('localhost') || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(urlStr.split(':')[0])) {
         urlStr = 'http://' + urlStr;
      } else {
-        // Otherwise, default to https for domain-like names
         urlStr = 'https://' + urlStr;
      }
   }
 
   try {
-    // Use the URL constructor to parse the string
     const parsedUrl = new URL(urlStr);
 
-    // The 'origin' property gives us exactly "scheme://hostname:port"
-    // It automatically handles stripping paths, queries, hashes, and trailing slashes.
     return parsedUrl.origin;
 
   } catch (error) {
-    // Log an error if the URL couldn't be parsed
     console.error(`Invalid URL provided for normalization: "${endpoint}". Could not parse as URL.`);
-    // Return an empty string to indicate failure, preventing malformed URLs later
     return '';
   }
 };

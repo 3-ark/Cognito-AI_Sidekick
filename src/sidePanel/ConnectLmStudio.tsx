@@ -38,7 +38,7 @@ export const ConnectLmStudio = () => {
             models: (config?.models || []).filter(m => m.id !== 'lmstudio_generic').concat([
               { id: 'lmstudio_generic', host: 'lmstudio', active: true, name: 'LM Studio Model' }
             ]),
-            selectedModel: 'lmstudio_generic' // Select this generic model
+            selectedModel: 'lmstudio'
           });
           toast.dismiss();
           toast.success("Connected to LM Studio");

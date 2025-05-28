@@ -41,7 +41,7 @@ export const isCurrentlyPaused = (): boolean =>
 export const speakMessage = (
   text: string,
   voiceName?: string,
-  rate: number = 1, // Add rate parameter with default
+  rate: number = 1,
   callbacks?: {
     onStart?: () => void;
     onEnd?: () => void;
@@ -55,7 +55,7 @@ export const speakMessage = (
   }
 
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = rate; // Use the provided rate
+  utterance.rate = rate;
 
   if (voiceName) {
     const voices = window.speechSynthesis.getVoices();
@@ -80,7 +80,7 @@ export const speakMessage = (
 
   utterance.onend = () => {
     console.log('Speech ended');
-    if (currentUtterance === utterance) { // Ensure it's the correct utterance ending
+    if (currentUtterance === utterance) {
         currentUtterance = null;
         if (onEndCallback) onEndCallback();
         onStartCallback = onEndCallback = onPauseCallback = onResumeCallback = null;
@@ -99,7 +99,7 @@ export const speakMessage = (
 
   utterance.onerror = (event) => {
     console.error('SpeechSynthesisUtterance error:', event.error);
-     if (currentUtterance === utterance) { // Ensure it's the correct utterance erroring
+     if (currentUtterance === utterance) {
         currentUtterance = null;
         if (onEndCallback) onEndCallback(); // Treat error as end
         onStartCallback = onEndCallback = onPauseCallback = onResumeCallback = null;

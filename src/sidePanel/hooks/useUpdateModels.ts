@@ -4,7 +4,6 @@ import { GEMINI_URL, GROQ_URL, OPENAI_URL, OPENROUTER_URL } from '../constants';
 import type { Config, Model } from 'src/types/config';
 import { normalizeApiEndpoint } from 'src/background/util';
 
-// Host Constants
 const HOST_OLLAMA = 'ollama';
 const HOST_GEMINI = 'gemini';
 const HOST_LMSTUDIO = 'lmStudio';
@@ -41,7 +40,7 @@ interface ServiceConfig {
 export const useUpdateModels = () => {
   const { config, updateConfig } = useConfig();
 
-  const FETCH_INTERVAL =  30 * 1000; // 30s
+  const FETCH_INTERVAL =  30 * 1000;
   const lastFetchRef = useRef(0);
 
   const serviceConfigs: ServiceConfig[] = [
@@ -49,7 +48,7 @@ export const useUpdateModels = () => {
       host: HOST_OLLAMA,
       isEnabled: (cfg) => !!cfg.ollamaUrl && cfg.ollamaConnected === true,
       getUrl: (cfg) => `${cfg.ollamaUrl}/api/tags`,
-      parseFn: (data, host) => (data?.models as Model[] ?? []).map(m => ({ ...m, id: m.id ?? m.name, host })), // Use name if id missing
+      parseFn: (data, host) => (data?.models as Model[] ?? []).map(m => ({ ...m, id: m.id ?? m.name, host })),
       onFetchFail: (_, updateCfg) => updateCfg({ ollamaConnected: false, ollamaUrl: '' }),
     },
     {
@@ -92,7 +91,7 @@ export const useUpdateModels = () => {
     },
     {
       host: HOST_CUSTOM,
-      isEnabled: (cfg) => !!cfg.customEndpoint, // Only need endpoint URL to try fetching
+      isEnabled: (cfg) => !!cfg.customEndpoint,
       getUrl: (cfg) => {
         const normalizedUrl = normalizeApiEndpoint(cfg.customEndpoint);
         return `${normalizedUrl}/v1/models`;
@@ -117,7 +116,7 @@ export const useUpdateModels = () => {
     }
     lastFetchRef.current = now;
 
-    const currentConfig = config; // Capture config at the start of the operation
+    const currentConfig = config;
     if (!currentConfig) {
       console.warn('[useUpdateModels] Config not available, skipping fetch.');
       return;

@@ -21,7 +21,6 @@ function createWebpackAliases (aliases) {
   return result;
 }
 
-// Export helpers
 module.exports = {
   inDev,
   createWebpackAliases

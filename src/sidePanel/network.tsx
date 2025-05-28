@@ -576,7 +576,7 @@ export const webSearch = async (
 
             console.log(`[webSearch - GoogleCustomSearch] Mapped ${searchResults.length} API results to scraper format. Attempting to fetch content from top ${Math.min(searchResults.length, maxLinksToVisit)} links.`);
 
-            const linksToFetch = searchResults.slice(0, maxLinksToVisit).filter(r => r.url); // Already sliced by API num, but good to be explicit
+            const linksToFetch = searchResults.slice(0, maxLinksToVisit).filter(r => r.url);
 
             const pageFetchPromises = linksToFetch.map(async (result) => {
                 if (!result.url) return { ...result, content: '[Invalid URL]', status: 'error' };
@@ -620,7 +620,7 @@ export const webSearch = async (
 
                  const correspondingFetch = fetchedPagesResults[pageIndex];
                  if (correspondingFetch?.status === 'fulfilled') {
-                     const fetchedData = correspondingFetch.value as (typeof searchResults[0] & { scrapedContent: string }); // Cast for type safety
+                     const fetchedData = correspondingFetch.value as (typeof searchResults[0] & { scrapedContent: string });
                      if (fetchedData.url === result.url) { // Ensure we're matching the correct result
                         const contentPreview = fetchedData.scrapedContent.substring(0, charLimitPerPage);
                         combinedResultsText += `Scraped Content:\n${contentPreview}${fetchedData.scrapedContent.length > charLimitPerPage ? '...' : ''}\n\n`;

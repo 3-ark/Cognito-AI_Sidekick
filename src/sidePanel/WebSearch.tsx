@@ -31,7 +31,7 @@ const WebSearchModeSelector = ({ webMode, updateConfig }: WebSearchModeSelectorP
         <RadioGroupItem
           value={mode}
           id={`webMode-${mode}`}
-          variant="themed" // Use the new themed variant
+          variant="themed"
         />
         <Label
           htmlFor={`webMode-${mode}`}
@@ -64,7 +64,7 @@ const SerpSettingsPanel = ({ config, updateConfig }: SerpSettingsPanelProps) => 
           max={10}
           min={1}
           step={1}
-          variant="themed" // Apply themed variant
+          variant="themed"
           onValueChange={value => updateConfig({ serpMaxLinksToVisit: value[0] })}
         />
         <p className="text-[var(--text)]/70 text-xs pt-1">
@@ -82,7 +82,7 @@ const SerpSettingsPanel = ({ config, updateConfig }: SerpSettingsPanelProps) => 
           max={128} 
           min={1}   
           step={1}
-          variant="themed" // Apply themed variant
+          variant="themed"
           onValueChange={value => updateConfig({ webLimit: value[0] })}
         />
          <p className="text-[var(--text)]/70 text-xs pt-1">
@@ -114,7 +114,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
           max={30}
           min={1}
           step={1}
-          variant="themed" // Apply themed variant
+          variant="themed"
           onValueChange={value => updateConfig({ wikiNumBlocks: value[0] })}
         />
       </div>
@@ -124,7 +124,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
           id="wikiRerank"
           checked={rerankEnabled}
           onCheckedChange={(checked) => updateConfig({ wikiRerank: !!checked })}
-          variant="themed" // Use the new themed variant
+          variant="themed"
         />
         <Label
           htmlFor="wikiRerank"
@@ -144,7 +144,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
             max={50}
             min={numBlocks} 
             step={1}
-            variant="themed" // Apply themed variant
+            variant="themed"
             onValueChange={value => updateConfig({ wikiNumBlocksToRerank: value[0] })}
             disabled={!rerankEnabled}
           />
@@ -322,10 +322,10 @@ export const WebSearch = () => {
     <AccordionItem
       value="web-search"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md", // Standard container styles
-        "overflow-hidden", // Specific to this instance
-        "transition-all duration-150 ease-in-out", // Common transition
-        "hover:border-[var(--active)] hover:brightness-105" // Common hover
+        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md",
+        "overflow-hidden",
+        "transition-all duration-150 ease-in-out",
+        "hover:border-[var(--active)] hover:brightness-105"
       )}
     >
       <AccordionTrigger

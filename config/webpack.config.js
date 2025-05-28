@@ -56,7 +56,7 @@ const config = {
           chunks: ['app']
         }),
     ...browsers.map(browser => new GenerateJsonFromJsPlugin({
-          path: join(__dirname, 'manifest', 'v3.js'), // Explicitly use v3.js
+          path: join(__dirname, 'manifest', 'v3.js'),
           filename: 'manifest.json',
           options: {
             replacer: (key, value) => {
@@ -78,7 +78,7 @@ const config = {
         },
         {
           from: require.resolve('pdfjs-dist/build/pdf.worker.mjs'),
-          to: '.' // Copies pdf.worker.mjs to the root of the output directory
+          to: '.'
         }
       ]
     })
@@ -102,7 +102,7 @@ const buildConfig = browser => ({
   output: {
     path: join(Dist, browser),
     filename: '[name].js',
-    publicPath: process.env.EXTENSION_PUBLIC_PATH || '/' // Fallback to '/' if env var is not set
+    publicPath: process.env.EXTENSION_PUBLIC_PATH || '/'
   }
 });
 
