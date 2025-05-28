@@ -48,6 +48,7 @@ const defaultConfig: Config = {
   personas,
   generateTitle: true,
   backgroundImage: false,
+  animatedBackground: false,
   persona: 'Sherlock',
   webMode: 'Google',
   webLimit: 60,
