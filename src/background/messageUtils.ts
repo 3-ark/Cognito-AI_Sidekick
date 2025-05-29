@@ -7,9 +7,6 @@ const getTimestamp = () => {
   return new Date().toJSON().slice(0, 19).replace('T', '_').replace(/:/g, '-');
 };
 
-export const downloadText = async (turns: MessageTurn[]) => {
-  if (!turns || turns.length === 0) return;
-
   let assistantPersonaName = 'assistant';
   let userNameToDisplay = 'user';
 
@@ -28,11 +25,14 @@ export const downloadText = async (turns: MessageTurn[]) => {
     console.error('Failed to load config to get persona name for download:', error);
   }
 
+export const downloadText = async (turns: MessageTurn[]) => {
+  if (!turns || turns.length === 0) return;
+
   const text = turns.map(turn => {
     const roleName = turn.role === 'assistant' ? assistantPersonaName : (turn.role === 'user' ? userNameToDisplay : turn.role);
     let turnText = `${roleName}:\n`;
     if (turn.role === 'assistant' && turn.webDisplayContent) {
-        turnText += `**From the Internet**\n${turn.webDisplayContent}\n\n---\n\n`;
+        turnText += `~From the Internet~\n${turn.webDisplayContent}\n\n---\n\n`;
     }
     turnText += turn.rawContent;
     return turnText;
@@ -55,11 +55,20 @@ export const downloadText = async (turns: MessageTurn[]) => {
 export const downloadJson = (turns: MessageTurn[]) => {
   if (!turns || turns.length === 0) return;
 
-  const text = JSON.stringify(turns, null, 2);
+  const transformedTurns = turns.map(turn => ({
+    ...turn,
+    role: turn.role === 'assistant' ? assistantPersonaName : (turn.role === 'user' ? userNameToDisplay : turn.role)
+  }));
+
+  const exportData = {
+    assistantNameInExport: assistantPersonaName,
+    userNameInExport: userNameToDisplay,
+    chatHistory: transformedTurns
+  };
+  const text = JSON.stringify(exportData, null, 2);
 
   const element = document.createElement('a');
-
-  element.setAttribute('href', `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`);
+  element.setAttribute('href', `data:application/json;charset=utf-8,${encodeURIComponent(text)}`);
   const filename = `chat_${getTimestamp()}.json`;
 
   element.setAttribute('download', filename);
@@ -153,3 +162,30 @@ export const downloadImage = (turns: MessageTurn[]) => {
       }
     });
 }
+
+export const downloadMarkdown = (turns: MessageTurn[]) => {
+  if (!turns || turns.length === 0) return;
+
+  const mdContent = turns.map(turn => {
+    const roleName = turn.role === 'assistant' ? assistantPersonaName : (turn.role === 'user' ? userNameToDisplay : turn.role);
+    const prefix = `### ${roleName}`;
+
+    let content = turn.rawContent;
+    
+    // keep code blocks
+    content = content.replace(/```([\s\S]*?)```/g, '\n```$1```\n');
+    
+    // URLs to links
+    content = content.replace(/(https?:\/\/[^\s]+)/g, '[Link]($1)');
+    
+    return `${prefix}\n\n${content}\n`;
+  }).join('\n---\n\n');
+
+  const element = document.createElement('a');
+  element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(mdContent)}`);
+  element.setAttribute('download', `chat_${getTimestamp()}.md`);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+};

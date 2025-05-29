@@ -25,7 +25,7 @@ import type { Config, ChatMode, ChatStatus } from '../types/config';
 import { Header } from './Header';
 import { Input } from './Input';
 import { Messages } from './Messages';
-import { downloadImage, downloadJson, downloadText } from '../background/messageUtils';
+import { downloadImage, downloadJson, downloadText, downloadMarkdown } from '../background/messageUtils';
 import { Settings } from './Settings';
 import storage from '../background/storageUtil';
 
@@ -556,6 +556,7 @@ const Cognito = () => {
             downloadImage={() => downloadImage(turns)}
             downloadJson={() => downloadJson(turns)}
             downloadText={() => downloadText(turns)}
+            downloadMarkdown={() => downloadMarkdown(turns)}
             historyMode={historyMode}
             reset={reset}
             setHistoryMode={setHistoryMode}

@@ -328,7 +328,7 @@ export const EditableMessage: FC<MessageProps> = ({
           {turn.role === 'assistant' && turn.webDisplayContent && (
             <div className="message-prefix">
               <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkSupersub]} components={markdownComponents}>
-                {`**From the Internet**
+                {`~From the Internet~
 ${turn.webDisplayContent}
 
 ---

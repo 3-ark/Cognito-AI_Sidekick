@@ -16,12 +16,22 @@ import { cn } from "@/src/background/util";
 
 const cleanTextForTTS = (text: string): string => {
   let cleanedText = text;
+  cleanedText = cleanedText.replace(/(https?:\/\/[^\s]+)/g, 'link');
+  cleanedText = cleanedText.replace(/\\([*_{}[\]()#+.!~`-])/g, '$1');
   cleanedText = cleanedText.replace(/(\*\*|__|\*|_)(.*?)\1/g, '$2');
+  cleanedText = cleanedText.replace(/~~(.*?)~~/g, '$1');
+  cleanedText = cleanedText.replace(/```(?:[\w\-_]+)?\n([\s\S]*?)\n```/g, '$1');
+  cleanedText = cleanedText.replace(/`([^`]+)`/g, '$1');
   cleanedText = cleanedText.replace(/^[*+-]\s+/gm, '');
   cleanedText = cleanedText.replace(/\*/g, '');
   cleanedText = cleanedText.replace(/:/g, '.');
   cleanedText = cleanedText.replace(/\//g, ' ');
   cleanedText = cleanedText.replace(/\s{2,}/g, ' ');
+  cleanedText = cleanedText.replace(/<[^>]*>/g, '');
+  cleanedText = cleanedText.replace(/:(?!\.|\s*\d)/g, '. ');
+  cleanedText = cleanedText.replace(/[()[\]{}]/g, '');
+  console.log('cleaned text:', cleanedText);
+
   return cleanedText.trim();
 };
 

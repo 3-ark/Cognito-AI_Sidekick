@@ -35,6 +35,7 @@ import { RxAvatar } from "react-icons/rx";
 import { CiText, CiImageOn } from "react-icons/ci";
 import { TbJson } from "react-icons/tb";
 import { IoFingerPrint } from "react-icons/io5";
+import { AiOutlineFileMarkdown } from "react-icons/ai";
 
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
 import { personaImages } from './constants';
@@ -218,6 +219,7 @@ interface HeaderProps {
   downloadImage: () => void;
   downloadJson: () => void;
   downloadText: () => void;
+  downloadMarkdown: () => void;
   chatMode: ChatMode;
   chatStatus: ChatStatus;
 }
@@ -233,6 +235,7 @@ export const Header: React.FC<HeaderProps> = ({
   downloadImage,
   downloadJson,
   downloadText,
+  downloadMarkdown,
   chatMode,
   chatStatus,
 }) => {
@@ -496,6 +499,13 @@ export const Header: React.FC<HeaderProps> = ({
                             sideOffset={2}
                             alignOffset={-5}
                           >
+                            <DropdownMenuPrimitive.Item
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              onSelect={downloadMarkdown}
+                            >
+                            <AiOutlineFileMarkdown className="mr-auto h-4 w-4" />
+                              .md
+                            </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
                               className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadText}
