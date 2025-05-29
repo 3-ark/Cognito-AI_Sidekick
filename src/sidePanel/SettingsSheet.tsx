@@ -196,7 +196,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                <Tooltip>
                  <TooltipTrigger asChild>
                    <Button variant="ghost" size="sm" aria-label={isDark ? 'Light' : 'Dark'} onClick={toggleTheme} className="text-[var(--text)] rounded-md">
-                     {document.documentElement.classList.contains('dark') ? <IoSunnyOutline size="20px" /> : <IoMoonOutline size="20px" />}
+                     {isDark ? <IoSunnyOutline size="20px" /> : <IoMoonOutline size="20px" />}
                    </Button>
                  </TooltipTrigger>
                  <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
