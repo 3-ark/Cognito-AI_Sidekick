@@ -89,12 +89,72 @@ const useSendMessage = (
   setChatStatus: Dispatch<SetStateAction<ChatStatus>>
 ) => {
   const completionGuard = useRef<number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const updateAssistantTurn = (callId: number | null, update: string, isFinished: boolean, isError?: boolean, isCancelled?: boolean) => {
+    if (completionGuard.current !== callId && !isFinished && !isError && !isCancelled) {
+      console.log(`[${callId}] updateAssistantTurn: Guard mismatch (current: ${completionGuard.current}), skipping non-final update.`);
+      return;
+    }
+    if (completionGuard.current === null && callId !== null) {
+        if ((update === "" && isFinished && !isError && !isCancelled) ||
+            (isError && (update.includes("Operation cancelled by user") || update.includes("Streaming operation cancelled")))) {
+            console.log(`[${callId}] updateAssistantTurn: Signal received after operation already finalized. Preserving existing state.`);
+            setLoading(false);
+            setChatStatus('idle');
+            return;
+        }
+    }
+
+    setTurns(prevTurns => {
+      if (prevTurns.length === 0 || prevTurns[prevTurns.length - 1].role !== 'assistant') {
+        console.warn(`[${callId}] updateAssistantTurn: No assistant turn found or last turn is not assistant.`);
+        if (isError) {
+          const errorTurn: MessageTurn = {
+            role: 'assistant',
+            rawContent: `Error: ${update || 'Unknown operation error'}`,
+            status: 'error',
+            timestamp: Date.now(),
+          };
+          return [...prevTurns, errorTurn];
+        }
+        return prevTurns;
+      }
+      const lastTurn = prevTurns[prevTurns.length - 1];
+      
+      let finalContentForTurn: string;
+      if (isCancelled) {
+        finalContentForTurn = lastTurn.rawContent;
+      } else if (isError) {
+        finalContentForTurn = `Error: ${update || 'Unknown stream/handler error'}`;
+      } else {
+        finalContentForTurn = update; 
+      }
+
+      const updatedStatus = (isError === true) ? 'error' : (isCancelled === true) ? 'cancelled' : (isFinished ? 'complete' : 'streaming');
+      
+      return [...prevTurns.slice(0, -1), { ...lastTurn, rawContent: finalContentForTurn, status: updatedStatus, timestamp: Date.now() }];
+    });
+
+    if (isFinished || (isError === true) || (isCancelled === true)) {
+      console.log(`[${callId}] updateAssistantTurn: Final state (Finished: ${isFinished}, Error: ${isError}, Cancelled: ${isCancelled}). Clearing guard and loading.`);
+      setLoading(false);
+      setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done'); // sets to idle for error/cancel
+
+      if (completionGuard.current === callId) {
+        completionGuard.current = null;
+        if (abortControllerRef.current) { // Nullify if it was the active controller
+            abortControllerRef.current = null;
+        }
+      }
+    }
+  };
 
   const onSend = async (overridedMessage?: string) => {
     const callId = Date.now();
     console.log(`[${callId}] useSendMessage: onSend triggered.`);
     
-    const message = overridedMessage || originalMessage;
+    const message = overridedMessage || ""; // Use overridedMessage or ensure it's a string
 
     if (!config) {
       console.log(`[${callId}] useSendMessage: Bailing out: Missing config.`);
@@ -107,9 +167,14 @@ const useSendMessage = (
     }
 
     if (completionGuard.current !== null) {
-        console.warn(`[${callId}] useSendMessage: Bailing out: Another send operation (ID: ${completionGuard.current}) is already in progress.`);
-        return;
+      console.warn(`[${callId}] useSendMessage: Another send operation (ID: ${completionGuard.current}) is already in progress. Aborting previous.`);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort(); // Abort the previous operation
+      }
     }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     console.log(`[${callId}] useSendMessage: Setting loading true.`);
     setLoading(true);
@@ -135,7 +200,7 @@ const useSendMessage = (
       setChatStatus('searching');
       try {
         const scrapedResults = await Promise.all(
-          urls.map(url => scrapeUrlContent(url))
+          urls.map(url => scrapeUrlContent(url, controller.signal))
         );
         scrapedContent = scrapedResults
           .map((content, idx) => `Content from [${urls[idx]}]:\n${content}`)
@@ -145,49 +210,6 @@ const useSendMessage = (
       }
       setChatStatus('thinking');
     }
-
-    const updateAssistantTurn = (update: string, isFinished: boolean, isError?: boolean) => {
-      if (completionGuard.current !== callId && !isFinished && !(isError === true) ) {
-        console.log(`[${callId}] updateAssistantTurn: Guard mismatch (current: ${completionGuard.current}), skipping non-final update.`);
-        return;
-      }
-
-      setTurns(prevTurns => {
-        if (prevTurns.length === 0 || prevTurns[prevTurns.length - 1].role !== 'assistant') {
-          console.warn(`[${callId}] updateAssistantTurn: No assistant turn found or last turn is not assistant.`);
-          if (isError) {
-            const errorTurn: MessageTurn = {
-              role: 'assistant',
-              rawContent: `Error: ${update || 'Unknown operation error'}`,
-              status: 'error',
-              timestamp: Date.now(),
-            };
-            return [...prevTurns, errorTurn];
-          }
-          return prevTurns;
-        }
-        const lastTurn = prevTurns[prevTurns.length - 1];
-        const updatedContent = (isError === true) ? `Error: ${update || 'Unknown stream/handler error'}` : update;
-        const updatedStatus = (isError === true) ? 'error' : (isFinished ? 'complete' : 'streaming');
-        
-        return [
-          ...prevTurns.slice(0, -1),
-          {
-            ...lastTurn,
-            rawContent: updatedContent,
-            status: updatedStatus,
-            timestamp: Date.now()
-          }
-        ];
-      });
-
-      if (isFinished || (isError === true)) {
-        console.log(`[${callId}] updateAssistantTurn: Final state (Finished: ${isFinished}, Error: ${isError}). Clearing guard and loading.`);
-        setLoading(false);
-        setChatStatus(isError ? 'idle' : 'done');
-        completionGuard.current = null;
-      }
-    };
 
     const userTurn: MessageTurn = {
       role: 'user',
@@ -207,7 +229,7 @@ const useSendMessage = (
     const currentModel = config?.models?.find(m => m.id === config.selectedModel);
     if (!currentModel) {
       console.error(`[${callId}] useSendMessage: No current model found.`);
-      updateAssistantTurn("Configuration error: No model selected.", true, true);
+      updateAssistantTurn(callId, "Configuration error: No model selected.", true, true);
       return;
     }
     const authHeader = getAuthHeader(config, currentModel);
@@ -225,7 +247,8 @@ const useSendMessage = (
           message,
           config,
           currentModel,
-          authHeader,
+          authHeader, 
+          controller.signal,
           historyForQueryOptimization
         );
         if (optimizedQuery && optimizedQuery.trim() && optimizedQuery !== message) {
@@ -249,13 +272,13 @@ const useSendMessage = (
       setChatStatus('searching');
 
       try {
-        searchRes = await webSearch(queryForProcessing, config);
-        setChatStatus('thinking'); // Status after search, before main LLM call      
+        searchRes = await webSearch(queryForProcessing, config, controller.signal);
+        setChatStatus('thinking');     
       } catch (searchError) {
         console.error(`[${callId}] Web search failed:`, searchError);
         searchRes = ''; 
         processedQueryDisplay += `[Web Search Failed: ${searchError instanceof Error ? searchError.message : String(searchError)}]`;
-        setChatStatus('idle'); // Or some error status if you define one      
+        setChatStatus('idle');     
       }
       console.log(`[${callId}] useSendMessage: Web search done. Length: ${searchRes.length}`);
     }
@@ -342,16 +365,13 @@ const useSendMessage = (
     const userProfile = config.userProfile?.trim();
 
     if (userName && userName.toLowerCase() !== 'user' && userName !== '') {
-      // Only include the name if it's set and not the default "user"
       userContextStatement = `You are interacting with a user named "${userName}".`;
       if (userProfile) {
         userContextStatement += ` Their provided profile information is: "${userProfile}".`;
       }
     } else if (userProfile) {
-      // If username is default/empty but profile exists
       userContextStatement = `You are interacting with a user. Their provided profile information is: "${userProfile}".`;
     }
-    // If both are default/empty, userContextStatement will remain empty, which is fine.
 
     const systemPromptParts = [];
     if (persona) systemPromptParts.push(persona);
@@ -386,7 +406,8 @@ const useSendMessage = (
           config,
           currentModel,
           authHeader,
-          (update, isFinished) => updateAssistantTurn(update, Boolean(isFinished))
+          (update, isFinished) => updateAssistantTurn(callId, update, Boolean(isFinished)),
+          controller.signal
         );
         console.log(`[${callId}] useSendMessage: HIGH compute level finished.`);
       } else if (config?.computeLevel === 'medium' && currentModel) {
@@ -397,7 +418,8 @@ const useSendMessage = (
           config,
           currentModel,
           authHeader,
-          (update, isFinished) => updateAssistantTurn(update, Boolean(isFinished))
+          (update, isFinished) => updateAssistantTurn(callId, update, Boolean(isFinished)),
+          controller.signal
         );
         console.log(`[${callId}] useSendMessage: MEDIUM compute level finished.`);
       } else {
@@ -436,25 +458,53 @@ const useSendMessage = (
             presence_penalty: config?.presencepenalty ?? 0,
           },
           (part: string, isFinished?: boolean, isError?: boolean) => {
-            updateAssistantTurn(part, Boolean(isFinished), Boolean(isError));
+            updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError));
             if (isFinished || isError) {
               console.log(`[${callId}] fetchDataAsStream Callback: Stream finished/errored.`);
             }
           },
           authHeader,
-          currentModel.host || ''
+          currentModel.host || '',
+          controller.signal
         );
         console.log(`[${callId}] useSendMessage: fetchDataAsStream call INITIATED.`);
       }
     } catch (error) {
-      console.error(`[${callId}] useSendMessage: Error during send operation:`, error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      updateAssistantTurn(errorMessage, true, true);
+      if (controller.signal.aborted) {
+        console.log(`[${callId}] Send operation was aborted. 'onStop' handler is responsible for UI updates.`);
+        if (isLoading) setLoading(false);
+        setChatStatus('idle');
+        if (completionGuard.current === callId) {
+            completionGuard.current = null;
+        }
+        if (abortControllerRef.current && abortControllerRef.current.signal === controller.signal) {
+            abortControllerRef.current = null;
+        }
+      } else {
+        console.error(`[${callId}] useSendMessage: Error during send operation:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        updateAssistantTurn(callId, errorMessage, true, true);
+      }
     }
     console.log(`[${callId}] useSendMessage: onSend processing logic completed.`);
   };
 
-  return onSend;
+  const onStop = () => {
+    const currentCallId = completionGuard.current;
+    if (currentCallId !== null) {
+      console.log(`[${currentCallId}] useSendMessage: onStop triggered.`);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      updateAssistantTurn(currentCallId, "[Operation cancelled by user]", true, false, true);
+    } else {
+      console.log(`[No CallID] useSendMessage: onStop triggered but no operation in progress.`);
+      setLoading(false); 
+      setChatStatus('idle'); 
+    }
+  };
+  return { onSend, onStop };
 }
 
 export default useSendMessage;

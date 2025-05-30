@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 import { normalizeApiEndpoint } from 'src/background/util';
 import { useConfig } from '../ConfigContext';
@@ -31,6 +31,7 @@ const extractTitle = (response: string): string => {
 export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: string) => {
   const [chatTitle, setChatTitle] = useState('');
   const { config } = useConfig();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     // Simplified conditions:
@@ -43,13 +44,19 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
         !chatTitle && 
         config?.generateTitle) {
 
+      // If a previous title generation is in progress, abort it
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
       const currentModel = config?.models?.find((model) => model.id === config.selectedModel);
       if (!currentModel) return;
 
-      const messagesForTitle: ApiMessage[] = [ // Explicitly type as ApiMessage[]
-        ...turns.slice(0, 2).map((turn): ApiMessage => ({ // Map over the first two turns
-          content: turn.rawContent || '', // Use rawContent from the turn
-          role: turn.role // Use the actual role from the turn
+      const messagesForTitle: ApiMessage[] = [
+        ...turns.slice(0, 2).map((turn): ApiMessage => ({
+          content: turn.rawContent || '',
+          role: turn.role
         })),
         { 
           role: 'user', 
@@ -118,7 +125,7 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
    
            return {
              ...baseConfig,
-             url: `${normalizedUrl}/v1/chat/completions`, // Use the normalized URL
+             url: `${normalizedUrl}/v1/chat/completions`,
              headers: { Authorization: `Bearer ${config.customApiKey}` }
            };
           }
@@ -128,6 +135,14 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
       
       if (!apiConfig) return;
 
+      const handleFetchError = (err: any) => {
+        if (signal.aborted) {
+          console.log('Title generation aborted.');
+        } else {
+          console.error('Title generation failed:', err);
+        }
+      };
+
       if (['ollama', 'lmStudio'].includes(currentModel.host || '')) {
         fetch(apiConfig.url, {
           method: 'POST',
@@ -135,7 +150,8 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
             'Content-Type': 'application/json',
             ...apiConfig.headers
           },
-          body: JSON.stringify(apiConfig.body)
+          body: JSON.stringify(apiConfig.body),
+          signal
         })
         .then(res => res.json())
         .then(data => {
@@ -146,7 +162,7 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
             setChatTitle(cleanTitle);
           }
         })
-        .catch(err => console.error('Title generation failed:', err));
+        .catch(handleFetchError);
       } else {
         let accumulatedTitle = '';
         fetchDataAsStream(
@@ -154,6 +170,10 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
           apiConfig.body,
           (part: string, isFinished?: boolean) => {
             accumulatedTitle = part;
+            if (signal.aborted) {
+              console.log("Title streaming aborted during callback.");
+              return; 
+            }
             if (isFinished) {
               const cleanTitle = extractTitle(accumulatedTitle);
               if (cleanTitle) {
@@ -163,11 +183,19 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
             }
           },
           apiConfig.headers,
-          currentModel.host || ''
+          currentModel.host || '',
+          signal
         );
       }
     }
-  }, [isLoading, turns, message, config, chatTitle]);
 
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, [isLoading, turns, message, config, chatTitle]);
+  
   return { chatTitle, setChatTitle };
 };

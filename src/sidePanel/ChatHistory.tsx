@@ -10,7 +10,7 @@ const dateToString = (date: number | Date): string => new Date(date).toLocaleDat
 
 export interface MessageTurn {
   role: 'user' | 'assistant';
-  status: 'complete' | 'streaming' | 'error';
+  status: 'complete' | 'streaming' | 'error' | 'cancelled';
   rawContent: string;
   webDisplayContent?: string;
   timestamp: number;

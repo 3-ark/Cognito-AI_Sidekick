@@ -1,10 +1,9 @@
 import type { FC } from 'react';
 import { AddToChat } from './AddToChat';
 import type { SpeechRecognition as SpeechRecognitionInstance, SpeechRecognitionEvent as SpeechRecognitionEventInstance, SpeechRecognitionErrorEvent as SpeechRecognitionErrorEventInstance } from '../types/speech';
-import { useEffect, useRef, useState, useCallback, Dispatch, SetStateAction } from 'react';
+import { useEffect, useRef, useState, useCallback, Dispatch, SetStateAction, MouseEvent } from 'react';
 import { FaRegStopCircle } from 'react-icons/fa';
-import { BsMic } from "react-icons/bs";
-import { BsSend } from "react-icons/bs";
+import { BsMic, BsSend, BsStopCircle } from "react-icons/bs";
 import { Loader2 } from 'lucide-react';
 import { useConfig } from './ConfigContext';
 import { Button } from "@/components/ui/button";
@@ -24,9 +23,10 @@ interface InputProps {
     message: string;
     setMessage: Dispatch<SetStateAction<string>>; 
     onSend: () => void;
+    onStopRequest: () => void;
 }
 
-export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend }) => {
+export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend, onStopRequest }) => {
   const { config } = useConfig();
   const ref = useRef<HTMLTextAreaElement>(null);
   const [isListening, setIsListening] = useState(false);
@@ -137,8 +137,12 @@ export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend }
     (window.SpeechRecognition || window.webkitSpeechRecognition);
   
     const handleSendClick = () => {
-    if (message.trim()) {
-      onSend();
+    if (isLoading) {
+      onStopRequest();
+    } else {
+      if (message.trim()) {
+        onSend();
+      }
     }
   };
 
@@ -221,17 +225,17 @@ export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend }
                 "p-2 ml-1 rounded-md",
                 !isLoading && "hover:bg-[var(--text)]/10"
               )}
-              onClick={handleSendClick}
-              disabled={isLoading || !message.trim()}
+              onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleSendClick();}}
+              disabled={!isLoading && !message.trim()}
             >
               {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin text-foreground" />
+                <BsStopCircle className="h-5 w-5 text-foreground" />
               ) : (
                 <BsSend className="h-5 w-5 text-foreground" />
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="top" className="bg-secondary/50 text-foreground"><p>Send</p></TooltipContent>
+          <TooltipContent side="top" className="bg-secondary/50 text-foreground"><p>{isLoading ? "Stop" : "Send"}</p></TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </div>

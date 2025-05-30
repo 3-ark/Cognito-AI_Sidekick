@@ -349,7 +349,7 @@ const Cognito = () => {
   }, [config?.chatMode]);
 
   const { chatTitle, setChatTitle } = useChatTitle(isLoading, turns, message);
-  const onSend = useSendMessage(
+  const { onSend, onStop } = useSendMessage(
     isLoading,
     message,
     turns,
@@ -753,6 +753,7 @@ const Cognito = () => {
               message={message}
               setMessage={setMessage}
               onSend={() => onSend(message)}
+              onStopRequest={onStop}
             />
           </div>
         )}

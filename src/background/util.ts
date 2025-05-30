@@ -62,4 +62,3 @@ export const normalizeApiEndpoint = (endpoint?: string): string => {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
