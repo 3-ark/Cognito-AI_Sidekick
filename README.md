@@ -109,9 +109,10 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Evaluation and integration of community pull requests.
 *   **Enhanced Agent Capabilities:**
     *   "Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.
+    *   Better websearch with [WebDancer](https://github.com/Alibaba-NLP/WebAgent/tree/main/WebDancer)
     *   "Short-term Memory" (state management) for multi-step tasks within the same context (e.g., web search followed by page parsing and comparison).
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
-*   Improved local TTS/STT integration (e.g., exploring options like StreamingKokoroJS).
+*   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
 *   Potential support for image and voice API interactions for multimodal capabilities.
 *   Add some shortcuts like modes shifting, cancel editing or saving editing.
 *   Add stop to "isloading" icon
@@ -133,7 +134,7 @@ Contributions are welcome! If you'd like to help improve Cognito, please:
 ## 🙏 Acknowledgments
 
 *   Cognito was originally built upon and inspired by [sidellama](https://github.com/gyopak/sidellama).
-*   Inspiration and ideas from projects like Stanford's [WikiChat](https://github.com/stanford-oval/WikiChat), [highCompute.py](https://github.com/AlexBefest/highCompute.py) by AlexBefest, [StreamingKokoroJS](https://github.com/rhulha/StreamingKokoroJS), and the [piper-browser-extension](https://github.com/ken107/piper-browser-extension).
+*   Inspiration and ideas from projects like Stanford's [WikiChat](https://github.com/stanford-oval/WikiChat), [highCompute.py](https://github.com/AlexBefest/highCompute.py) by AlexBefest, [StreamingKokoroJS](https://github.com/rhulha/StreamingKokoroJS), [WebAgent](https://github.com/Alibaba-NLP/WebAgent), [chatterbox](https://github.com/resemble-ai/chatterbox), [kokoro and kokoro.js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and the [piper-browser-extension](https://github.com/ken107/piper-browser-extension).
 *   Thanks to all the developers of the open-source libraries and tools that make Cognito possible.
 
 ## 📄 License
