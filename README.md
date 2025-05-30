@@ -115,7 +115,7 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
 *   Potential support for image and voice API interactions for multimodal capabilities.
 *   Add some shortcuts like modes shifting, cancel editing or saving editing.
-*   Add stop to "isloading" icon
+*   ~Add stop to "isloading" icon~
 
 *(This section will be regularly updated based on project progress)*
 
