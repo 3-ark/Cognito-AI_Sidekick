@@ -4,7 +4,6 @@ import type { SpeechRecognition as SpeechRecognitionInstance, SpeechRecognitionE
 import { useEffect, useRef, useState, useCallback, Dispatch, SetStateAction, MouseEvent } from 'react';
 import { FaRegStopCircle } from 'react-icons/fa';
 import { BsMic, BsSend, BsStopCircle } from "react-icons/bs";
-import { Loader2 } from 'lucide-react';
 import { useConfig } from './ConfigContext';
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
