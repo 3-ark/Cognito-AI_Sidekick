@@ -129,10 +129,9 @@ Output:
       : query;
 
   } catch (error: any) {
-    // If the operation was aborted, re-throw the error so the caller can handle it as an abort.
     if (abortSignal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
       console.log('processQueryWithAI: Operation aborted.');
-      throw error; // Re-throw to be caught by onSend's catch block
+      throw error;
     }
     console.error('processQueryWithAI: Error during execution:', error);
     return query;
@@ -242,11 +241,10 @@ interface GoogleCustomSearchResponse {
   }
 }
 
-
 export const webSearch = async (
     query: string,
     config: Config,
-    abortSignal?: AbortSignal // Added optional AbortSignal
+    abortSignal?: AbortSignal
 ): Promise<string> => {
     console.log('[webSearch] Received query:', query);
     console.log('[webSearch] Web Mode from config:', config?.webMode);
@@ -255,7 +253,6 @@ export const webSearch = async (
     const maxLinksToVisit = config.serpMaxLinksToVisit ?? 3;
     const charLimitPerPage = (config.webLimit && config.webLimit !== 128) ? config.webLimit * 1000 : Infinity; // Use Infinity for 'Unlimited'
 
-    // Use the provided abortSignal or create a new one if not provided
     const controller = abortSignal ? { signal: abortSignal } : new AbortController();
 
     const serpAbortController = new AbortController();
@@ -282,7 +279,7 @@ export const webSearch = async (
                     : `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
 
             const response = await fetch(baseUrl, {
-                signal: controller.signal, // Use the main signal
+                signal: controller.signal,
                 method: 'GET',
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
@@ -399,11 +396,11 @@ export const webSearch = async (
             const pageFetchPromises = linksToFetch.map(async (result) => {
                 if (!result.url) return { ...result, content: '[Invalid URL]', status: 'error' };
                 console.log(`Fetching content from: ${result.url}`);
-                const pageFetchController = new AbortController(); // Individual controller for page fetch
+                const pageFetchController = new AbortController();
                 const timeoutId = setTimeout(() => pageFetchController.abort(), 12000);
                 try {
                     const pageResponse = await fetch(result.url, {
-                        signal: controller.signal, // Use the main signal here as well
+                        signal: controller.signal,
                         method: 'GET',
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -486,7 +483,7 @@ export const webSearch = async (
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(requestBody),
-                    signal: controller.signal, // Use the main signal
+                    signal: controller.signal,
                 });
                 if (serpTimeoutId) clearTimeout(serpTimeoutId);
 
@@ -550,7 +547,7 @@ export const webSearch = async (
             let apiResponse: GoogleCustomSearchResponse;
             try {
                 const response = await fetch(customSearchUrl, {
-                    signal: controller.signal, // Use the main signal
+                    signal: controller.signal,
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -600,16 +597,16 @@ export const webSearch = async (
 
             console.log(`[webSearch - GoogleCustomSearch] Mapped ${searchResults.length} API results to scraper format. Attempting to fetch content from top ${Math.min(searchResults.length, maxLinksToVisit)} links.`);
 
-            const linksToFetch = searchResults.slice(0, maxLinksToVisit).filter(r => r.url); // Already sliced by API num, but good to be explicit
+            const linksToFetch = searchResults.slice(0, maxLinksToVisit).filter(r => r.url);
 
             const pageFetchPromises = linksToFetch.map(async (result) => {
                 if (!result.url) return { ...result, content: '[Invalid URL]', status: 'error' };
                 console.log(`[GoogleCustomSearch - Scraper] Fetching content from: ${result.url}`);
-                const pageScrapeController = new AbortController(); // Individual controller for page scrape
+                const pageScrapeController = new AbortController();
                 const pageTimeoutId = setTimeout(() => pageScrapeController.abort(), 12000);
                 try {
                     const pageResponse = await fetch(result.url, {
-                        signal: controller.signal, // Use the main signal
+                        signal: controller.signal,
                         method: 'GET',
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
@@ -641,7 +638,7 @@ export const webSearch = async (
 
             let combinedResultsText = `Google Custom Search results for "${query}" (with scraped content):\n\n`;
             let pageIndex = 0;
-            searchResults.slice(0, maxLinksToVisit).forEach((result, index) => { // Iterate only over links we intended to fetch
+            searchResults.slice(0, maxLinksToVisit).forEach((result, index) => {
                  combinedResultsText += `[Result ${index + 1}: ${result.title}]\n`;
                  combinedResultsText += `URL: ${result.url || '[No URL Found]'}\n`;
                  combinedResultsText += `API Snippet: ${result.snippet || '[No API Snippet]'}\n`;
@@ -649,7 +646,7 @@ export const webSearch = async (
                  const correspondingFetch = fetchedPagesResults[pageIndex];
                  if (correspondingFetch?.status === 'fulfilled') {
                      const fetchedData = correspondingFetch.value as (typeof searchResults[0] & { scrapedContent: string }); // Cast for type safety
-                     if (fetchedData.url === result.url) { // Ensure we're matching the correct result
+                     if (fetchedData.url === result.url) { 
                         const contentPreview = fetchedData.scrapedContent.substring(0, charLimitPerPage);
                         combinedResultsText += `Scraped Content:\n${contentPreview}${fetchedData.scrapedContent.length > charLimitPerPage ? '...' : ''}\n\n`;
                      } else {
@@ -671,7 +668,7 @@ export const webSearch = async (
         }
     } catch (error: any) {
         if (serpTimeoutId) clearTimeout(serpTimeoutId);
-        if (controller.signal?.aborted && error.name === 'AbortError') { // Check if controller.signal exists
+        if (controller.signal?.aborted && error.name === 'AbortError') {
             return `Web search operation aborted.`;
         }
         console.error('Web search overall failed:', error);
@@ -686,7 +683,7 @@ export async function fetchDataAsStream(
       onMessage: (message: string, done?: boolean, error?: boolean) => void,
       headers: Record<string, string> = {},
       host: string,
-      abortSignal?: AbortSignal // Added AbortSignal
+      abortSignal?: AbortSignal
     ) {
       let streamFinished = false;
 
@@ -730,7 +727,7 @@ export async function fetchDataAsStream(
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...headers },
           body: JSON.stringify(data),
-          signal: abortSignal // Pass signal to fetch
+          signal: abortSignal
         });
 
         if (!response.ok) {
@@ -751,7 +748,7 @@ export async function fetchDataAsStream(
             const reader = response.body.getReader();
             let done, value;
             while (true) {
-              checkAborted(); // Check before each read
+              checkAborted();
               ({ value, done } = await reader.read());
               if (done) break;
               const chunk = new TextDecoder().decode(value);
@@ -759,7 +756,7 @@ export async function fetchDataAsStream(
 
               for (const jsonObjStr of jsonObjects) {
                  if (jsonObjStr.trim() === '[DONE]') {
-                    if (abortSignal?.aborted) reader.cancel(); // Ensure reader is cancelled if aborted
+                    if (abortSignal?.aborted) reader.cancel();
                     finishStream(str);
                     return;
                  }
@@ -785,14 +782,11 @@ export async function fetchDataAsStream(
           } else if (["lmStudio", "groq", "gemini", "openai", "openrouter", "custom"].includes(host)) {
             const stream = events(response);
             for await (const event of stream) {
-              checkAborted(); // Check at the start of each event
+              checkAborted();
               if (streamFinished) continue;
               if (!event.data) continue;
 
               if (event.data.trim() === '[DONE]') {
-                // The `events` library might not have a direct reader.cancel equivalent here,
-                // but `checkAborted` throwing will break the loop.
-                // The underlying fetch is already aborted by the signal.
                 finishStream(str);
                 break;
               }
@@ -829,7 +823,7 @@ export async function fetchDataAsStream(
         if (abortSignal?.aborted) {
           console.log(`[fetchDataAsStream] Operation aborted via signal as expected. Details:`, error);
           finishStream("", false);
-        } else if (error instanceof Error && error.name === 'AbortError') { // Fallback for other AbortErrors
+        } else if (error instanceof Error && error.name === 'AbortError') {
           console.log(`[fetchDataAsStream] AbortError (name check) caught. Operation was cancelled. Details:`, error);
           finishStream("", false);
         } else {
@@ -844,7 +838,7 @@ export async function fetchDataAsStream(
  */
 export async function scrapeUrlContent(url: string, abortSignal?: AbortSignal): Promise<string> {
   const controller = new AbortController();
-  const signal = abortSignal || controller.signal; // Use provided signal or internal one
+  const signal = abortSignal || controller.signal;
   const timeoutId = !abortSignal ? setTimeout(() => controller.abort(), 12000) : null;
   try {
     const response = await fetch(url, {

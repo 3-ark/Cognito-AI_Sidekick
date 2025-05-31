@@ -142,7 +142,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
           <Slider
             value={[numBlocksToRerank]} 
             max={50}
-            min={numBlocks} 
+            min={1}
             step={1}
             variant="themed"
             onValueChange={value => updateConfig({ wikiNumBlocksToRerank: value[0] })}
@@ -252,13 +252,19 @@ export const WebSearch = () => {
   useEffect(() => {
     if (config?.webMode === 'Wikipedia') {
       const updates: Partial<Config> = {};
-      if (typeof config.wikiNumBlocks === 'undefined') updates.wikiNumBlocks = 3;
-      if (config.wikiRerank && typeof config.wikiNumBlocksToRerank === 'undefined') {
-        updates.wikiNumBlocksToRerank = Math.max(config.wikiNumBlocks || 3, 10);
+      const numBlocksOrDefault = config.wikiNumBlocks ?? 3;
+
+      if (typeof config.wikiNumBlocks === 'undefined') {
+        updates.wikiNumBlocks = 3;
       }
-      if (config.wikiRerank && config.wikiNumBlocks && config.wikiNumBlocksToRerank) {
-        if (config.wikiNumBlocksToRerank < config.wikiNumBlocks) {
-          updates.wikiNumBlocksToRerank = config.wikiNumBlocks;
+      
+      if (config.wikiRerank) {
+        if (typeof config.wikiNumBlocksToRerank === 'undefined') {
+          updates.wikiNumBlocksToRerank = Math.max(numBlocksOrDefault, 10);
+        } else {
+          if (config.wikiNumBlocksToRerank < numBlocksOrDefault) {
+            updates.wikiNumBlocksToRerank = numBlocksOrDefault;
+          }
         }
       }
       if (Object.keys(updates).length > 0) updateConfig(updates);
