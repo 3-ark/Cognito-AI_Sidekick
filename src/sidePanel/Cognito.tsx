@@ -271,6 +271,7 @@ const Cognito = () => {
   const [isWebSearchHovering, setIsWebSearchHovering] = useState(false);
   const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
 
+  const toastIdRef = useRef<string | null>(null);
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
       if (containerRef.current) {
@@ -347,6 +348,43 @@ const Cognito = () => {
       lastInjectedRef.current = { id: null, url: '' };
     };
   }, [config?.chatMode]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+
+      // Don't trigger shortcuts if settings or history mode is active
+      if (settingsMode || historyMode) {
+        return;
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === 'm') {
+        event.preventDefault();
+        const currentMode = config?.chatMode;
+        let toastMessage = '';
+
+        if (currentMode === 'web') {
+          updateConfig({ chatMode: undefined });
+          toastMessage = 'Switched to Chat Mode';
+        } else if (currentMode === 'page') {
+          updateConfig({ chatMode: 'web' });
+          toastMessage = 'Switched to Web Mode';
+        } else {
+          updateConfig({ chatMode: 'page' });
+          toastMessage = 'Switched to Page Mode';
+        }
+
+        if (toastIdRef.current) {
+          toast.dismiss(toastIdRef.current);
+        }
+        toastIdRef.current = toast(toastMessage);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [config?.chatMode, updateConfig, settingsMode, historyMode]);
 
   const { chatTitle, setChatTitle } = useChatTitle(isLoading, turns, message);
   const { onSend, onStop } = useSendMessage(

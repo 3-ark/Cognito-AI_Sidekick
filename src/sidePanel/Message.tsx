@@ -1,7 +1,7 @@
 import '../content/index.css';
 import type { ComponentPropsWithoutRef, ReactElement, FC } from 'react';
-import { Children, HTMLAttributes, ReactNode, useState } from 'react';
-import Markdown from 'react-markdown';
+import { Children, HTMLAttributes, ReactNode, useState, useEffect } from 'react';
+import Markdown, { Components } from 'react-markdown';
 import { FiCopy, FiCheck, FiX } from 'react-icons/fi';
 import { Textarea } from "@/components/ui/textarea";
 
@@ -231,7 +231,7 @@ const ThinkingBlock = ({ content }: { content: string }) => {
   );
 };
 
-const markdownComponents = {
+const markdownComponents: Components = {
   ul: Ul,
   ol: Ol,
   p: P,
@@ -271,6 +271,29 @@ export const EditableMessage: FC<MessageProps> = ({
   const parts = contentToRender.split(/(<think>[\s\S]*?<\/think>)/g).filter(part => part && part.trim() !== '');
   const thinkRegex = /<think>([\s\S]*?)<\/think>/;
 
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        onCancelEdit();
+      } else if (event.key === 'Enter' && !event.shiftKey && !event.altKey && !event.metaKey) {
+        if (editText.trim()) {
+          event.preventDefault();
+          event.stopPropagation();
+          onSaveEdit();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase to potentially override other listeners
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isEditing, onCancelEdit, onSaveEdit, editText]);
+
   return (
     <div
       className={cn(
@@ -305,21 +328,22 @@ export const EditableMessage: FC<MessageProps> = ({
             minRows={3}
             autoFocus
           />
-          <div className="flex justify-end space-x-2">
+          <div className="flex font-mono justify-end space-x-2">
             <Button
               size="sm"
+              variant="outline"
               onClick={onSaveEdit}
               title="Save changes"
             >
               <FiCheck className="h-4 w-4 mr-1" /> Save
             </Button>
             <Button
-              variant="destructive-outline"
+              variant="outline"
               size="sm"
               onClick={onCancelEdit}
               title="Discard changes"
             >
-              <FiX className="h-4 w-4 mr-1" /> Cancel
+              <FiX className="h-4 w-4 mr-1" /> Exit
             </Button>
           </div>
         </div>
