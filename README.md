@@ -109,7 +109,7 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Evaluation and integration of community pull requests.
 *   **Enhanced Agent Capabilities:**
     *   "Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.
-    *   Better websearch with [WebDancer](https://github.com/Alibaba-NLP/WebAgent/tree/main/WebDancer)
+    *   Better websearch with [WebDancer](forget it, I misunderstood, this is more training, I will see any other methods)
     *   "Short-term Memory" (state management) for multi-step tasks within the same context (e.g., web search followed by page parsing and comparison).
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
 *   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
