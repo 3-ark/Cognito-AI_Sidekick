@@ -122,16 +122,17 @@ const useSendMessage = (
       }
       const lastTurn = prevTurns[prevTurns.length - 1];
       
+      const updatedStatus = (isError === true) ? 'error' : (isCancelled === true) ? 'cancelled' : (isFinished ? 'complete' : 'streaming');
       let finalContentForTurn: string;
+      
       if (isCancelled) {
-        finalContentForTurn = lastTurn.rawContent;
+        const existingContent = lastTurn.rawContent || "";
+        finalContentForTurn = existingContent + (existingContent ? " " : "") + update;
       } else if (isError) {
         finalContentForTurn = `Error: ${update || 'Unknown stream/handler error'}`;
       } else {
         finalContentForTurn = update; 
       }
-
-      const updatedStatus = (isError === true) ? 'error' : (isCancelled === true) ? 'cancelled' : (isFinished ? 'complete' : 'streaming');
       
       return [...prevTurns.slice(0, -1), { ...lastTurn, rawContent: finalContentForTurn, status: updatedStatus, timestamp: Date.now() }];
     });
@@ -139,11 +140,11 @@ const useSendMessage = (
     if (isFinished || (isError === true) || (isCancelled === true)) {
       console.log(`[${callId}] updateAssistantTurn: Final state (Finished: ${isFinished}, Error: ${isError}, Cancelled: ${isCancelled}). Clearing guard and loading.`);
       setLoading(false);
-      setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done'); // sets to idle for error/cancel
+      setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done');
 
       if (completionGuard.current === callId) {
         completionGuard.current = null;
-        if (abortControllerRef.current) { // Nullify if it was the active controller
+        if (abortControllerRef.current) {
             abortControllerRef.current = null;
         }
       }
@@ -154,7 +155,7 @@ const useSendMessage = (
     const callId = Date.now();
     console.log(`[${callId}] useSendMessage: onSend triggered.`);
     
-    const message = overridedMessage || ""; // Use overridedMessage or ensure it's a string
+    const message = overridedMessage || "";
 
     if (!config) {
       console.log(`[${callId}] useSendMessage: Bailing out: Missing config.`);
@@ -169,7 +170,7 @@ const useSendMessage = (
     if (completionGuard.current !== null) {
       console.warn(`[${callId}] useSendMessage: Another send operation (ID: ${completionGuard.current}) is already in progress. Aborting previous.`);
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort(); // Abort the previous operation
+        abortControllerRef.current.abort();
       }
     }
 
@@ -221,6 +222,15 @@ const useSendMessage = (
     setMessage('');
     console.log(`[${callId}] useSendMessage: User turn added to state.`);
 
+    const assistantTurnPlaceholder: MessageTurn = {
+        role: 'assistant',
+        rawContent: '',
+        status: 'streaming',
+        timestamp: Date.now() + 1 
+    };
+    setTurns(prevTurns => [...prevTurns, assistantTurnPlaceholder]);
+    console.log(`[${callId}] useSendMessage: Assistant placeholder turn added early.`);
+
     let queryForProcessing = message;
     let searchRes: string = '';
     let processedQueryDisplay = '';
@@ -234,10 +244,9 @@ const useSendMessage = (
     }
     const authHeader = getAuthHeader(config, currentModel);
 
-    // ... (Step 1: Optimize Query remains the same)
     if (performSearch) {
       console.log(`[${callId}] useSendMessage: Optimizing query...`);
-      setChatStatus('thinking'); // Status while optimizing query      
+      setChatStatus('thinking');    
       const historyForQueryOptimization: ApiMessage[] = currentTurns.map(turn => ({
         role: turn.role,
         content: turn.rawContent
@@ -274,23 +283,35 @@ const useSendMessage = (
       try {
         searchRes = await webSearch(queryForProcessing, config, controller.signal);
         setChatStatus('thinking');     
-      } catch (searchError) {
+        if (controller.signal.aborted) {
+          console.log(`[${callId}] Web search was aborted (signal check post-await).`);
+          return;
+        }
+      } catch (searchError: any) {
         console.error(`[${callId}] Web search failed:`, searchError);
-        searchRes = ''; 
-        processedQueryDisplay += `[Web Search Failed: ${searchError instanceof Error ? searchError.message : String(searchError)}]`;
-        setChatStatus('idle');     
+        if (searchError.name === 'AbortError' || controller.signal.aborted) {
+          console.log(`[${callId}] Web search aborted. onStop handler will finalize UI.`);
+          return;
+        } else {
+          searchRes = '';
+          const errorMessage = `Web Search Failed: ${searchError instanceof Error ? searchError.message : String(searchError)}`;
+          setChatStatus('idle');     
+          updateAssistantTurn(callId, errorMessage, true, true, false);
+          return;
+        }
       }
-      console.log(`[${callId}] useSendMessage: Web search done. Length: ${searchRes.length}`);
+      console.log(`[${callId}] useSendMessage: Web search completed. Length: ${searchRes.length}`);
+      if (processedQueryDisplay) { 
+        setTurns(prevTurns => prevTurns.map(t => (t.role === 'assistant' && prevTurns[prevTurns.length -1] === t && t.status !== 'complete' && t.status !== 'error' && t.status !== 'cancelled') ? { ...t, webDisplayContent: processedQueryDisplay } : t));
+      }
     }
-
+    
     const messageToUse = performSearch ? queryForProcessing : message;
     const webLimit = 1000 * (config?.webLimit || 1);
     const limitedWebResult = webLimit && typeof searchRes === 'string'
       ? searchRes.substring(0, webLimit)
       : searchRes;
-    const combinedWebContentDisplay = processedQueryDisplay;
     const webContentForLlm = config?.webLimit === 128 ? searchRes : limitedWebResult;
-    console.log(`[${callId}] useSendMessage: Web content prepared for display.`);
 
     const messageForApi: ApiMessage[] = currentTurns
       .map((turn): ApiMessage => ({
@@ -343,7 +364,7 @@ const useSendMessage = (
         : safeCurrentPageContent;
       pageContentForLlm = config?.contextLimit === 128 ? safeCurrentPageContent : limitedContent;
       setPageContent(pageContentForLlm || '');
-      setChatStatus('thinking'); // After reading page, before main LLM call      
+      setChatStatus('thinking');     
       console.log(`[${callId}] Page content prepared for LLM. Length: ${pageContentForLlm?.length}`);
     } else {
       setPageContent('');
@@ -384,16 +405,6 @@ const useSendMessage = (
     const systemContent = systemPromptParts.join('\n\n').trim();
 
     console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx: ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}`)
-
-    const assistantTurnPlaceholder: MessageTurn = {
-      role: 'assistant',
-      rawContent: '',
-      status: 'streaming',
-      webDisplayContent: combinedWebContentDisplay,
-      timestamp: Date.now() + 1
-    };
-    setTurns(prevTurns => [...prevTurns, assistantTurnPlaceholder]);
-    console.log(`[${callId}] useSendMessage: Assistant placeholder turn added.`);
 
     // --- Step 4: Execute based on Compute Level ---
     try {
@@ -439,8 +450,14 @@ const useSendMessage = (
         const url = urlMap[host];
 
         if (!url) {
-          throw new Error(`Could not determine API URL for host: ${currentModel.host}`);
+          updateAssistantTurn(callId, `Configuration error: Could not determine API URL for host '${currentModel.host}'.`, true, true);
+          return;
         }
+        const messagesForApiPayload: ApiMessage[] = [];
+        if (systemContent.trim() !== '') {
+          messagesForApiPayload.push({ role: 'system', content: systemContent });
+        }
+        messagesForApiPayload.push(...messageForApi);
 
         console.log(`[${callId}] useSendMessage: Sending chat request to ${url} with system prompt: "${systemContent}"`); // Log the system prompt
         await fetchDataAsStream(
@@ -448,10 +465,7 @@ const useSendMessage = (
           {
             ...configBody,
             model: config?.selectedModel || '',
-            messages: [
-              { role: 'system', content: systemContent },
-              ...messageForApi
-            ],
+            messages: messagesForApiPayload,
             temperature: config?.temperature ?? 0.7,
             max_tokens: config?.maxTokens ?? 32048,
             top_p: config?.topP ?? 1,

@@ -1,7 +1,7 @@
 {
   "name": "cognito",
   "displayName": "Cognito - AI Sidekick",
-  "version": "3.6.7",
+  "version": "3.6.8",
   "description": "Cognito uses AI to interpret your needs, letting you guide, query, and control your Chrome browser through natural interaction.",
   "main": "index.js",
   "scripts": {
@@ -83,14 +83,14 @@
     "tailwind-scrollbar": "^4.0.2",
     "tailwind-scrollbar-hide": "^4.0.0",
     "tailwindcss": "^4.1.8",
-    "tw-animate-css": "^1.3.2",
+    "tw-animate-css": "^1.3.3",
     "webext-redux": "^4.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
     "@stylistic/eslint-plugin-ts": "^4.4.0",
     "@tailwindcss/postcss": "^4.1.8",
-    "@types/chrome": "^0.0.325",
+    "@types/chrome": "^0.0.326",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.28.0",
