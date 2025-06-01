@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FiTrash2 } from 'react-icons/fi';
+import { GoTrash, GoSearch } from "react-icons/go";
 import localforage from 'localforage';
 import { Input } from '@/components/ui/input';
 
@@ -219,13 +219,16 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
   return (
     <div className={rootComputedClassName}>
        <div className="p-0">
-        <Input
-          type="text"
-          placeholder="Search chat history (titles & content)..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          className="w-full bg-background rounded-none text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace]"
-        />
+        <div className="relative">
+          <Input
+            type="text"
+            placeholder="Search chat history (titles & content)..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="w-full bg-background rounded-none text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10"
+          />
+          <GoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        </div>
       </div>     
       <ScrollArea
         className="flex-1 w-full min-h-0"
@@ -256,7 +259,7 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
                     </button>
                     <motion.div className={`shrink-0 transition-opacity duration-150 ${hoverId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} whileHover={{ rotate: '15deg' }} onMouseEnter={() => setRemoveId(message.id)} onMouseLeave={() => setRemoveId(null)}>
                       <Button variant="ghost" size="sm" aria-label="Delete chat" className="rounded-full w-8 h-8 font-['Space_Mono',_monospace]" onClick={(e) => { e.stopPropagation(); deleteMessage(message.id); }}>
-                        <FiTrash2 className="h-4 w-4 text-foreground" />
+                        <GoTrash className="h-4 w-4 text-foreground" />
                       </Button>
                     </motion.div>
                   </div>
