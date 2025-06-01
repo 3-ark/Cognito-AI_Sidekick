@@ -39,7 +39,7 @@ export const Settings = () => {
               </div>
               <div className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--active)] flex items-center justify-center">2</span>
-                <p>Exit settings, then click the avatar icon to select your model to chat with</p>
+                <p>Exit settings, then click the avatar icon to select your model to chat with. You can set username in the top right corner.</p>
               </div>
               <div className="text-sm text-[var(--mute)] mt-1 ml-9">
                 <em>Note: You can change the other settings now or later. Have fun!</em>
