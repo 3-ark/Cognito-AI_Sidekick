@@ -114,7 +114,7 @@ const PersonaModal = ({
             onChange={e => setName(e.target.value)}
             className={cn(
               "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-              "hover:border-[var(--active)] hover:brightness-98"
+              "hover:border-[var(--active)] hover:brightness-98",
             )}
           />
         </div>
@@ -246,6 +246,7 @@ const PersonaTextareaWrapper = ({
       }}
       readOnly={!isEditing}
       {...onFocusProp}
+      data-slot="textarea-default"
       placeholder="Define the persona's characteristics and instructions here..."
       className={cn(
         "w-full min-h-[80px] border border-[var(--text)]/10 px-3 py-2 text-sm ring-offset-[var(--bg)] placeholder:text-[var(--muted-foreground)] rounded-[12px]",

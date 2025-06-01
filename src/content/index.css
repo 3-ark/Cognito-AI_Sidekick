@@ -277,21 +277,21 @@ white-space: pre-wrap;
 }
 
 /* Customizing scrollbar within elements (override by the previous setting */
-.markdown-body pre, textarea.autosize-textarea::-webkit-scrollbar {
+.markdown-body pre, textarea[data-slot="textarea-autosize"]::-webkit-scrollbar {
     width: auto;
     height: auto;
 }
 
-.markdown-body pre, textarea.autosize-textarea::-webkit-scrollbar-thumb {
+.markdown-body pre, textarea[data-slot="textarea-autosize"]::-webkit-scrollbar-thumb {
     background-color: var(--border);
     border-radius: 0px;
 }
 
-.markdown-body pre, textarea.autosize-textarea::-webkit-scrollbar-track {
+.markdown-body pre, textarea[data-slot="textarea-autosize"]::-webkit-scrollbar-track {
     background-color: transparent;
 }
 
-.markdown-body pre, textarea.autosize-textarea {
+.markdown-body pre, textarea[data-slot="textarea-autosize"] {
     scrollbar-width: thin;
 }
 

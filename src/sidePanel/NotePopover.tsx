@@ -85,10 +85,11 @@ export const NotePopover = () => {
           <div>
             <Textarea
               id="note-popover-textarea"
+              data-slot="textarea-autosize"
               value={editableNote}
               onChange={(e) => setEditableNote(e.target.value)}
               placeholder="Persistent notes for the AI..."
-              className="mt-1 min-h-[150px] bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+              className="mt-1 min-h-[150px] max-h-[455px] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
               rows={8}
             />
           </div>
