@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiTrash2 } from 'react-icons/fi';
-import { PiShareFat } from "react-icons/pi";
-import { TbReload } from "react-icons/tb";
+import { FiX, FiTrash2, FiShare, FiChevronLeft } from 'react-icons/fi';
+import { TbReload, TbJson } from "react-icons/tb";
 import { useConfig } from './ConfigContext';
 import { cn } from "@/src/background/util";
 import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import { SettingsSheet } from './SettingsSheet';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,12 +22,8 @@ import {
 } from "@/components/ui/avatar";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { IoChevronBack } from "react-icons/io5";
-import { RxAvatar } from "react-icons/rx";
-import { CiText, CiImageOn } from "react-icons/ci";
-import { TbJson } from "react-icons/tb";
-import { IoFingerPrint } from "react-icons/io5";
-import { AiOutlineFileMarkdown } from "react-icons/ai";
+import { IoFingerPrint, IoPerson, IoImageOutline, IoTextOutline } from "react-icons/io5";
+import { BsFiletypeMd } from "react-icons/bs";
 
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
 import { personaImages } from './constants';
@@ -368,7 +356,6 @@ export const Header: React.FC<HeaderProps> = ({
                 {leftButtonLabel}
               </TooltipContent>
             </Tooltip>
-            {/* Name and status are NOT hoverable, just next to avatar */}
             {!showBackButton && (
               <div className="flex flex-col justify-center ml-1">
                 <span className="text-[13px] font-medium text-[var(--text)] leading-tight">
@@ -447,7 +434,7 @@ export const Header: React.FC<HeaderProps> = ({
                           size="sm"
                           className="text-[var(--text)] rounded-md"
                         >
-                          <PiShareFat size="18px" />
+                          <FiShare size="18px" />
                         </Button>
                       </DropdownMenuPrimitive.Trigger>
                     </TooltipTrigger>
@@ -471,7 +458,7 @@ export const Header: React.FC<HeaderProps> = ({
                         )}
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
-                        <RxAvatar className="mr-auto h-4 w-4" />
+                        <IoPerson  className="mr-auto h-4 w-4" />
                         Edit Profile
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
@@ -487,7 +474,7 @@ export const Header: React.FC<HeaderProps> = ({
                             "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                           )}
                         >
-                        <IoChevronBack className="mr-auto h-4 w-4" />
+                        <FiChevronLeft className="mr-auto h-4 w-4" />
                           Export Chat
                         </DropdownMenuPrimitive.SubTrigger>
                         <DropdownMenuPrimitive.Portal>
@@ -503,14 +490,14 @@ export const Header: React.FC<HeaderProps> = ({
                               className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadMarkdown}
                             >
-                            <AiOutlineFileMarkdown className="mr-auto h-4 w-4" />
+                            <BsFiletypeMd className="mr-auto h-4 w-4" />
                               .md
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
                               className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadText}
                             >
-                            <CiText className="mr-auto h-4 w-4" />
+                            <IoTextOutline className="mr-auto h-4 w-4" />
                               .txt
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
@@ -524,7 +511,7 @@ export const Header: React.FC<HeaderProps> = ({
                               className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadImage}
                             >
-                            <CiImageOn className="mr-auto h-4 w-4" />
+                            <IoImageOutline className="mr-auto h-4 w-4" />
                               .png
                             </DropdownMenuPrimitive.Item>
                           </DropdownMenuPrimitive.SubContent>
