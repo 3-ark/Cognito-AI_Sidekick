@@ -130,7 +130,6 @@ async function injectBridge() {
   const [tab] = await chrome.tabs.query(queryOptions);
 
   if (!tab?.id || tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://') || tab.url?.startsWith('about:')) { // Added about:
-    console.debug('[Cognito:] Skipping injection for restricted URL:', tab?.url);
     storage.deleteItem('pagestring');
     storage.deleteItem('pagehtml');
     storage.deleteItem('alttexts');
@@ -138,16 +137,12 @@ async function injectBridge() {
     return;
   }
 
-  console.debug(`[Cognito:] Attempting injection into tab ${tab.id} (${tab.url})`);
-
   storage.deleteItem('pagestring');
   storage.deleteItem('pagehtml');
   storage.deleteItem('alttexts');
   storage.deleteItem('tabledata');
-  console.debug('[Cognito:] Cleared previous page content from storage.');
 
   try {
-    console.debug('[Cognito:] Executing bridge function...');
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: bridge
@@ -172,19 +167,11 @@ async function injectBridge() {
         return;
     }
 
-    console.debug('[Cognito:] Bridge function parsed result:', {
-        title: res?.title,
-        textLength: res?.text?.length,
-        htmlLength: res?.html?.length
-    });
-    console.log(`[Cognito:] Extracted Content: Text=${res?.text?.length}, HTML=${res?.html?.length}`);
-
     try {
       storage.setItem('pagestring', res?.text ?? '');
       storage.setItem('pagehtml', res?.html ?? '');
       storage.setItem('alttexts', res?.altTexts ?? '');
       storage.setItem('tabledata', res?.tableData ?? '');
-      console.debug('[Cognito:] Stored extracted content.');
     } catch (storageError) {
         console.error('[Cognito:] Storage error after successful extraction:', storageError);
         storage.deleteItem('pagestring');
@@ -295,13 +282,11 @@ const Cognito = () => {
       if (!tab?.id || !tab.url) return;
 
       if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
-          console.log(`[Cognito ] Active tab is restricted (${tab.url}). Skipping injection.`);
           if (lastInjectedRef.current.id !== tab.id || lastInjectedRef.current.url !== tab.url) {
               storage.deleteItem('pagestring');
               storage.deleteItem('pagehtml');
               storage.deleteItem('alttexts');
               storage.deleteItem('tabledata');
-              console.log("[Cognito ] Cleared storage due to restricted tab activation/update.");
           }
           lastInjectedRef.current = { id: tab.id, url: tab.url };
           setCurrentTabInfo({ id: tab.id, url: tab.url });
@@ -309,19 +294,16 @@ const Cognito = () => {
       }
 
       if (tab.id !== lastInjectedRef.current.id || tab.url !== lastInjectedRef.current.url) {
-        console.log(`[Cognito ] Tab changed or updated. Old: ${lastInjectedRef.current.id}/${lastInjectedRef.current.url}, New: ${tab.id}/${tab.url}. Re-injecting bridge.`);
         lastInjectedRef.current = { id: tab.id, url: tab.url };
         setCurrentTabInfo({ id: tab.id, url: tab.url });
         await injectBridge();
       } else {
-        console.log(`[Cognito ] Tab activated/updated, but ID and URL match last injection. Skipping bridge injection.`);
       }
     };
 
     checkAndInject();
 
     const handleTabActivated = (activeInfo: chrome.tabs.TabActiveInfo) => {
-      console.log(`[Cognito ] Tab activated: tabId ${activeInfo.tabId}`);
       chrome.tabs.get(activeInfo.tabId, (tab) => {
         if (chrome.runtime.lastError) {
           console.warn(`[Cognito ] Error getting tab info on activation: ${chrome.runtime.lastError.message}`);
@@ -333,7 +315,6 @@ const Cognito = () => {
 
     const handleTabUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
       if (tab.active && (changeInfo.status === 'complete' || (changeInfo.url && tab.status === 'complete'))) {
-         console.log(`[Cognito ] Active tab updated: tabId ${tabId}, status: ${changeInfo.status}, url changed: ${!!changeInfo.url}`);
          checkAndInject();
       }
     };
@@ -342,7 +323,6 @@ const Cognito = () => {
     chrome.tabs.onUpdated.addListener(handleTabUpdated);
 
     return () => {
-      console.log("[Cognito ] Cleaning up tab listeners for 'page' mode.");
       chrome.tabs.onActivated.removeListener(handleTabActivated);
       chrome.tabs.onUpdated.removeListener(handleTabUpdated);
       lastInjectedRef.current = { id: null, url: '' };
@@ -403,7 +383,6 @@ const Cognito = () => {
   useUpdateModels();
 
   const reset = () => {
-    console.log("[Cognito ] Resetting chat state.");
     setTurns([]);
     setPageContent('');
     setWebContent('');
@@ -423,11 +402,9 @@ const Cognito = () => {
       const last = prevTurns[prevTurns.length - 1];
       const secondLast = prevTurns[prevTurns.length - 2];
       if (last.role === 'assistant' && secondLast.role === 'user') {
-        console.log("[Cognito ] Reloading last user message.");
         setMessage(secondLast.rawContent);
         return prevTurns.slice(0, -2);
       }
-      console.log("[Cognito ] Cannot reload, conditions not met.");
       return prevTurns;
     });
     setLoading(false);
@@ -435,7 +412,6 @@ const Cognito = () => {
   };
 
   const loadChat = (chat: ChatMessage) => {
-    console.log(`[Cognito ] Loading chat ${chat.id}`);
     setChatTitle(chat.title || '');
     setTurns(chat.turns);
     setChatId(chat.id);
@@ -467,7 +443,6 @@ const Cognito = () => {
   }
 
   const deleteAll = async () => {
-    console.log("[Cognito ] Deleting all chat history from localforage.");
     try {
         const keys = await localforage.keys();
         const chatKeys = keys.filter(key => key.startsWith('chat_'));
@@ -494,7 +469,6 @@ const Cognito = () => {
         useNoteActive: config?.useNote,
         noteContentUsed: config?.useNote ? config.noteContent : undefined,
       };
-      console.log(`[Cognito ] Saving chat ${chatId} (Turns: ${turns.length})`);
       localforage.setItem(chatId, savedChat).catch(err => {
         console.error(`[Cognito ] Error saving chat ${chatId}:`, err);
       });
@@ -515,7 +489,6 @@ const Cognito = () => {
 
     const handlePanelOpen = async () => {
       if (cancelled) return;
-      console.log("[Cognito - Revised] Panel opened. Resetting state.");
       reset();
 
       try {
@@ -524,17 +497,14 @@ const Cognito = () => {
             setCurrentTabInfo({ id: tab.id, url: tab.url });
 
             if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
-                console.log("[Cognito - Revised] Panel opened on restricted tab. Clearing storage.");
                 storage.deleteItem('pagestring');
                 storage.deleteItem('pagehtml');
                 storage.deleteItem('alttexts');
                 storage.deleteItem('tabledata');
                 lastInjectedRef.current = { id: null, url: '' };
             } else {
-                console.log("[Cognito - Revised] Panel opened on valid tab. Injection will occur if mode switched to 'page'. lastInjectedRef is currently:", lastInjectedRef.current);
             }
         } else if (!cancelled) {
-            console.log("[Cognito - Revised] Panel opened, but no active tab found or tab has no URL.");
             lastInjectedRef.current = { id: null, url: '' };
             setCurrentTabInfo({ id: null, url: '' });
             storage.deleteItem('pagestring');
@@ -559,7 +529,6 @@ const Cognito = () => {
 
     return () => {
       cancelled = true;
-      console.log("[Cognito - Revised] Panel closing (component unmount). Clearing cached content and resetting state.");
       storage.deleteItem('pagestring');
       storage.deleteItem('pagehtml');
       storage.deleteItem('alttexts');

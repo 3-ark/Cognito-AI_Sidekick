@@ -8,7 +8,6 @@ import ChannelNames from '../types/ChannelNames';
       window.location.protocol === 'chrome:' ||
       window.location.protocol === 'chrome-extension:'
     ) {
-      console.debug('Skipping restricted URL:', window.location.protocol);
       return;
     }
 
@@ -18,10 +17,8 @@ import ChannelNames from '../types/ChannelNames';
       await store.ready();
       store.dispatch(contentLoaded());
     } catch (initError) {
-      console.debug('Store initialization error:', initError);
     }
   } catch (err) {
-    console.debug('Content script error:', err);
   }
 })();
 

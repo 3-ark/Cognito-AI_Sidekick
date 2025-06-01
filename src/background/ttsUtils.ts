@@ -50,7 +50,6 @@ export const speakMessage = (
   }
 ) => {
   if (isCurrentlySpeaking() || window.speechSynthesis.pending) {
-    console.log("Stopping previous speech before starting new.");
     stopSpeech(); // Use the enhanced stopSpeech which handles callbacks
   }
 
@@ -73,13 +72,11 @@ export const speakMessage = (
   onResumeCallback = callbacks?.onResume || null;
 
   utterance.onstart = () => {
-    console.log('Speech started');
     currentUtterance = utterance; // Move this here to ensure it's set when speech actually starts
     if (onStartCallback) onStartCallback();
   };
 
   utterance.onend = () => {
-    console.log('Speech ended');
     if (currentUtterance === utterance) {
         currentUtterance = null;
         if (onEndCallback) onEndCallback();
@@ -88,12 +85,10 @@ export const speakMessage = (
   };
 
   utterance.onpause = () => {
-    console.log('Speech paused');
      if (currentUtterance === utterance && onPauseCallback) onPauseCallback();
   };
 
   utterance.onresume = () => {
-    console.log('Speech resumed');
      if (currentUtterance === utterance && onResumeCallback) onResumeCallback();
   };
 
@@ -113,7 +108,6 @@ export const stopSpeech = () => {
   if (!currentUtterance && !window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
     return;
   }
-  console.log('Stopping speech');
   const callback = onEndCallback; // Capture callback before clearing
   currentUtterance = null;
   currentText = '';
@@ -124,14 +118,12 @@ export const stopSpeech = () => {
   window.speechSynthesis.cancel(); // Stop speaking and clear queue
 
   if (callback) {
-    console.log('Manually triggering onEnd callback after stop.');
     callback();
   }
 };
 
 export const pauseSpeech = () => {
   if (currentUtterance && isCurrentlySpeaking() && !isSpeechPaused) {
-    console.log('Pausing speech');
     try {
       isSpeechPaused = true;
       window.speechSynthesis.pause();
@@ -149,7 +141,6 @@ export const pauseSpeech = () => {
 };
 
 export const resumeSpeech = () => {
-  console.log('Attempting to resume speech, isPaused:', isSpeechPaused);
   if (!isSpeechPaused) return;
 
   try {
