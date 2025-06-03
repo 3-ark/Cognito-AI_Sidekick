@@ -122,7 +122,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (content) {
       const filename = `cognito_note_${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
 
-      const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`;
+      const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(content)}`;
 
       chrome.downloads.download({
         url: dataUrl,

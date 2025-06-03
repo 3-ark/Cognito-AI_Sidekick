@@ -3,7 +3,6 @@ module.exports = [
   'storage',
   'sidePanel',
   'downloads',
-  'fileSystem',
   'scripting',
   'tabs',
   'declarativeNetRequest',
