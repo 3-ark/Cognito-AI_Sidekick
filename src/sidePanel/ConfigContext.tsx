@@ -40,6 +40,7 @@ const defaultConfig: Config = {
     preBg: '#eadbdb',
     preFg: '#c2e7b5',
     tableBorder: '#eadbdb',
+    mute: '#A9A9A9',
     error: '#af1b1b',
     warning: '#388e3c',
     success: '#7eaa6e',
@@ -108,7 +109,7 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
 
     const currentThemeName = config.theme || defaultConfig.theme!;
     const paperTextureEnabled = config.paperTexture ?? defaultConfig.paperTexture!;
-    let themeToApply: Config['customTheme'] | (typeof themes)[0];
+    let themeToApply: AppTheme;
 
     if (currentThemeName === 'custom') {
       const baseCustomOrDefault = themes.find(t => t.name === 'custom') || defaultConfig.customTheme!;
