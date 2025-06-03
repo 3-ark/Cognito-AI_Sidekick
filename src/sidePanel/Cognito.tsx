@@ -28,6 +28,8 @@ import { Messages } from './Messages';
 import { downloadImage, downloadJson, downloadText, downloadMarkdown } from '../background/messageUtils';
 import { Settings } from './Settings';
 import storage from '../background/storageUtil';
+import ChannelNames from '../types/ChannelNames';
+import { useAddToNote } from './hooks/useAddToNote';
 
 function bridge() {
 
@@ -365,6 +367,31 @@ const Cognito = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [config?.chatMode, updateConfig, settingsMode, historyMode]);
+  
+  const { appendToNote } = useAddToNote(); // Added for context menu
+
+  useEffect(() => {
+    console.log("[Cognito SidePanel] Setting up listener for background messages.");
+    const port = chrome.runtime.connect({ name: ChannelNames.SidePanelPort });
+
+    const messageListener = (message: any) => {
+      console.log("[Cognito SidePanel] Received message from background:", message);
+      if (message.type === "ADD_SELECTION_TO_NOTE" && message.payload) {
+        appendToNote(message.payload);
+      }
+    };
+
+    port.onMessage.addListener(messageListener);
+
+    port.postMessage({ type: 'init' });
+    console.log("[Cognito SidePanel] 'init' message sent to background.");
+
+    return () => {
+      console.log("[Cognito SidePanel] Disconnecting port and removing listener.");
+      port.onMessage.removeListener(messageListener);
+      port.disconnect();
+    };
+  }, [appendToNote]);
 
   const { chatTitle, setChatTitle } = useChatTitle(isLoading, turns, message);
   const { onSend, onStop } = useSendMessage(

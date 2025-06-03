@@ -4,5 +4,6 @@ module.exports = [
   'sidePanel',
   'scripting',
   'tabs',
-  'declarativeNetRequest'
+  'declarativeNetRequest',
+  'contextMenus'
 ];
