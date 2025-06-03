@@ -116,4 +116,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'SAVE_NOTE_TO_FILE' && request.payload) {
+    const { content } = request.payload;
+    if (content) {
+      const filename = `cognito_note_${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
+
+      const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`;
+
+      chrome.downloads.download({
+        url: dataUrl,
+        filename: filename,
+        saveAs: true
+      }, (downloadId) => {
+        if (chrome.runtime.lastError) {
+          console.error('Download failed:', chrome.runtime.lastError);
+        } else if (downloadId) {
+          console.log('Download started with ID:', downloadId);
+        }
+      });
+    }
+  }
+  return true;
+});
+
 export {};

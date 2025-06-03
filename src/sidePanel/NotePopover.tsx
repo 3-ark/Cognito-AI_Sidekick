@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -7,16 +7,19 @@ import { Label } from '@/components/ui/label';
 import { LuNotebookPen } from "react-icons/lu";
 import { toast } from 'react-hot-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { IoArchiveOutline } from "react-icons/io5";
 import { LuSpeech } from 'react-icons/lu';
 import { useConfig } from './ConfigContext';
 import { cn } from '@/src/background/util';
 import { speakMessage, stopSpeech } from '@/src/background/ttsUtils';
+import ChannelNames from '@/src/types/ChannelNames';
 
 export const NotePopover = () => {
   const { config, updateConfig } = useConfig();
   const [isOpen, setIsOpen] = useState(false);
   const [editableNote, setEditableNote] = useState(config.noteContent || '');
   const [isSpeakingNote, setIsSpeakingNote] = useState(false);
+  const noteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isOpen && config.noteContent !== editableNote) {
@@ -46,7 +49,17 @@ export const NotePopover = () => {
     toast.success('Note saved!');
   };
 
-  const handleClearNote = () => {
+  const handleSaveNoteToFile = () => {
+    // Send message to background to trigger file save
+    chrome.runtime.sendMessage({
+      type: 'SAVE_NOTE_TO_FILE',
+      payload: { content: editableNote },
+    });
+    toast.success('Note saved to file!');
+    setIsOpen(false); // Close the popover after saving
+  };
+
+    const handleClearNote = () => {
     setEditableNote('');
     updateConfig({ noteContent: '' });
     toast('Note cleared');
@@ -160,11 +173,28 @@ export const NotePopover = () => {
                   className={cn(
                     "border-[var(--border)] text-[var(--text)]",
                     "text-xs px-2 py-1 h-auto w-16"
-                  )}
+                    )}
                   disabled={editableNote === (config.noteContent || '')}
                 >
                   Save
                 </Button>
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleSaveNoteToFile}
+                      disabled={!editableNote}
+                      className={cn(
+                        "border-[var(--border)] text-[var(--text)]",
+                        "text-xs px-2 py-1 h-auto w-10",
+                        editableNote ? "enabled" : "disabled"
+                      )}
+                    >
+                      <IoArchiveOutline size={16} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">Save to File</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>
