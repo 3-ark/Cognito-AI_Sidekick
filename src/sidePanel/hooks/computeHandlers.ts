@@ -1,6 +1,6 @@
 import { MessageTurn } from '../ChatHistory';
 import type { Config, Model } from 'src/types/config';
-import { processQueryWithAI } from '../network'; // Assuming processQueryWithAI is in network.ts
+import { processQueryWithAI } from '../network';
 
 // Delay between sub-queries in MS for Medium/High compute
 const SUB_QUERY_DELAY_MS = 1000;
