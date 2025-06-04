@@ -38,7 +38,7 @@ export const AddToChat = () => {
               className={cn(
                 "border-none shadow-none bg-transparent",
                 "hover:bg-[var(--text)]/10",
-                "hover:rounded-[8px_0_0_8px]", // Adds radius only to left corners
+                "hover:rounded-[8px_0_0_8px]",
                 "text-foreground",
                 "px-0 pl-2 h-9 w-fit",
                 "gap-0",
