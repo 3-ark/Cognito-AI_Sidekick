@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import localforage from 'localforage';
 import { TbWorldSearch, TbBrowserPlus, TbApi } from "react-icons/tb";
@@ -30,6 +30,7 @@ import { Settings } from './Settings';
 import storage from '../background/storageUtil';
 import ChannelNames from '../types/ChannelNames';
 import { useAddToNote } from './hooks/useAddToNote';
+import { NoteSystemView } from './NoteSystemView';
 
 function bridge() {
 
@@ -251,6 +252,7 @@ const Cognito = () => {
   const [settingsMode, setSettingsMode] = useState(false);
   const [historyMode, setHistoryMode] = useState(false);
   const { config, updateConfig } = useConfig();
+  const [noteSystemMode, setNoteSystemMode] = useState(false);
   const [currentTabInfo, setCurrentTabInfo] = useState<{ id: number | null, url: string }>({ id: null, url: '' });
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -259,6 +261,7 @@ const Cognito = () => {
   const [isPageActionsHovering, setIsPageActionsHovering] = useState(false);
   const [isWebSearchHovering, setIsWebSearchHovering] = useState(false);
   const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
+  const [triggerNoteCreation, setTriggerNoteCreation] = useState(false);
 
   const toastIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -335,7 +338,7 @@ const Cognito = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
 
       // Don't trigger shortcuts if settings or history mode is active
-      if (settingsMode || historyMode) {
+      if (settingsMode || historyMode || noteSystemMode) {
         return;
       }
 
@@ -420,7 +423,11 @@ const Cognito = () => {
     setChatTitle('');
     setChatId(generateChatId());
     setHistoryMode(false);
-    setSettingsMode(false);
+    setSettingsMode(false); 
+    setNoteSystemMode(false);
+    if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+    }
   };
 
   const onReload = () => {
@@ -484,7 +491,7 @@ const Cognito = () => {
   };
 
   useEffect(() => {
-    if (turns.length > 0 && !historyMode && !settingsMode) {
+    if (turns.length > 0 && !historyMode && !settingsMode && !noteSystemMode) {
       const savedChat: ChatMessage = {
         id: chatId,
         title: chatTitle || `Chat ${new Date(Date.now()).toLocaleString()}`,
@@ -565,6 +572,10 @@ const Cognito = () => {
     };
   }, []);
 
+  const handleNoteModalOpened = useCallback(() => {
+    setTriggerNoteCreation(false);
+  }, []);
+
   const handleEditTurn = (index: number, newContent: string) => {
     setTurns(prevTurns => {
       const updatedTurns = [...prevTurns];
@@ -596,15 +607,18 @@ const Cognito = () => {
             setHistoryMode={setHistoryMode}
             setSettingsMode={setSettingsMode}
             settingsMode={settingsMode}
+            noteSystemMode={noteSystemMode}
+            onAddNewNoteRequest={noteSystemMode ? () => setTriggerNoteCreation(true) : undefined}
+            setNoteSystemMode={setNoteSystemMode}
             chatMode={(config?.chatMode as ChatMode) || 'chat'}
             chatStatus={chatStatus}
           />
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto relative">
           {settingsMode && (
             <Settings />
           )}
 
-          {!settingsMode && historyMode && (
+          {!settingsMode && historyMode && !noteSystemMode && (
             <ChatHistory
               className="flex-1 w-full min-h-0"
               loadChat={loadChat}
@@ -612,9 +626,16 @@ const Cognito = () => {
             />
           )}
 
-          {!settingsMode && !historyMode && (
+          {!settingsMode && !historyMode && noteSystemMode && (
+            <NoteSystemView
+              triggerOpenCreateModal={triggerNoteCreation}
+              onModalOpened={handleNoteModalOpened}
+              // Pass config and updateConfig if NoteSystemView needs them directly
+            />
+          )}
+
+          {!settingsMode && !historyMode && !noteSystemMode && (
             <div className="flex flex-col flex-1 min-h-0 relative">
-            {!settingsMode && !historyMode && turns.length > 0 && (
                   <Messages
                     isLoading={isLoading}
                     turns={turns}
@@ -622,7 +643,6 @@ const Cognito = () => {
                     onReload={onReload}
                     onEditTurn={handleEditTurn}
                   />
-                )}
             {turns.length === 0 && !config?.chatMode && (
               (<div className="fixed bottom-20 left-8 flex flex-col gap-2 z-[5]">
                 <Tooltip>
@@ -780,7 +800,7 @@ const Cognito = () => {
             </div>
           )}
         </div>
-        {!settingsMode && !historyMode && (
+        {!settingsMode && !historyMode && !noteSystemMode && (
           <div className="p-2 relative z-[10]">
             <Input
               isLoading={isLoading}

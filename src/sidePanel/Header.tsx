@@ -6,23 +6,16 @@ import { cn } from "@/src/background/util";
 import { toast } from 'react-hot-toast';
 import { Button } from "@/components/ui/button";
 import { SettingsSheet } from './SettingsSheet';
+import { NoteSystemView } from './NoteSystemView';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { IoFingerPrint, IoPerson, IoImageOutline, IoTextOutline } from "react-icons/io5";
+import { GoPlus } from "react-icons/go";
 import { BsFiletypeMd } from "react-icons/bs";
 
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
@@ -202,6 +195,8 @@ interface HeaderProps {
   setSettingsMode: (mode: boolean) => void;
   historyMode: boolean;
   setHistoryMode: (mode: boolean) => void;
+  noteSystemMode: boolean;
+  setNoteSystemMode: (mode: boolean) => void;
   deleteAll: () => void | Promise<void>;
   reset: () => void;
   downloadImage: () => void;
@@ -210,6 +205,7 @@ interface HeaderProps {
   downloadMarkdown: () => void;
   chatMode: ChatMode;
   chatStatus: ChatStatus;
+  onAddNewNoteRequest?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -218,6 +214,8 @@ export const Header: React.FC<HeaderProps> = ({
   setSettingsMode,
   historyMode,
   setHistoryMode,
+  noteSystemMode,
+  setNoteSystemMode,
   deleteAll,
   reset,
   downloadImage,
@@ -226,22 +224,24 @@ export const Header: React.FC<HeaderProps> = ({
   downloadMarkdown,
   chatMode,
   chatStatus,
+  onAddNewNoteRequest,
 }) => {
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const currentPersona = config?.persona || 'default';
   const personaImageSrc = personaImages[currentPersona] || personaImages.default;
 
-  const visibleTitle = chatTitle && !settingsMode && !historyMode;
+  const visibleTitle = chatTitle && !settingsMode && !historyMode && !noteSystemMode;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const handleSheetOpenChange = (open: boolean) => {setIsSheetOpen(open);}
 
-  const showBackButton = settingsMode || historyMode;
+  const showBackButton = settingsMode || historyMode || noteSystemMode;
 
   const handleLeftButtonClick = () => {
     if (showBackButton) {
       setSettingsMode(false);
       setHistoryMode(false);
+      setNoteSystemMode(false);
     } else {
       setIsSheetOpen(true);
     }
@@ -378,7 +378,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {chatTitle}
               </p>
             )}
-            {!visibleTitle && !historyMode && !settingsMode && (
+            {!visibleTitle && !historyMode && !settingsMode && !noteSystemMode && (
               <Badge>
                   {config?.selectedModel || 'No Model Selected'}
               </Badge>
@@ -397,11 +397,18 @@ export const Header: React.FC<HeaderProps> = ({
                 </p>
               </div>
             )}
+            {noteSystemMode && (
+              <div className="flex items-center justify-center">
+                <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
+                  Note System
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Right Button Area */}
           <div className={cn("flex justify-end items-center min-h-10", rightSideContainerWidthClass)}>
-            {!settingsMode && !historyMode && (
+            {!settingsMode && !historyMode && !noteSystemMode && (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -540,10 +547,28 @@ export const Header: React.FC<HeaderProps> = ({
                 </TooltipContent>
               </Tooltip>
             )}
+            {noteSystemMode && onAddNewNoteRequest && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    aria-label="Add New Note"
+                    variant="ghost"
+                    size="sm"
+                    className="text-[var(--text)] rounded-md"
+                    onClick={onAddNewNoteRequest}
+                  >
+                    <GoPlus size="18px" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
+                  Add New Note
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
-        {(!config?.models || config.models.length === 0) && !settingsMode && !historyMode && (
+        {(!config?.models || config.models.length === 0) && !settingsMode && !historyMode && !noteSystemMode && (
            <WelcomeModal isOpen={true} setSettingsMode={setSettingsMode} onClose={() => {}} />
         )}
 
@@ -554,6 +579,7 @@ export const Header: React.FC<HeaderProps> = ({
           updateConfig={updateConfig}
           setSettingsMode={setSettingsMode}
           setHistoryMode={setHistoryMode}
+          setNoteSystemMode={setNoteSystemMode}
         />
 
         <EditProfileDialog

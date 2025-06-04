@@ -72,6 +72,7 @@ export interface SettingsSheetProps {
   updateConfig: (newConfig: Partial<Config>) => void;
   setSettingsMode: (mode: boolean) => void;
   setHistoryMode: (mode: boolean) => void;
+  setNoteSystemMode: (mode: boolean) => void;
 }
 
 export const SettingsSheet: React.FC<SettingsSheetProps> = ({
@@ -81,6 +82,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   updateConfig,
   setSettingsMode,
   setHistoryMode,
+  setNoteSystemMode,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [inputFocused, setInputFocused] = React.useState(false);
@@ -120,6 +122,11 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
 
   const handleHistoryClick = () => {
     setHistoryMode(true);
+    onOpenChange(false);
+  };
+
+  const handleNoteSystemClick = () => {
+    setNoteSystemMode(true);
     onOpenChange(false);
   };
 
@@ -218,7 +225,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     "text-xl font-semibold text-[var(--text)] bg-[var(--active)] inline-block px-3 py-1 rounded-md no-underline",
                     "cognito-title-blade-glow"
                   )}>
-                 COGNITO <sub className="contrast-200 text-[0.5em]">v3.6</sub>
+                 COGNITO <sub className="contrast-200 text-[0.5em]">v3.7</sub>
                </a>
              </SheetTitle>
              <SheetDescription className="text-center font-['Bruno_Ace_SC'] text-[var(--text)] leading-tight mt-2">
@@ -382,7 +389,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         "font-['Space_Mono',_monospace]",
                         "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95",
                         "focus:ring-1 focus:ring-[var(--active)]",
-                        "mb-3",
+                        "mb-4",
                       )}
                     >
                       Configuration
@@ -397,10 +404,25 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         "font-['Space_Mono',_monospace]",
                         "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95",
                         "focus:ring-1 focus:ring-[var(--active)]",
-                        "mb-3 mt-3",
+                        "mb-4 mt-3",
                        )}
                     >
                       Chat History
+                    </Button>
+                    <Button
+                       variant="outline"
+                       size="default" onClick={handleNoteSystemClick}
+                       className={cn(
+                        "text-[var(--text)] rounded-xl shadow-md w-full justify-start font-medium h-9",
+                        "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]",
+                        "border-[var(--text)]/10",
+                        "font-['Space_Mono',_monospace]",
+                        "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95",
+                        "focus:ring-1 focus:ring-[var(--active)]",
+                        "mb-4 mt-3",
+                       )}
+                    >
+                      Note System
                     </Button>
                  </div>
               </div>

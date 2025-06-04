@@ -12,6 +12,7 @@ import { useConfig } from './ConfigContext';
 import { cn } from '@/src/background/util';
 import { speakMessage, stopSpeech } from '@/src/background/ttsUtils';
 import ChannelNames from '@/src/types/ChannelNames';
+import { saveNoteInSystem } from '../background/noteStorage';
 
 export const NotePopover = () => {
   const { config, updateConfig } = useConfig();
@@ -47,13 +48,25 @@ export const NotePopover = () => {
     toast.success('Note saved!');
   };
 
-  const handleSaveNoteToFile = () => {
+  const handleSaveNoteToFile = async () => {
     // Send message to background to trigger file save
     chrome.runtime.sendMessage({
       type: 'SAVE_NOTE_TO_FILE',
       payload: { content: editableNote },
     });
     toast.success('Note saved to file!');
+    // Also save to the note system as a new note
+    if (editableNote.trim()) {
+      try {
+        const timestamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const noteTitle = `Note from Popover - ${timestamp}`;
+        await saveNoteInSystem({ title: noteTitle, content: editableNote });
+        toast.success('Snapshot saved to Note System!');
+      } catch (error) {
+        console.error("Error saving note to system from popover:", error);
+        toast.error('Failed to save note to system.');
+      }
+    }
     setIsOpen(false); // Close the popover after saving
   };
 
