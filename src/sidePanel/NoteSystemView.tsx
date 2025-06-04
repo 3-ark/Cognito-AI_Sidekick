@@ -127,7 +127,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             {paginatedNotes.map(note => (
               <div
                 key={note.id}
-                className="px-2 border-b border-[var(--text)]/20 rounded-none hover:shadow-lg transition-shadow w-full"
+                className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
               >
                 <div className="flex justify-between items-center">
                   <h3 className="font-semibold text-md truncate">{note.title}</h3>
@@ -172,7 +172,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
           setIsCreateModalOpen(true);
         }
       }}>
-        <DialogContent className="bg-[var(--bg)] border-[var(--border)] text-[var(--text)]">
+        <DialogContent className="bg-[var(--bg)] border-[var(--text)]/10 text-[var(--text)]">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
           </DialogHeader>
@@ -181,13 +181,13 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
               placeholder="Note Title (optional)"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="bg-[var(--input-bg)] border-[var(--border)]"
+              className="bg-[var(--input-bg)] border-[var(--text)]/10"
             />
             <Textarea
               placeholder="Your note content..."
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              className="min-h-[200px] bg-[var(--input-bg)] border-[var(--border)]"
+              className="min-h-[200px] bg-[var(--input-bg)] border-[var(--text)]/10"
               rows={10}
             />
           </div>
