@@ -602,7 +602,7 @@ const Cognito = () => {
             chatMode={(config?.chatMode as ChatMode) || 'chat'}
             chatStatus={chatStatus}
           />
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto relative">
+        <div className="flex flex-col flex-1 min-h-0 no-scrollbar overflow-y-auto relative">
           {settingsMode && (
             <Settings />
           )}

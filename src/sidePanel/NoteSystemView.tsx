@@ -16,7 +16,7 @@ interface NoteSystemViewProps {
   onModalOpened: () => void;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 8; // Number of notes to display per page
 
 export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreateModal, onModalOpened }) => {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
@@ -101,7 +101,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg)] text-[var(--text)]">
+    <div className="flex flex-col h-full text-[var(--text)]">
       <div className="p-0">
         <div className="relative">
           <Input
@@ -127,7 +127,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             {paginatedNotes.map(note => (
               <div
                 key={note.id}
-                className="px-2 border-b border-[var(--text)]/20 rounded-none bg-[var(--card-bg)] hover:shadow-lg transition-shadow w-full"
+                className="px-2 border-b border-[var(--text)]/20 rounded-none hover:shadow-lg transition-shadow w-full"
               >
                 <div className="flex justify-between items-center">
                   <h3 className="font-semibold text-md truncate">{note.title}</h3>
