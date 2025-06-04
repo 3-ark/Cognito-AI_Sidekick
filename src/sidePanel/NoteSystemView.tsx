@@ -172,7 +172,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
           setIsCreateModalOpen(true);
         }
       }}>
-        <DialogContent className="bg-[var(--bg)] border-[var(--border)] text-[var(--text)]">
+        <DialogContent className="bg-[var(--bg)] border-[var(--text)]/10 text-[var(--text)]">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
           </DialogHeader>
