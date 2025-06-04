@@ -147,10 +147,22 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       </ScrollArea>
 
       {totalPages > 1 && (
-        <div className="p-2 border-t border-[var(--border)] flex justify-center items-center space-x-2">
-          <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Prev</Button>
-          <span>Page {currentPage} of {totalPages}</span>
-          <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next</Button>
+        <div className="flex justify-center items-center h-10 space-x-2 p-2 font-['Space_Mono',_monospace]">
+          <Button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            variant="ghost"
+            className="font-['Space_Mono',_monospace]"
+          >
+            Prev
+          </Button>
+          <span className="text-md">Page {currentPage} of {totalPages}</span>
+          <Button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            variant="ghost"
+            className="font-['Space_Mono',_monospace]"
+          >Next</Button>
         </div>
       )}
 
