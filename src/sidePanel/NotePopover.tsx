@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { LuNotebookPen } from "react-icons/lu";
+import { LuNotebookPen, LuSpeech } from "react-icons/lu";
 import { toast } from 'react-hot-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { IoArchiveOutline } from "react-icons/io5";
-import { LuSpeech } from 'react-icons/lu';
 import { useConfig } from './ConfigContext';
 import { cn } from '@/src/background/util';
 import { speakMessage, stopSpeech } from '@/src/background/ttsUtils';
@@ -19,7 +18,6 @@ export const NotePopover = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editableNote, setEditableNote] = useState(config.noteContent || '');
   const [isSpeakingNote, setIsSpeakingNote] = useState(false);
-  const noteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!isOpen && config.noteContent !== editableNote) {
