@@ -130,7 +130,7 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
   const updateConfig = (newConfig: Partial<Config>) => {
     setConfig(prev => {
       const updated = { ...prev, ...newConfig };
-      storage.setItem('config', updated).catch(err => 
+      storage.setItem('config', JSON.stringify(updated)).catch(err => 
         console.error("Failed to save config", err)
       );
       return updated;

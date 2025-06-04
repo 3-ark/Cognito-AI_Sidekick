@@ -11,7 +11,6 @@ import { IoArchiveOutline } from "react-icons/io5";
 import { useConfig } from './ConfigContext';
 import { cn } from '@/src/background/util';
 import { speakMessage, stopSpeech } from '@/src/background/ttsUtils';
-import ChannelNames from '@/src/types/ChannelNames';
 import { saveNoteInSystem } from '../background/noteStorage';
 
 export const NotePopover = () => {
@@ -49,7 +48,6 @@ export const NotePopover = () => {
   };
 
   const handleSaveNoteToFile = async () => {
-    // Send message to background to trigger file save
     chrome.runtime.sendMessage({
       type: 'SAVE_NOTE_TO_FILE',
       payload: { content: editableNote },
@@ -70,7 +68,7 @@ export const NotePopover = () => {
     setIsOpen(false); // Close the popover after saving
   };
 
-    const handleClearNote = () => {
+  const handleClearNote = () => {
     setEditableNote('');
     updateConfig({ noteContent: '' });
     toast('Note cleared');
@@ -112,7 +110,7 @@ export const NotePopover = () => {
                 )}
                 aria-label="Toggle/Edit Note"
               >
-                <LuNotebookPen className={cn("h-5 w-5", config.noteContent ? "text-[var(--active)]" : "text-inherit")} />
+                <LuNotebookPen className={cn("h-5 w-5", config.useNote ? "text-[var(--active)]" : "text-inherit")} />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
@@ -196,8 +194,8 @@ export const NotePopover = () => {
                       onClick={handleSaveNoteToFile}
                       disabled={!editableNote}
                       className={cn(
-                        "border-[var(--border)] text-[var(--text)]",
                         "text-xs px-2 py-1 h-auto w-10",
+                        // Consider removing "enabled" / "disabled" classes if relying on :disabled pseudo-selector
                         editableNote ? "enabled" : "disabled"
                       )}
                     >

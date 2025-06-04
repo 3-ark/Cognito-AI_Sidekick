@@ -22,11 +22,8 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ["selection"],
       enabled: false,
     }, () => {
-      if (chrome.runtime.lastError) {
+      if (chrome.runtime.lastError) 
         console.error("Error creating context menu:", chrome.runtime.lastError.message);
-      } else {
-        console.log("Context menu 'Add to Cognito Note' created (initially disabled).");
-      }
     });
   });
 });
@@ -34,7 +31,6 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === ADD_TO_NOTE_MENU_ID && sidePanelPortGlobal) {
     if (info.selectionText) {
-      console.log("Context menu 'Add to Cognito Note' clicked. Sending text to side panel.");
       sidePanelPortGlobal.postMessage({
         type: "ADD_SELECTION_TO_NOTE",
         payload: info.selectionText.trim()
@@ -47,7 +43,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onConnect.addListener(port => {
   if (port.name === ChannelNames.SidePanelPort) {
-    console.log("SidePanel connected. Enabling 'Add to Note' context menu.");
     sidePanelPortGlobal = port;
     chrome.contextMenus.update(ADD_TO_NOTE_MENU_ID, { enabled: true }, () => {
       if (chrome.runtime.lastError) {
@@ -86,7 +81,6 @@ chrome.runtime.onConnect.addListener(port => {
     });
 
     port.onDisconnect.addListener(() => {
-      console.log("SidePanel disconnected. Disabling 'Add to Note' context menu.");
       chrome.contextMenus.update(ADD_TO_NOTE_MENU_ID, { enabled: false }, () => {
         if (chrome.runtime.lastError) {
           console.warn("Error disabling context menu:", chrome.runtime.lastError.message);

@@ -371,14 +371,12 @@ const Cognito = () => {
     };
   }, [config?.chatMode, updateConfig, settingsMode, historyMode]);
   
-  const { appendToNote } = useAddToNote(); // Added for context menu
+  const { appendToNote } = useAddToNote();
 
   useEffect(() => {
-    console.log("[Cognito SidePanel] Setting up listener for background messages.");
     const port = chrome.runtime.connect({ name: ChannelNames.SidePanelPort });
 
     const messageListener = (message: any) => {
-      console.log("[Cognito SidePanel] Received message from background:", message);
       if (message.type === "ADD_SELECTION_TO_NOTE" && message.payload) {
         appendToNote(message.payload);
       }
@@ -387,10 +385,8 @@ const Cognito = () => {
     port.onMessage.addListener(messageListener);
 
     port.postMessage({ type: 'init' });
-    console.log("[Cognito SidePanel] 'init' message sent to background.");
 
     return () => {
-      console.log("[Cognito SidePanel] Disconnecting port and removing listener.");
       port.onMessage.removeListener(messageListener);
       port.disconnect();
     };
@@ -454,17 +450,10 @@ const Cognito = () => {
     setSettingsMode(false);
 
     const loadedConfigUpdate: Partial<Config> = {
-      // chatMode: chat.chatMode || undefined, 
-      // webMode: chat.webMode || config?.webMode, 
+      useNote: chat.useNoteActive ?? false, // Restore the 'useNote' state from saved chat
+      noteContent: chat.noteContentUsed || '',
     };
 
-    if (chat.useNoteActive && chat.noteContentUsed !== undefined) {
-      loadedConfigUpdate.useNote = true;
-      loadedConfigUpdate.noteContent = chat.noteContentUsed; 
-    } else {
-      loadedConfigUpdate.useNote = false;
-      loadedConfigUpdate.noteContent = ''; 
-    }
     updateConfig(loadedConfigUpdate);
 
     if (loadedConfigUpdate.chatMode !== 'page') {
@@ -509,8 +498,8 @@ const Cognito = () => {
     }
   }, [chatId, turns, chatTitle, config?.selectedModel, config?.chatMode, config?.webMode, config?.useNote, config?.noteContent, historyMode, settingsMode]);
 
-  useEffect(() => {
-    if (chatStatus === 'done') {
+   useEffect(() => {
+    if (chatStatus === 'done' || chatStatus === 'idle') {
       const timer = setTimeout(() => {
         setChatStatus('idle');
       }, 1500);

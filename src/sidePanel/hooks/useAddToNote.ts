@@ -26,7 +26,6 @@ export const useAddToNote = () => {
 
     updateConfig({
       noteContent: newNoteContent,
-      useNote: true, // Ensure 'useNote' is enabled when content is added
     });
 
     toast.success('Selected text appended to note.');
