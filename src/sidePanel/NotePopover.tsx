@@ -110,7 +110,7 @@ export const NotePopover = () => {
                 )}
                 aria-label="Toggle/Edit Note"
               >
-                <LuNotebookPen className={cn("h-5 w-5", config.useNote ? "text-[var(--active)]" : "text-inherit")} />
+                <LuNotebookPen />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
@@ -195,7 +195,6 @@ export const NotePopover = () => {
                       disabled={!editableNote}
                       className={cn(
                         "text-xs px-2 py-1 h-auto w-10",
-                        // Consider removing "enabled" / "disabled" classes if relying on :disabled pseudo-selector
                         editableNote ? "enabled" : "disabled"
                       )}
                     >
