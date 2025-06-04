@@ -153,9 +153,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             disabled={currentPage === 1}
             variant="ghost"
             className="font-['Space_Mono',_monospace]"
-          >
-            Prev
-          </Button>
+          >Prev</Button>
           <span className="text-md">Page {currentPage} of {totalPages}</span>
           <Button
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
