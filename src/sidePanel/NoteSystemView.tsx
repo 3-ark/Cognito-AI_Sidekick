@@ -130,7 +130,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             {paginatedNotes.map(note => (
               <div
                 key={note.id}
-                className="px-2 py-3 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
+                className="p-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
               >
                 <HoverCard openDelay={200} closeDelay={100}>
                   <div className="flex justify-between items-center">
@@ -140,48 +140,49 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                     <div className="flex-shrink-0">
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <LuEllipsis className="h-4 w-4" />
+                          <Button variant="ghost" size="sm">
+                            <LuEllipsis />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-40 bg-[var(--popover)] border-[var(--border)] text-[var(--popover-foreground)] p-1 space-y-1 shadow-md">
+                        <PopoverContent className="w-24 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
                           <Button
                             variant="ghost"
-                            className="w-full justify-start text-sm h-9 px-2 font-normal"
+                            className="w-full justify-start text-md h-8 px-2 font-normal"
                             onClick={() => openEditModal(note)}
                           >
-                            <GoPencil className="mr-2 h-4 w-4" />
+                            <GoPencil className="mr-2 size-4" />
                             Edit
                           </Button>
                           <Button
                             variant="ghost"
-                            className="w-full justify-start text-sm h-9 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                            className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
                             onClick={() => handleDeleteNote(note.id)}
                           >
-                            <GoTrash className="mr-2 h-4 w-4" />
+                            <GoTrash className="mr-2 size-4" />
                             Delete
                           </Button>
                         </PopoverContent>
                       </Popover>
                     </div>
                   </div>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                    Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm mt-1 line-clamp-1">{note.content}</p>
-
-                  <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--border)] text-[var(--popover-foreground)]" side="top" align="start">
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">Tags: (coming soon)</p>
+                  </div>
+                  <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--border)] text-[var(--popover-foreground)]" side="top" align="start" >
                     <div className="space-y-2">
-                      <h4 className="text-md font-semibold">{note.title}</h4>
+                      <h4 className="text-sm font-semibold">{note.title}</h4>
                       <p className="text-xs text-[var(--muted-foreground)]">
                         Date: {new Date(note.lastUpdatedAt).toLocaleString()}
                       </p>
-                      <p className="text-sm max-h-40 overflow-y-auto whitespace-pre-wrap break-words">
+                      <p className="text-sm max-h-40 overflow-y-auto whitespace-pre-wrap break-words thin-scrollbar">
                         {note.content}
                       </p>
                       <div className="border-t border-[var(--border)] pt-2 mt-2">
                           <p className="text-xs text-[var(--muted-foreground)]">Tags: (coming soon)</p>
-                      </div>
+                      </div> 
                     </div>
                   </HoverCardContent>
                 </HoverCard>
@@ -232,8 +233,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
               placeholder="Your note content..."
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              className="min-h-[200px] bg-[var(--input-bg)] border-[var(--text)]/10"
-              rows={10}
+              className="min-h-[30vh] max-h-[65vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 thin-scrollbar"
             />
           </div>
           <DialogFooter>

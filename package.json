@@ -1,7 +1,7 @@
 {
   "name": "cognito",
   "displayName": "Cognito - AI Sidekick",
-  "version": "3.7.0",
+  "version": "3.7.1",
   "description": "Cognito uses AI to interpret your needs, letting you guide, query, and control your Chrome browser through natural interaction.",
   "main": "index.js",
   "scripts": {
@@ -32,6 +32,7 @@
     "@radix-ui/react-collapsible": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-hover-card": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-navigation-menu": "^1.2.13",
     "@radix-ui/react-popover": "^1.1.14",

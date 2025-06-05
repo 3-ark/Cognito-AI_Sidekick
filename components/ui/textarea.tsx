@@ -26,7 +26,6 @@ function Textarea({
   if (autosize) {
     return (
       <AutosizeTextarea
-        data-slot="textarea-autosize"
         minRows={minRows}
         maxRows={maxRows}
         style={style}
@@ -35,6 +34,7 @@ function Textarea({
           "focus-visible:border-ring focus-visible:ring-ring/50",
           "field-sizing-content text-sm md:text-sm transition-[color,box-shadow] outline-none focus-visible:ring-[3px]",
           "disabled:cursor-not-allowed disabled:opacity-50",
+          "thin-scrollbar",
           className
         )}
         {...props}
