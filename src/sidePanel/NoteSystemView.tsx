@@ -19,7 +19,7 @@ interface NoteSystemViewProps {
   onModalOpened: () => void;
 }
 
-const ITEMS_PER_PAGE = 8; // Number of notes to display per page
+const ITEMS_PER_PAGE = 12; // Number of notes to display per page
 
 export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreateModal, onModalOpened }) => {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
@@ -130,7 +130,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             {paginatedNotes.map(note => (
               <div
                 key={note.id}
-                className="p-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
+                className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
               >
                 <HoverCard openDelay={200} closeDelay={100}>
                   <div className="flex justify-between items-center">
@@ -221,6 +221,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
         <DialogContent className="bg-[var(--bg)] border-[var(--text)]/10 text-[var(--text)]">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
+            <DialogDescription className="text-[var(--text)]/80 pt-1">
+              {editingNote ? 'Update the title or content of your note.' : 'Provide a title (optional) and content for your new note.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <Input
