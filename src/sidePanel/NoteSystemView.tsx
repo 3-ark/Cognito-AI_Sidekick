@@ -218,7 +218,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
           setIsCreateModalOpen(true);
         }
       }}>
-        <DialogContent className="bg-[var(--bg)] border-[var(--text)]/10 text-[var(--text)]">
+        <DialogContent className="bg-[var(--bg)] border-[var(--text)]/10  w-[80vw] text-[var(--text)]">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
             <DialogDescription className="text-[var(--text)]/80 pt-1">
@@ -236,7 +236,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
               placeholder="Your note content..."
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              className="min-h-[30vh] max-h-[60vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 thin-scrollbar"
+              className="min-h-[30vh] max-h-[60vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 resize-none thin-scrollbar"
+              rows={10}
             />
           </div>
           <DialogFooter>
