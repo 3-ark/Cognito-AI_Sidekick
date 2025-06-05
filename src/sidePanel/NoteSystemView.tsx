@@ -171,7 +171,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                     </p>
                     <p className="text-xs text-[var(--muted-foreground)]">Tags: (coming soon)</p>
                   </div>
-                  <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--border)] text-[var(--popover-foreground)]" side="top" align="start" >
+                  <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)]" side="top" align="start" >
                     <div className="space-y-2">
                       <h4 className="text-sm font-semibold">{note.title}</h4>
                       <p className="text-xs text-[var(--muted-foreground)]">
