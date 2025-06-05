@@ -237,7 +237,6 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               className="min-h-[30vh] max-h-[60vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 resize-none thin-scrollbar"
-              rows={10}
             />
           </div>
           <DialogFooter>

@@ -137,7 +137,6 @@ export const NotePopover = () => {
                 onChange={(e) => setEditableNote(e.target.value)}
                 placeholder="Persistent notes for the AI..."
                 className="mt-1 min-h-[30vh] max-h-[70vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
-                rows={8}
               />
             </div>
             <div className="flex justify-between items-center pt-1">
