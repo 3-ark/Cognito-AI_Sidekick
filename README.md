@@ -109,13 +109,46 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Evaluation and integration of community pull requests.
 *   **Enhanced Agent Capabilities:**
     *   "Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.
+    *   Autonomously invoke internal tools (like “save note”, “search note”, “summarize page”) without switching modes. Here’s how to pull it off: Adding a small tool-invoking agent layer; Capturing tool-friendly intent (few-shot or system prompt); Internally calling functions when confidence is high. [^1]
     *   Better websearch with [Deepsearch](https://github.com/google-gemini/gemini-fullstack-langgraph-quickstart)
     *   "Short-term Memory" (state management) for multi-step tasks within the same context (e.g., web search followed by page parsing and comparison). Note would be used for this.
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
 *   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
 *   Potential support for image and voice API interactions for multimodal capabilities.
 *   Change notes to link + hover card, add tags, change the dustbin to ...+dropdownmenu/context menu/menu
+*   A hybrid RAG system starting with BM25 is smart for speed and local search. [wink-bm25-text-search](https://github.com/winkjs/wink-bm25-text-search) – fast, no dependencies, lightweight
 
+```
+const bm25 = require('wink-bm25-text-search')();
+bm25.defineConfig({ fldWeights: { title: 1, content: 2 } });
+
+bm25.definePrepTasks([
+  // optional: tokenize, lowercase, remove stopwords
+]);
+
+// Add documents (your notes)
+bm25.addDoc({ title: "Page summary", content: "..." }, docId);
+
+// Search
+const results = bm25.search("keyword or phrase");
+```
+
+[^1]: 
+```
+const userPrompt = "Summarize this page and save to my notes";
+
+const tools = [
+  { name: "saveNote", description: "Save text content to note system" },
+  ...
+];
+
+const res = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [...],
+  tools,
+  tool_choice: "auto"
+});
+```
 
 *(This section will be regularly updated based on project progress)*
 
