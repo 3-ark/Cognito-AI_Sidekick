@@ -116,6 +116,22 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
 *   Potential support for image and voice API interactions for multimodal capabilities.
 *   Change notes to link + hover card, add tags, change the dustbin to ...+dropdownmenu/context menu/menu
+*   A hybrid RAG system starting with BM25 is smart for speed and local search. [wink-bm25-text-search](https://github.com/winkjs/wink-bm25-text-search) – fast, no dependencies, lightweight
+
+```
+const bm25 = require('wink-bm25-text-search')();
+bm25.defineConfig({ fldWeights: { title: 1, content: 2 } });
+
+bm25.definePrepTasks([
+  // optional: tokenize, lowercase, remove stopwords
+]);
+
+// Add documents (your notes)
+bm25.addDoc({ title: "Page summary", content: "..." }, docId);
+
+// Search
+const results = bm25.search("keyword or phrase");
+```
 
 [^1]: 
 ```
