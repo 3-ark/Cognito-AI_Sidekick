@@ -5,6 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { GoTrash, GoPencil, GoSearch } from "react-icons/go";
+import { LuEllipsis } from "react-icons/lu";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { toast } from 'react-hot-toast';
 import { Note } from '../types/noteTypes';
 import { getAllNotesFromSystem, saveNoteInSystem, deleteNoteFromSystem, deleteAllNotesFromSystem } from '../background/noteStorage';
@@ -127,19 +130,61 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             {paginatedNotes.map(note => (
               <div
                 key={note.id}
-                className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
+                className="px-2 py-3 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
               >
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-md truncate">{note.title}</h3>
-                  <div className="space-x-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEditModal(note)}><GoPencil /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteNote(note.id)} className="hover:text-red-500"><GoTrash /></Button>
+                <HoverCard openDelay={200} closeDelay={100}>
+                  <div className="flex justify-between items-center">
+                    <HoverCardTrigger asChild>
+                      <h3 className="font-semibold text-md truncate cursor-pointer hover:underline">{note.title}</h3>
+                    </HoverCardTrigger>
+                    <div className="flex-shrink-0">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <LuEllipsis className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 bg-[var(--popover)] border-[var(--border)] text-[var(--popover-foreground)] p-1 space-y-1 shadow-md">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-sm h-9 px-2 font-normal"
+                            onClick={() => openEditModal(note)}
+                          >
+                            <GoPencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-sm h-9 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                            onClick={() => handleDeleteNote(note.id)}
+                          >
+                            <GoTrash className="mr-2 h-4 w-4" />
+                            Delete
+                          </Button>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
-                </p>
-                <p className="text-sm mt-1 line-clamp-1">{note.content}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                    Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm mt-1 line-clamp-1">{note.content}</p>
+
+                  <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--border)] text-[var(--popover-foreground)]" side="top" align="start">
+                    <div className="space-y-2">
+                      <h4 className="text-md font-semibold">{note.title}</h4>
+                      <p className="text-xs text-[var(--muted-foreground)]">
+                        Date: {new Date(note.lastUpdatedAt).toLocaleString()}
+                      </p>
+                      <p className="text-sm max-h-40 overflow-y-auto whitespace-pre-wrap break-words">
+                        {note.content}
+                      </p>
+                      <div className="border-t border-[var(--border)] pt-2 mt-2">
+                          <p className="text-xs text-[var(--muted-foreground)]">Tags: (coming soon)</p>
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
               </div>
             ))}
           </div>
