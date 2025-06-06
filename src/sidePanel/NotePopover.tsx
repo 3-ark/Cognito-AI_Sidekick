@@ -20,24 +20,37 @@ export const NotePopover = () => {
   const [editableNote, setEditableNote] = useState(config.noteContent || '');
   const [isSpeakingNote, setIsSpeakingNote] = useState(false);
   const [popoverTags, setPopoverTags] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) {
-      // If popover is closing, and content hasn't been "saved" to config, reset editableNote to what's in config.
-      // Also clear any tags typed by the user if they weren't saved.
-      if (config.noteContent !== editableNote) {
-        setEditableNote(config.noteContent || '');
-      }
-      setPopoverTags(''); // Reset tags when popover closes
-    }
-  }, [config.noteContent, isOpen, editableNote]); // Added editableNote to deps as it's used in condition
+  const [popoverTitle, setPopoverTitle] = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      // When popover opens, reset to current global note content (or empty)
+      // and clear title/tags for a fresh input experience.
       setEditableNote(config.noteContent || '');
-      setPopoverTags(''); // Reset tags when popover opens to ensure a clean slate
+      setPopoverTitle('');
+      setPopoverTags('');
+    } else {
+      // When popover closes (without saving, as save handles its own reset and closes)
+      // Reset editableNote if it was changed AND not saved to config via "Save" button for quick notes.
+      // Title and Tags are reset to ensure they are clear next time.
+      if (config.noteContent !== editableNote) {
+        setEditableNote(config.noteContent || '');
+      }
+      setPopoverTitle('');
+      setPopoverTags('');
     }
-  }, [isOpen, config.noteContent]);
+  }, [isOpen, config.noteContent]); // editableNote removed from deps, see note below
+
+  // Note on editableNote in dependency array:
+  // The original logic for resetting editableNote when closing was:
+  // `if (config.noteContent !== editableNote) { setEditableNote(config.noteContent || ''); }`
+  // This implies that if the user types something in editableNote but doesn't hit the "Save"
+  // button (which updates config.noteContent), and then closes the popover,
+  // editableNote should revert to config.noteContent.
+  // If editableNote is in the dependency array of the main isOpen effect,
+  // then any typing in editableNote would trigger the effect, which is not desired.
+  // The check `config.noteContent !== editableNote` should be sufficient to capture this intent
+  // when isOpen becomes false. The state of editableNote at the point of closure is what matters.
 
   useEffect(() => {
     if (!isOpen && isSpeakingNote) {
@@ -65,11 +78,14 @@ export const NotePopover = () => {
     if (editableNote.trim()) {
       try {
         const timestamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const noteTitle = `Note from Popover - ${timestamp}`;
+        const finalPopoverTitle = popoverTitle.trim() || `Note from Popover - ${timestamp}`;
         const parsedTags = popoverTags.trim() === '' ? [] : popoverTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-        await saveNoteInSystem({ title: noteTitle, content: editableNote, tags: parsedTags });
+        await saveNoteInSystem({ title: finalPopoverTitle, content: editableNote, tags: parsedTags });
         toast.success('Snapshot saved to Note System!');
-        setPopoverTags(''); // Reset tags input
+        setEditableNote('');    // Clear content after successful save to system
+        setPopoverTitle('');    // Clear title after successful save
+        setPopoverTags('');     // Clear tags after successful save
+        updateConfig({ noteContent: '' }); // Also update config as editableNote is cleared
       } catch (error) {
         console.error("Error saving note to system from popover:", error);
         toast.error('Failed to save note to system.');
@@ -80,6 +96,7 @@ export const NotePopover = () => {
 
   const handleClearNote = () => {
     setEditableNote('');
+    setPopoverTitle(''); // Reset title input
     setPopoverTags(''); // Reset tags input
     updateConfig({ noteContent: '' });
     toast('Note cleared');
@@ -142,6 +159,14 @@ export const NotePopover = () => {
               />
             </div>
             <div>
+              <Input
+                id="popover-title-input"
+                type="text"
+                placeholder="Title (optional)"
+                value={popoverTitle}
+                onChange={(e) => setPopoverTitle(e.target.value)}
+                className="mb-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+              />
               <Textarea
                 id="note-popover-textarea"
                 value={editableNote}
