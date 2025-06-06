@@ -145,6 +145,11 @@ export const NotePopover = () => {
     }
   };
 
+  const isContentUnchanged = editableNote === (config.noteContent || '');
+  const isTitleUnchanged = popoverTitle === (config.popoverTitleDraft || '');
+  const isTagsUnchanged = popoverTags === (config.popoverTagsDraft || '');
+  const isSaveDisabled = isContentUnchanged && isTitleUnchanged && isTagsUnchanged;
+
   return (
     <TooltipProvider delayDuration={500}>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -249,7 +254,7 @@ export const NotePopover = () => {
                     "border-[var(--border)] text-[var(--text)]",
                     "text-xs px-2 py-1 h-auto w-16"
                     )}
-                  disabled={editableNote === (config.noteContent || '')}
+                  disabled={isSaveDisabled}
                 >
                   Save
                 </Button>

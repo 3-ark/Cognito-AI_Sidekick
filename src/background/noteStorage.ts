@@ -11,18 +11,15 @@ export const saveNoteInSystem = async (noteData: Partial<Note> & { content: stri
   const noteId = noteData.id || generateNoteId();
   const existingNote = noteData.id ? await localforage.getItem<Note>(noteId) : null;
 
-  // Directly use title and tags from noteData.
   // NotePopover is responsible for ensuring noteData.title is populated (custom or generated).
-  const titleToSave = noteData.title;
-  const tagsToSave = noteData.tags;
-
+  // Tags are also taken directly as they come from noteData (should be string[] or undefined).
   const noteToSaveToStorage: Note = {
     id: noteId,
-    title: titleToSave, // Explicitly use the title from noteData
+    title: noteData.title, // Use directly from noteData
     content: noteData.content,
     createdAt: existingNote?.createdAt || now,
     lastUpdatedAt: now,
-    tags: tagsToSave,    // Explicitly use the tags from noteData
+    tags: noteData.tags,    // Use directly from noteData
     // isArchived: noteData.isArchived || false, // Example for future fields
   };
 
