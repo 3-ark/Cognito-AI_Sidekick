@@ -58,7 +58,7 @@ export const NotePopover = () => {
       try {
         const timestamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         const noteTitle = `Note from Popover - ${timestamp}`;
-        await saveNoteInSystem({ title: noteTitle, content: editableNote });
+        await saveNoteInSystem({ title: noteTitle, content: editableNote, tags: ['from-popover'] });
         toast.success('Snapshot saved to Note System!');
       } catch (error) {
         console.error("Error saving note to system from popover:", error);
