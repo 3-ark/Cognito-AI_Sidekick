@@ -80,13 +80,14 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       toast.error("Note content cannot be empty.");
       return;
     }
+    const parsedTags = noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+
     const noteToSave: Partial<Note> & { content: string } = {
       id: editingNote?.id,
       title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
       content: noteContent,
-      tags: noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
+      tags: parsedTags,
     };
-    console.log('Saving note with tags:', noteToSave.tags); // Debugging line
     await saveNoteInSystem(noteToSave);
     toast.success(editingNote ? "Note updated!" : "Note created!");
     fetchNotes();
@@ -98,10 +99,11 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   };
 
   const openEditModal = (note: Note) => {
+    const newNoteTags = note.tags ? note.tags.join(', ') : '';
     setEditingNote(note);
     setNoteTitle(note.title);
     setNoteContent(note.content);
-    setNoteTags(note.tags ? note.tags.join(', ') : ''); // Populate tags
+    setNoteTags(newNoteTags); // Populate tags
     setIsCreateModalOpen(true);
   };
 
@@ -269,7 +271,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
             <Input
               placeholder="Tags (comma-separated)"
               value={noteTags}
-              onChange={(e) => setNoteTags(e.target.value)}
+              onChange={(e) => {
+                setNoteTags(e.target.value);
+              }}
               className="bg-[var(--input-bg)] border-[var(--text)]/10"
             />
           </div>
