@@ -3,6 +3,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input'; // Import Input
 import { Label } from '@/components/ui/label';
 import { LuNotebookPen, LuSpeech } from "react-icons/lu";
 import { toast } from 'react-hot-toast';
@@ -18,16 +19,23 @@ export const NotePopover = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editableNote, setEditableNote] = useState(config.noteContent || '');
   const [isSpeakingNote, setIsSpeakingNote] = useState(false);
+  const [popoverTags, setPopoverTags] = useState('');
 
   useEffect(() => {
-    if (!isOpen && config.noteContent !== editableNote) {
-      setEditableNote(config.noteContent || '');
+    if (!isOpen) {
+      // If popover is closing, and content hasn't been "saved" to config, reset editableNote to what's in config.
+      // Also clear any tags typed by the user if they weren't saved.
+      if (config.noteContent !== editableNote) {
+        setEditableNote(config.noteContent || '');
+      }
+      setPopoverTags(''); // Reset tags when popover closes
     }
-  }, [config.noteContent, isOpen]);
+  }, [config.noteContent, isOpen, editableNote]); // Added editableNote to deps as it's used in condition
 
   useEffect(() => {
     if (isOpen) {
       setEditableNote(config.noteContent || '');
+      setPopoverTags(''); // Reset tags when popover opens to ensure a clean slate
     }
   }, [isOpen, config.noteContent]);
 
@@ -58,8 +66,10 @@ export const NotePopover = () => {
       try {
         const timestamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         const noteTitle = `Note from Popover - ${timestamp}`;
-        await saveNoteInSystem({ title: noteTitle, content: editableNote, tags: ['from-popover'] });
+        const parsedTags = popoverTags.trim() === '' ? [] : popoverTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+        await saveNoteInSystem({ title: noteTitle, content: editableNote, tags: parsedTags });
         toast.success('Snapshot saved to Note System!');
+        setPopoverTags(''); // Reset tags input
       } catch (error) {
         console.error("Error saving note to system from popover:", error);
         toast.error('Failed to save note to system.');
@@ -70,6 +80,7 @@ export const NotePopover = () => {
 
   const handleClearNote = () => {
     setEditableNote('');
+    setPopoverTags(''); // Reset tags input
     updateConfig({ noteContent: '' });
     toast('Note cleared');
   };
@@ -137,6 +148,16 @@ export const NotePopover = () => {
                 onChange={(e) => setEditableNote(e.target.value)}
                 placeholder="Persistent notes for the AI..."
                 className="mt-1 min-h-[30vh] max-h-[70vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
+              />
+            </div>
+            <div>
+              <Input
+                id="popover-tags-input"
+                type="text"
+                placeholder="Tags (comma-separated)"
+                value={popoverTags}
+                onChange={(e) => setPopoverTags(e.target.value)}
+                className="mt-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
               />
             </div>
             <div className="flex justify-between items-center pt-1">

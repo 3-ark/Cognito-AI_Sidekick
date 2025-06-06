@@ -84,8 +84,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       id: editingNote?.id,
       title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
       content: noteContent,
-      tags: noteTags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+      tags: noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
     };
+    console.log('Saving note with tags:', noteToSave.tags); // Debugging line
     await saveNoteInSystem(noteToSave);
     toast.success(editingNote ? "Note updated!" : "Note created!");
     fetchNotes();
