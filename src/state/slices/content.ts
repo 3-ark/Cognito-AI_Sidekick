@@ -10,7 +10,7 @@ export const contentDefaultState: ContentState = {
 };
 
 const slice = createSlice({
-  name: 'profile',
+  name: 'content',
   initialState: contentDefaultState,
   reducers: {
     reset: () => contentDefaultState,

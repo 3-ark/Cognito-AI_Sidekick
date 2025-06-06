@@ -16,7 +16,7 @@ export interface SidePanelState {
 export const sidePanelDefaultState: SidePanelState = { isOpen: false };
 
 const slice = createSlice({
-  name: 'profile',
+  name: 'sidePanel',
   initialState: sidePanelDefaultState,
   reducers: { reset: () => sidePanelDefaultState }
 });

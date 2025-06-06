@@ -2,7 +2,6 @@ import {
   combineReducers,
   configureStore,
   createSerializableStateInvariantMiddleware,
-  Dispatch,
   Middleware,
   Slice,
   UnknownAction
@@ -46,7 +45,7 @@ const additionalMiddlewareForConfigureStore: Middleware[] = [
 ];
 
 const buildStoreWithDefaults = ({ channelName }: BuildStoreOptions = {}) => {
-  const reducer = combineReducers<State, UnknownAction>({
+  const reducer = combineReducers({
     sidePanel: sidePanelSlice.reducer,
     content: contentSlice.reducer
   });

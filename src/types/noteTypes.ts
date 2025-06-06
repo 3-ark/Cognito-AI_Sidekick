@@ -4,7 +4,7 @@ export interface Note {
   content: string;
   createdAt: number;
   lastUpdatedAt: number;
-  tags?: string[]; // Added tags field
+  tags?: string[];
   // Future enhancements: isArchived?: boolean;
 }
 
