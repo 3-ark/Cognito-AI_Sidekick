@@ -7,20 +7,23 @@ export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}
  * Saves a new note or updates an existing one in localforage.
  */
 export const saveNoteInSystem = async (noteData: Partial<Note> & { content: string }): Promise<Note> => {
-  const now = Date.now();
+  const now = Date.now(); // 'now' is used for createdAt, lastUpdatedAt, and potentially title fallback
   const noteId = noteData.id || generateNoteId();
-
   const existingNote = noteData.id ? await localforage.getItem<Note>(noteId) : null;
 
-  // Ensure all fields from Note interface are considered, especially new or optional ones.
+  // Directly use title and tags from noteData.
+  // NotePopover is responsible for ensuring noteData.title is populated (custom or generated).
+  const titleToSave = noteData.title;
+  const tagsToSave = noteData.tags;
+
   const noteToSaveToStorage: Note = {
     id: noteId,
-    title: noteData.title || `Note - ${new Date(now).toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+    title: titleToSave, // Explicitly use the title from noteData
     content: noteData.content,
     createdAt: existingNote?.createdAt || now,
     lastUpdatedAt: now,
-    tags: noteData.tags, // Use tags from noteData
-    // isArchived: noteData.isArchived || false, // Example if isArchived was added
+    tags: tagsToSave,    // Explicitly use the tags from noteData
+    // isArchived: noteData.isArchived || false, // Example for future fields
   };
 
   await localforage.setItem(noteId, noteToSaveToStorage);
