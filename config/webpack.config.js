@@ -2,8 +2,10 @@ const CopyPlugin = require('copy-webpack-plugin');
 const GenerateJsonFromJsPlugin = require('generate-json-from-js-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const dotenv = require('dotenv');
+const webpack = require('webpack');
 const { join } = require('path');
 const { inDev } = require("./helpers");
+const packageJson = require('../package.json');
 
 dotenv.config();
 
@@ -48,6 +50,9 @@ const config = {
   },
   plugins: [
     ...require('./plugins'),
+    new webpack.DefinePlugin({
+      'APP_VERSION': JSON.stringify(packageJson.version)
+    }),
     new HtmlWebpackPlugin(
         {
           inject: 'body',

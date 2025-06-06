@@ -24,3 +24,5 @@ interface FilePickerOptions {
 interface Window {
   showOpenFilePicker?(options?: FilePickerOptions): Promise<FileSystemFileHandle[]>;
 }
+
+declare const APP_VERSION: string;
