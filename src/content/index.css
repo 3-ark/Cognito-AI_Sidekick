@@ -429,15 +429,6 @@ html[data-paper-texture="true"] #root::before {
   border-radius: inherit;
 }
 
-/* Math rendering (KaTeX) */
-.markdown-body .katex {
-  font-size: 1em;
-  color: var(--markdown-h2);
-  background: none;
-  border-radius: 0;
-  padding: 0;
-}
-
 .focus-visible\:ring-1.focus-visible\:ring-offset-0.focus-visible.AutoResizeTextarea {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1); /* Adjust color and intensity */
 }

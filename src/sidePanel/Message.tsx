@@ -15,7 +15,6 @@ import {
 
 import remarkGfm from 'remark-gfm';
 import remarkSupersub from 'remark-supersub';
-import remarkMath from 'remark-math';
 
 import { useConfig } from './ConfigContext';
 import { MessageTurn } from './ChatHistory';
@@ -351,7 +350,7 @@ export const EditableMessage: FC<MessageProps> = ({
         <div className="message-markdown markdown-body relative z-[1] text-foreground">
           {turn.role === 'assistant' && turn.webDisplayContent && (
             <div className="message-prefix">
-              <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkSupersub]} components={markdownComponents}>
+              <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={markdownComponents}>
                 {`~From the Internet~
 ${turn.webDisplayContent}
 
@@ -369,7 +368,7 @@ ${turn.webDisplayContent}
               return (
                 <div key={`content_${partIndex}`} className="message-content">
                 <Markdown
-                  remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkMath, remarkSupersub]}
+                  remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
                   components={markdownComponents}
                 >{part}</Markdown>
                 </div>
