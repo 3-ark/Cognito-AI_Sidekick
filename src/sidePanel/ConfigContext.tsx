@@ -80,7 +80,9 @@ const defaultConfig: Config = {
   useNote: false,
   noteContent: '',
   userName: 'user', 
-  userProfile: ''
+  userProfile: '',
+  popoverTitleDraft: '',
+  popoverTagsDraft: '',
 };
 
 export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {

@@ -112,6 +112,8 @@ export interface Config {
   tts?: TtsSettings;
   userName?: string;
   userProfile?: string;
+  popoverTitleDraft?: string;
+  popoverTagsDraft?: string;
 }
 
 export interface ConfigContextType {

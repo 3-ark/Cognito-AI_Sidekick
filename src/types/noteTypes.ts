@@ -4,7 +4,8 @@ export interface Note {
   content: string;
   createdAt: number;
   lastUpdatedAt: number;
-  // Future enhancements: tags?: string[]; isArchived?: boolean;
+  tags?: string[]; // Added tags field
+  // Future enhancements: isArchived?: boolean;
 }
 
 export const NOTE_STORAGE_PREFIX = 'cognito_note_';

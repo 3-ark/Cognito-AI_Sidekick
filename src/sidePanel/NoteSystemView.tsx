@@ -29,6 +29,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
+  const [noteTags, setNoteTags] = useState('');
 
   const { config } = useConfig();
 
@@ -45,6 +46,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
     setEditingNote(null);
     setNoteTitle('');
     setNoteContent('');
+    setNoteTags(''); // Reset tags
     setIsCreateModalOpen(true);
   }, []);
 
@@ -58,10 +60,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   const filteredNotes = useMemo(() => {
     if (!searchQuery) return allNotes;
     const lowerCaseQuery = searchQuery.toLowerCase();
-    return allNotes.filter(note =>
-      note.title.toLowerCase().includes(lowerCaseQuery) ||
-      note.content.toLowerCase().includes(lowerCaseQuery)
-    );
+    return allNotes.filter(note => {
+      const titleMatch = note.title.toLowerCase().includes(lowerCaseQuery);
+      const contentMatch = note.content.toLowerCase().includes(lowerCaseQuery);
+      const tagsMatch = note.tags && note.tags.some(tag => tag.toLowerCase().includes(lowerCaseQuery));
+      return titleMatch || contentMatch || tagsMatch;
+    });
   }, [allNotes, searchQuery]);
 
   const paginatedNotes = useMemo(() => {
@@ -76,10 +80,13 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       toast.error("Note content cannot be empty.");
       return;
     }
+    const parsedTags = noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+
     const noteToSave: Partial<Note> & { content: string } = {
       id: editingNote?.id,
       title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
       content: noteContent,
+      tags: parsedTags,
     };
     await saveNoteInSystem(noteToSave);
     toast.success(editingNote ? "Note updated!" : "Note created!");
@@ -88,12 +95,15 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
     setEditingNote(null);
     setNoteTitle('');
     setNoteContent('');
+    setNoteTags(''); // Reset tags input
   };
 
   const openEditModal = (note: Note) => {
+    const newNoteTags = note.tags ? note.tags.join(', ') : '';
     setEditingNote(note);
     setNoteTitle(note.title);
     setNoteContent(note.content);
+    setNoteTags(newNoteTags); // Populate tags
     setIsCreateModalOpen(true);
   };
 
@@ -169,7 +179,13 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                     <p className="text-xs text-[var(--muted-foreground)]">
                       Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
                     </p>
-                    <p className="text-xs text-[var(--muted-foreground)]">Tags: (coming soon)</p>
+                    {note.tags && note.tags.length > 0 ? (
+                      <p className="text-xs text-[var(--muted-foreground)] truncate max-w-[50%]">
+                        Tags: {note.tags.join(', ')}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
+                    )}
                   </div>
                   <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)]" side="top" align="start" >
                     <div className="space-y-2">
@@ -180,9 +196,18 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                       <p className="text-sm max-h-40 overflow-y-auto whitespace-pre-wrap break-words thin-scrollbar">
                         {note.content}
                       </p>
-                      <div className="border-t border-[var(--border)] pt-2 mt-2">
-                          <p className="text-xs text-[var(--muted-foreground)]">Tags: (coming soon)</p>
-                      </div> 
+                      {note.tags && note.tags.length > 0 && (
+                        <div className="border-t border-[var(--border)] pt-2 mt-2">
+                          <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {note.tags.map(tag => (
+                              <span key={tag} className="text-xs bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </HoverCardContent>
                 </HoverCard>
@@ -214,7 +239,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
         if (!isOpen) {
           setIsCreateModalOpen(false);
           setEditingNote(null);
+          setNoteTitle(''); // Reset title
+          setNoteContent(''); // Reset content
+          setNoteTags(''); // Reset tags
         } else {
+          // This branch is taken when the dialog is opened programmatically after being closed.
+          // openCreateModal or openEditModal would have already set the state.
           setIsCreateModalOpen(true);
         }
       }}>
@@ -237,6 +267,14 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               className="min-h-[30vh] max-h-[60vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 resize-none thin-scrollbar"
+            />
+            <Input
+              placeholder="Tags (comma-separated)"
+              value={noteTags}
+              onChange={(e) => {
+                setNoteTags(e.target.value);
+              }}
+              className="bg-[var(--input-bg)] border-[var(--text)]/10"
             />
           </div>
           <DialogFooter>
