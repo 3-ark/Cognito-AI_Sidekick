@@ -24,22 +24,29 @@ export const NotePopover = () => {
 
   useEffect(() => {
     if (isOpen) {
-      // When popover opens, reset to current global note content (or empty)
-      // and clear title/tags for a fresh input experience.
+      // When popover opens, load content, title draft, and tags draft from config.
       setEditableNote(config.noteContent || '');
-      setPopoverTitle('');
-      setPopoverTags('');
+      setPopoverTitle(config.popoverTitleDraft || ''); // Load title from config draft
+      setPopoverTags(config.popoverTagsDraft || '');   // Load tags string from config draft
     } else {
-      // When popover closes (without saving, as save handles its own reset and closes)
-      // Reset editableNote if it was changed AND not saved to config via "Save" button for quick notes.
-      // Title and Tags are reset to ensure they are clear next time.
-      if (config.noteContent !== editableNote) {
-        setEditableNote(config.noteContent || '');
+      // When popover closes (e.g. by clicking outside, not via "Archive" or "Clear" which have their own resets)
+      // If the content was changed but not saved with the inline "Save" button, revert it.
+      // Title and Tags drafts are cleared to ensure a fresh state next time unless saved.
+      // This behavior ensures that if a user types a title/tag, then clicks "Save" (which saves to config),
+      // then closes and reopens, they see their saved draft. If they type, then click away, it's cleared.
+      if (config.noteContent !== editableNote) { // This check is for the main note content
+        // If they typed in popover, didn't hit "Save" (which updates config.noteContent), then closed,
+        // this line would revert editableNote to what's in config.noteContent.
+        // However, the "Save" button only updates config.noteContent, config.popoverTitleDraft, config.popoverTagsDraft.
+        // It does NOT clear the local popoverTitle/popoverTags states.
+        // The current design is that closing the popover clears the local popoverTitle/Tags states.
       }
+      // Always clear local popover title/tags state when popover is dismissed without explicit save action.
+      // Saved drafts will be reloaded from config next time it opens.
       setPopoverTitle('');
       setPopoverTags('');
     }
-  }, [isOpen, config.noteContent]); // editableNote removed from deps, see note below
+  }, [isOpen, config]); // Use config object as dependency
 
   // Note on editableNote in dependency array:
   // The original logic for resetting editableNote when closing was:
@@ -64,8 +71,12 @@ export const NotePopover = () => {
   }, [isOpen, isSpeakingNote, editableNote]);
 
   const handleSaveNote = () => {
-    updateConfig({ noteContent: editableNote });
-    toast.success('Note saved!');
+    updateConfig({
+      noteContent: editableNote,       // Existing: saves the main content
+      popoverTitleDraft: popoverTitle, // New: saves the current title from popover's state
+      popoverTagsDraft: popoverTags,   // New: saves the current tags string from popover's state
+    });
+    toast.success('Draft saved!'); // Optionally change toast message
   };
 
   const handleSaveNoteToFile = async () => {
@@ -85,7 +96,11 @@ export const NotePopover = () => {
         setEditableNote('');    // Clear content after successful save to system
         setPopoverTitle('');    // Clear title after successful save
         setPopoverTags('');     // Clear tags after successful save
-        updateConfig({ noteContent: '' }); // Also update config as editableNote is cleared
+        updateConfig({
+          noteContent: '',
+          popoverTitleDraft: '',
+          popoverTagsDraft: '',
+        }); // Also update config for all drafts
       } catch (error) {
         console.error("Error saving note to system from popover:", error);
         toast.error('Failed to save note to system.');
@@ -95,11 +110,18 @@ export const NotePopover = () => {
   };
 
   const handleClearNote = () => {
+    // Clear local component state
     setEditableNote('');
-    setPopoverTitle(''); // Reset title input
-    setPopoverTags(''); // Reset tags input
-    updateConfig({ noteContent: '' });
-    toast('Note cleared');
+    setPopoverTitle('');
+    setPopoverTags('');
+
+    // Clear draft values from config
+    updateConfig({
+      noteContent: '',
+      popoverTitleDraft: '',
+      popoverTagsDraft: '',
+    });
+    toast('Note cleared'); // Existing toast message
   };
 
   const handleToggleUseNote = (checked: boolean) => {
