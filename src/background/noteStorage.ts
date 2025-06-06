@@ -15,7 +15,7 @@ export const saveNoteInSystem = async (noteData: Partial<Note> & { content: stri
   // Tags are also taken directly as they come from noteData (should be string[] or undefined).
   const noteToSaveToStorage: Note = {
     id: noteId,
-    title: noteData.title, // Use directly from noteData
+    title: noteData.title || `Note - ${new Date(now).toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
     content: noteData.content,
     createdAt: existingNote?.createdAt || now,
     lastUpdatedAt: now,
