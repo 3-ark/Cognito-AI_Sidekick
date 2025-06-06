@@ -149,6 +149,22 @@ export const NotePopover = () => {
   const isTitleUnchanged = popoverTitle === (config.popoverTitleDraft || '');
   const isTagsUnchanged = popoverTags === (config.popoverTagsDraft || '');
   const isSaveDisabled = isContentUnchanged && isTitleUnchanged && isTagsUnchanged;
+  const isArchiveDisabled =
+    !popoverTitle.trim() &&
+    !editableNote.trim() &&
+    !popoverTags.trim();
+
+  const isLocalContentPresent =
+    !!popoverTitle.trim() ||
+    !!editableNote.trim() ||
+    !!popoverTags.trim();
+
+  const isConfigDraftPresent =
+    !!(config.popoverTitleDraft && config.popoverTitleDraft.trim()) ||
+    !!(config.noteContent && config.noteContent.trim()) ||
+    !!(config.popoverTagsDraft && config.popoverTagsDraft.trim());
+
+  const isClearDisabled = !isLocalContentPresent && !isConfigDraftPresent;
 
   return (
     <TooltipProvider delayDuration={500}>
@@ -239,7 +255,7 @@ export const NotePopover = () => {
                 <Button
                   variant="outline"
                   onClick={handleClearNote}
-                  disabled={!editableNote && !config.noteContent}
+                  disabled={isClearDisabled}
                   className={cn(
                     "border-[var(--border)] text-[var(--text)]",
                     "text-xs px-2 py-1 h-auto w-16"
@@ -263,10 +279,12 @@ export const NotePopover = () => {
                     <Button
                       variant="ghost"
                       onClick={handleSaveNoteToFile}
-                      disabled={!editableNote}
+                      disabled={isArchiveDisabled}
                       className={cn(
-                        "text-xs px-2 py-1 h-auto w-10",
-                        editableNote ? "enabled" : "disabled"
+                        "text-xs px-2 py-1 h-auto w-10"
+                        // The "enabled" / "disabled" class logic might need to be reviewed
+                        // if it was tied to the old disabled state, or make it consistent.
+                        // For now, just setting the disabled prop.
                       )}
                     >
                       <IoArchiveOutline size={16} />
