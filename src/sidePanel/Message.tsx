@@ -287,7 +287,7 @@ export const EditableMessage: FC<MessageProps> = ({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase to potentially override other listeners
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };

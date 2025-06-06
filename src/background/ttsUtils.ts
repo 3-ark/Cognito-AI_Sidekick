@@ -15,7 +15,7 @@ export const getAvailableVoices = (): Promise<VoiceOption[]> => {
       voices = window.speechSynthesis.getVoices();
       if (voices.length) {
         resolve(voices.map((voice) => ({ name: voice.name, lang: voice.lang })));
-        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged); // Clean up listener
+        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
       }
     };
     window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
@@ -28,7 +28,6 @@ let onStartCallback: (() => void) | null = null;
 let onPauseCallback: (() => void) | null = null;
 let onResumeCallback: (() => void) | null = null;
 
-// Add these state tracking variables at the top
 let isSpeechPaused = false;
 let currentText = '';
 let currentVoice: SpeechSynthesisVoice | null = null;
@@ -50,7 +49,7 @@ export const speakMessage = (
   }
 ) => {
   if (isCurrentlySpeaking() || window.speechSynthesis.pending) {
-    stopSpeech(); // Use the enhanced stopSpeech which handles callbacks
+    stopSpeech();
   }
 
   const utterance = new SpeechSynthesisUtterance(text);
@@ -72,7 +71,7 @@ export const speakMessage = (
   onResumeCallback = callbacks?.onResume || null;
 
   utterance.onstart = () => {
-    currentUtterance = utterance; // Move this here to ensure it's set when speech actually starts
+    currentUtterance = utterance;
     if (onStartCallback) onStartCallback();
   };
 
@@ -96,7 +95,7 @@ export const speakMessage = (
     console.error('SpeechSynthesisUtterance error:', event.error);
      if (currentUtterance === utterance) {
         currentUtterance = null;
-        if (onEndCallback) onEndCallback(); // Treat error as end
+        if (onEndCallback) onEndCallback();
         onStartCallback = onEndCallback = onPauseCallback = onResumeCallback = null;
      }
   };
@@ -108,14 +107,14 @@ export const stopSpeech = () => {
   if (!currentUtterance && !window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
     return;
   }
-  const callback = onEndCallback; // Capture callback before clearing
+  const callback = onEndCallback;
   currentUtterance = null;
   currentText = '';
   currentVoice = null;
   isSpeechPaused = false;
   onStartCallback = onEndCallback = onPauseCallback = onResumeCallback = null;
 
-  window.speechSynthesis.cancel(); // Stop speaking and clear queue
+  window.speechSynthesis.cancel();
 
   if (callback) {
     callback();
@@ -130,7 +129,6 @@ export const pauseSpeech = () => {
       if (onPauseCallback) onPauseCallback();
     } catch (error) {
       console.error('Error pausing speech:', error);
-      // Fallback: Store current state for manual resume
       if (currentUtterance) {
         currentText = currentUtterance.text;
         currentVoice = currentUtterance.voice;
@@ -149,7 +147,6 @@ export const resumeSpeech = () => {
     if (onResumeCallback) onResumeCallback();
   } catch (error) {
     console.error('Error resuming speech, attempting fallback:', error);
-    // Fallback: Recreate utterance and start from approximate position
     if (currentText && currentUtterance) {
       window.speechSynthesis.cancel();
       const newUtterance = new SpeechSynthesisUtterance(currentText);

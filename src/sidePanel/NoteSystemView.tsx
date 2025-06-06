@@ -46,7 +46,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
     setEditingNote(null);
     setNoteTitle('');
     setNoteContent('');
-    setNoteTags(''); // Reset tags
+    setNoteTags('');
     setIsCreateModalOpen(true);
   }, []);
 
@@ -95,7 +95,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
     setEditingNote(null);
     setNoteTitle('');
     setNoteContent('');
-    setNoteTags(''); // Reset tags input
+    setNoteTags('');
   };
 
   const openEditModal = (note: Note) => {
@@ -103,7 +103,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
     setEditingNote(note);
     setNoteTitle(note.title);
     setNoteContent(note.content);
-    setNoteTags(newNoteTags); // Populate tags
+    setNoteTags(newNoteTags);
     setIsCreateModalOpen(true);
   };
 
@@ -239,12 +239,10 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
         if (!isOpen) {
           setIsCreateModalOpen(false);
           setEditingNote(null);
-          setNoteTitle(''); // Reset title
-          setNoteContent(''); // Reset content
-          setNoteTags(''); // Reset tags
+          setNoteTitle('');
+          setNoteContent('');
+          setNoteTags('');
         } else {
-          // This branch is taken when the dialog is opened programmatically after being closed.
-          // openCreateModal or openEditModal would have already set the state.
           setIsCreateModalOpen(true);
         }
       }}>

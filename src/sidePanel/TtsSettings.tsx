@@ -71,12 +71,12 @@ export const TtsSettings = () => {
     <AccordionItem
       value="tts-settings"
       className={cn(
-        "bg-[var(--input-background)]", // Standard background
-        "border-[var(--text)]/10",    // Standard border
-        "rounded-xl",                 // Standard rounding
-        "shadow-md",                  // Standard shadow
-        "transition-all duration-150 ease-in-out", // Common transition
-        "hover:border-[var(--active)] hover:brightness-105" // Common hover
+        "bg-[var(--input-background)]",
+        "border-[var(--text)]/10",
+        "rounded-xl",
+        "shadow-md",
+        "transition-all duration-150 ease-in-out",
+        "hover:border-[var(--active)] hover:brightness-105"
       )}
     >
       <AccordionTrigger
@@ -111,22 +111,22 @@ export const TtsSettings = () => {
                 onValueChange={handleVoiceChange}
               >
                 <SelectTrigger
-                  variant="settings" // Use the new "settings" variant
+                  variant="settings"
                   className={cn(
-                    "w-full", // Keep w-full as it's specific to this layout
-                    "data-[placeholder]:text-muted-foreground" // Keep if specific
+                    "w-full",
+                    "data-[placeholder]:text-muted-foreground"
                   )}
                 >
                   <SelectValue placeholder="Select voice" />
                 </SelectTrigger>
                 <SelectContent
-                  variant="settingsPanel" // Use existing variant for content styling
+                  variant="settingsPanel"
                 >
                   {voices.map((voice) => (
                     <SelectItem
                       key={voice.name}
                       value={voice.name}
-                      focusVariant="activeTheme" // Use the new focus variant
+                      focusVariant="activeTheme"
                     >
                       {voice.name} ({voice.lang})
                     </SelectItem>
@@ -151,7 +151,7 @@ export const TtsSettings = () => {
                 step={0.1}
                 value={[currentRate]}
                 onValueChange={handleRateChange}
-                variant="themed" // Apply themed variant
+                variant="themed"
               />
             </div>
           )}
