@@ -156,7 +156,9 @@ const Em = ({ children, className, ...rest }: EmProps) => (
 
 type TableProps = { children?: ReactNode } & HTMLAttributes<HTMLTableElement>;
 const Table = ({ children, className, ...rest }: TableProps) => (
-  <table className={cn(className)} {...rest}>{children}</table>
+  <div className="markdown-table-wrapper">
+    <table className={cn(className)} {...rest}>{children}</table>
+  </div>
 );
 
 type THeadProps = { children?: ReactNode } & HTMLAttributes<HTMLTableSectionElement>;
@@ -287,7 +289,7 @@ export const EditableMessage: FC<MessageProps> = ({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase to potentially override other listeners
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };

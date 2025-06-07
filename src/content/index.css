@@ -306,12 +306,34 @@ word-wrap: break-word;
 text-indent: 0;
 }
 
+/* Wrapper for tables to handle overflow */
+.markdown-table-wrapper {
+  overflow-x: auto; /* Enable horizontal scrolling for the table */
+  margin: 1rem 0;   /* Apply vertical margins here, moved from table */
+  max-width: 100%;  /* Ensure the wrapper itself respects the container width */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(128, 128, 128, 0.5) transparent; /* Firefox */
+}
+
+.markdown-table-wrapper::-webkit-scrollbar {
+  height: 8px; /* For horizontal scrollbar */
+  width: 8px;  /* For vertical scrollbar (if ever needed by content) */
+}
+
+.markdown-table-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 128, 128, 0.5);
+  border-radius: 4px;
+}
+
+.markdown-table-wrapper::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
 /* Table styles */
 .markdown-body table {
 border: 2px solid var(--markdown-table-border);
 border-collapse: collapse;
 width: 100%;
-margin: 1rem 0;
 }
 
 .markdown-body thead {

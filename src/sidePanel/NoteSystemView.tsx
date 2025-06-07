@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { GoTrash, GoPencil, GoSearch } from "react-icons/go";
+import { GoTrash, GoPencil, GoSearch, GoDownload } from "react-icons/go";
 import { LuEllipsis } from "react-icons/lu";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
@@ -154,9 +154,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                             <LuEllipsis />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-24 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
+                        <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
                           <Button
-                            variant="ghost"
+                            variant="ghost"                            
                             className="w-full justify-start text-md h-8 px-2 font-normal"
                             onClick={() => openEditModal(note)}
                           >
@@ -164,13 +164,45 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                             Edit
                           </Button>
                           <Button
-                            variant="ghost"
-                            className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                            variant="ghost"                            
+                            className="w-full justify-start text-md h-8 px-2 font-normal"
+                            onClick={() => {
+                              let mdContent = '---\n';
+                              mdContent += `title: ${note.title}\n`;
+
+                              // Prefer lastUpdatedAt, fallback to createdAt for the date
+                              const dateTimestamp = note.lastUpdatedAt || note.createdAt;
+                              if (dateTimestamp) {
+                                const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
+                                mdContent += `date: ${formattedDate}\n`;
+                              }
+
+                              if (note.tags && note.tags.length > 0) {
+                                mdContent += 'tags:\n';
+                                note.tags.forEach(tag => {
+                                  mdContent += `  - ${tag.trim()}\n`;
+                                });
+                              }
+                              mdContent += '---\n\n';
+                              mdContent += note.content;
+
+                              const element = document.createElement('a');
+                              element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(mdContent)}`);
+                              element.setAttribute('download', `${note.title}.md`);
+                              element.style.display = 'none';
+                              document.body.appendChild(element);
+                              element.click();
+                              document.body.removeChild(element);
+                            }}
+                          >
+                            <GoDownload className="mr-2 size-4" />
+                            ObsidianMD
+                          </Button>
+                          <Button
+                            variant="ghost"                            className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
                             onClick={() => handleDeleteNote(note.id)}
                           >
-                            <GoTrash className="mr-2 size-4" />
-                            Delete
-                          </Button>
+                            <GoTrash className="mr-2 size-4" /> Delete </Button>
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -285,4 +317,5 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       </Dialog>
     </div>
   );
+
 };
