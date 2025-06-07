@@ -10,11 +10,27 @@ chrome.sidePanel
   .catch(console.error);
 
 const ADD_TO_NOTE_MENU_ID = "cognitoAddToNoteSelection";
-let sidePanelPortGlobal: chrome.runtime.Port | null = null;
+
+chrome.contextMenus.create({
+  id: ADD_TO_NOTE_MENU_ID,
+  title: "Add to Cognito Note",
+  contexts: ["selection"],
+  enabled: false,
+}, () => {
+  if (chrome.runtime.lastError) {
+    const knownMessages = ['duplicate id ' + ADD_TO_NOTE_MENU_ID, 'item already exists'];
+    if (!knownMessages.some(msg => chrome.runtime.lastError?.message?.includes(msg))) {
+      console.warn(`Initial attempt to create context menu '${ADD_TO_NOTE_MENU_ID}' encountered an issue: ${chrome.runtime.lastError.message}`);
+    }
+  }
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.remove(ADD_TO_NOTE_MENU_ID, () => {
-    if (chrome.runtime.lastError) {
+    if (chrome.runtime.lastError && 
+        !chrome.runtime.lastError.message?.includes("No such context menu") &&
+        !chrome.runtime.lastError.message?.includes("Cannot find menu item")) {
+      console.warn(`Error removing context menu '${ADD_TO_NOTE_MENU_ID}' during onInstalled: ${chrome.runtime.lastError.message}`);
     }
     chrome.contextMenus.create({
       id: ADD_TO_NOTE_MENU_ID,
@@ -23,7 +39,7 @@ chrome.runtime.onInstalled.addListener(() => {
       enabled: false,
     }, () => {
       if (chrome.runtime.lastError) 
-        console.error("Error creating context menu:", chrome.runtime.lastError.message);
+        console.error(`Error creating/recreating context menu '${ADD_TO_NOTE_MENU_ID}' in onInstalled: ${chrome.runtime.lastError.message}`);
     });
   });
 });
@@ -41,14 +57,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+let sidePanelPortGlobal: chrome.runtime.Port | null = null;
+
 chrome.runtime.onConnect.addListener(port => {
   if (port.name === ChannelNames.SidePanelPort) {
     sidePanelPortGlobal = port;
-    chrome.contextMenus.update(ADD_TO_NOTE_MENU_ID, { enabled: true }, () => {
-      if (chrome.runtime.lastError) {
-        console.error("Error enabling context menu:", chrome.runtime.lastError.message);
-      }
-    });
+    setTimeout(() => {
+      chrome.contextMenus.update(ADD_TO_NOTE_MENU_ID, { enabled: true }, () => {
+        if (chrome.runtime.lastError) {
+          console.error("Error enabling context menu (after timeout):", chrome.runtime.lastError.message);
+        }
+      });
+    }, 0); // 0ms delay pushes it to the end of the current event loop macrotask queue
 
     let tabListenersActive = false;
 
