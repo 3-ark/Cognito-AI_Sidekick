@@ -152,7 +152,7 @@ export const H2 = ({ children, className, ...rest }: HeadingProps) => (
 );
 
 export const H3 = ({ children, className, ...rest }: HeadingProps) => (
-  <h3 className={cn("text-lg font-semibold mt-2 mb-1", className)} {...rest}>{children}</h3>
+  <h3 className={cn("text-lg font-semibold mt-2 mb-1 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h3>
 );
 
 export const Strong = ({ children, className, ...rest }: StrongProps) => (
@@ -164,7 +164,7 @@ export const Em = ({ children, className, ...rest }: EmProps) => (
 );
 
 export const Table = ({ children, className, ...rest }: TableProps) => (
-  <div className="markdown-table-wrapper my-2">
+  <div className="markdown-table-wrapper my-2 overflow-x-auto">
     <table className={cn("w-full border-collapse border border-[var(--border)]", className)} {...rest}>{children}</table>
   </div>
 );
