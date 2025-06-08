@@ -44,7 +44,7 @@ export const Ol = ({ children, className, ...rest }: ListProps) => (
 );
 
 export const P = ({ children, className, ...rest }: ParagraphProps) => (
-  <p className={cn("mb-2", className)} {...rest}>{children}</p>
+  <p className={cn("mb-0", className)} {...rest}>{children}</p>
 );
 
 export const Pre = (props: CustomPreProps) => {
