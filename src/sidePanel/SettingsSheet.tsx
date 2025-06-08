@@ -319,7 +319,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                             "bg-[var(--bg)]",
                             "border border-[var(--active)]/20",
                             "rounded-xl shadow-lg",
-                            "max-h-[200px]",
+                            "max-h-[12rem]",
                             "no-scrollbar",
                             "overflow-y-auto"
                           )}

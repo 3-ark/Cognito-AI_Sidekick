@@ -52,15 +52,15 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
           "[&>button]:hidden"
       )}
       style={{ 
-        width: '220px', 
-        height: '110px',
-        borderRadius: '30px',
-        boxShadow: '15px 15px 30px rgb(25, 25, 25), 0px 0px 30px rgb(60, 60, 60)'
+        width: '13.75rem', 
+        height: '6.875rem',
+        borderRadius: '1.875rem',
+        boxShadow: '0.9375rem 0.9375rem 1.875rem rgb(25, 25, 25), 0 0 1.875rem rgb(60, 60, 60)'
       }}
       onInteractOutside={(e) => e.preventDefault()}
     >
       <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow">
-        <DialogTitle className="text-base pt-2">Welcome</DialogTitle>
+        <DialogTitle className="text-base">Welcome</DialogTitle>
       </DialogHeader>
       <DialogDescription asChild>
         <div className="p-4 text-center">
@@ -75,7 +75,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
                   onClick={() => setSettingsMode(true)}
                   aria-label="Connect to your models"
                 >
-                  <IoFingerPrint size="48" color="var(--active)" />
+                  <IoFingerPrint size="3rem" color="var(--active)" />
                 </Button>
           </div>
         </div>
@@ -241,7 +241,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (showBackButton) {
       setSettingsMode(false);
       setHistoryMode(false);
-      setNoteSystemMode(false);
+      setNoteSystemMode(false); // Ensure note system mode is also reset
     } else {
       setIsSheetOpen(true);
     }
@@ -358,10 +358,10 @@ export const Header: React.FC<HeaderProps> = ({
             </Tooltip>
             {!showBackButton && (
               <div className="flex flex-col justify-center ml-1">
-                <span className="text-[13px] font-medium text-[var(--text)] leading-tight">
+                <span className="text-[0.8125rem] font-medium text-[var(--text)] leading-tight">
                   {currentPersona === 'default' ? 'Jet' : currentPersona}
                 </span>
-                <span className="text-[10px] text-muted-foreground font-semibold leading-tight flex items-center pt-0.5">
+                <span className="text-[0.625rem] text-muted-foreground font-semibold leading-tight flex items-center pt-0.5">
                   {chatStatus === 'idle' && (
                     <span className="h-1.5 w-1.5 bg-green-600 rounded-full mr-1"></span>
                   )}
@@ -557,7 +557,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="text-[var(--text)] rounded-md"
                     onClick={onAddNewNoteRequest}
                   >
-                    <GoPlus size="18px" />
+                    <GoPlus size="18px" /> {/* Adjusted icon size for consistency */}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
