@@ -49,8 +49,8 @@ const ThinkingBlock = ({ content }: { content: string }) => {
           >
             <div className="markdown-body">
               <Markdown
-                remarkPlugins={[remarkGfm]}
-                components={markdownComponents}
+                remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
+                components={messageMarkdownComponents}
               >
                 {content}
               </Markdown>
@@ -112,9 +112,9 @@ export const EditableMessage: FC<MessageProps> = ({
   return (
     <div
       className={cn(
-        "border rounded-2xl text-base font-semibold",
+        "border rounded-2xl text-base",
         "w-[calc(100%-2rem)] mx-1 my-2",
-        "pb-1 pl-4 pr-4 pt-1", 
+        "pb-1 pl-4 pr-4 pt-1",
         "shadow-lg text-left relative",
         turn.role === 'assistant' ? 'bg-accent border-[var(--text)]/20' : 'bg-primary/10 border-[var(--text)]/20',
         config?.paperTexture ? 'chat-message-bubble' : '',
@@ -166,7 +166,7 @@ export const EditableMessage: FC<MessageProps> = ({
         <div className="message-markdown markdown-body relative z-[1] text-foreground">
           {turn.role === 'assistant' && turn.webDisplayContent && (
             <div className="message-prefix">
-              <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={markdownComponents}>
+              <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={messageMarkdownComponents}>
                 {`~From the Internet~
 ${turn.webDisplayContent}
 

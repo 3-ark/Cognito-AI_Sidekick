@@ -325,7 +325,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                         Date: {new Date(note.lastUpdatedAt).toLocaleString()}
                       </p>
                       <div className="text-sm whitespace-pre-wrap break-words">
-                        <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                        <Markdown remarkPlugins={[remarkGfm]} components={noteSystemMarkdownComponents}>
                           {note.content}
                         </Markdown>
                       </div>
