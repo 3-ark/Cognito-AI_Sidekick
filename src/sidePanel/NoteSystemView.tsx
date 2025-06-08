@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, HTMLAttributes, ReactNode, ComponentPropsWithoutRef, Children, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, ComponentPropsWithoutRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -13,72 +13,27 @@ import { Note } from '../types/noteTypes';
 import { getAllNotesFromSystem, saveNoteInSystem, deleteNoteFromSystem, deleteAllNotesFromSystem } from '../background/noteStorage';
 import { cn } from '@/src/background/util';
 import { useConfig } from './ConfigContext';
-import Markdown, { Components } from 'react-markdown';
+import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FiCopy, FiCheck } from 'react-icons/fi';
 import ChannelNames from '../types/ChannelNames';
-
+import { markdownComponents, Pre as SharedPre } from '@/components/MarkdownComponents';
 
 interface NoteSystemViewProps {
   triggerOpenCreateModal: boolean;
   onModalOpened: () => void;
 }
 
-type ListProps = { children?: ReactNode; ordered?: boolean; } & HTMLAttributes<HTMLUListElement | HTMLOListElement>;
-const Ul = ({ children, className, ...rest }: ListProps) => <ul className={cn("list-disc pl-5", className)} {...rest}>{children}</ul>;
-const Ol = ({ children, className, ...rest }: ListProps) => <ol className={cn("list-decimal pl-5", className)} {...rest}>{children}</ol>;
-type ParagraphProps = { children?: ReactNode } & HTMLAttributes<HTMLParagraphElement>;
-const P = ({ children, className, ...rest }: ParagraphProps) => <p className={cn("mb-2", className)} {...rest}>{children}</p>;
-type CustomPreProps = ComponentPropsWithoutRef<'pre'>;
-const Pre = (props: CustomPreProps) => {
-  const { children, className: preClassName, ...restPreProps } = props;
-  const [copied, setCopied] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const codeElement = Children.only(children) as React.ReactElement<any> | null;
-  let codeString = '';
-  if (codeElement?.props?.children) {
-    if (Array.isArray(codeElement.props.children)) {
-      codeString = codeElement.props.children.map((child: React.ReactNode) => typeof child === 'string' ? child : '').join('');
-    } else {
-      codeString = String(codeElement.props.children);
-    }
-    codeString = codeString.trim();
-  }
-  const copyToClipboard = () => {
-    if (codeString) {
-      navigator.clipboard.writeText(codeString);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }
-  };
-  return (
-    <div className="relative my-2" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      <pre className={cn("p-3 rounded-md bg-[var(--code-bg)] text-[var(--code-text)] overflow-x-auto thin-scrollbar", preClassName)} {...restPreProps}>
-        {children}
-      </pre>
-      {codeString && (
-        <Button variant="ghost" size="sm" aria-label={copied ? "Copied!" : "Copy code"} title={copied ? "Copied!" : "Copy code"} className={cn("absolute right-2 top-2 h-7 w-7 p-0 text-[var(--text)] hover:bg-[var(--text)]/10", "transition-opacity duration-200", (hovered || copied) ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")} onClick={copyToClipboard}>
-          {copied ? <FiCheck className="h-4 w-4" /> : <FiCopy className="h-4 w-4" />}
-        </Button>
-      )}
-    </div>
-  );
+const noteSystemMarkdownComponents = {
+  ...markdownComponents,
+  pre: (props: ComponentPropsWithoutRef<typeof SharedPre>) => (
+    <SharedPre
+      {...props}
+      wrapperClassName="my-2"
+      className={cn("bg-[var(--code-bg)] text-[var(--code-text)]", props.className)}
+      buttonClassName="h-7 w-7 text-[var(--text)] hover:bg-[var(--text)]/10"
+    />
+  ),
 };
-type CustomCodeProps = ComponentPropsWithoutRef<'code'> & { inline?: boolean; };
-const Code = (props: CustomCodeProps) => {
-  const { children, className, inline, ...restCodeProps } = props;
-  if (inline) {
-    return <code className={cn("px-1 py-0.5 rounded-sm bg-[var(--code-inline-bg)] text-[var(--code-inline-text)] text-sm", className)} {...restCodeProps}>{children}</code>;
-  }
-  return <code className={cn("font-mono text-sm", className)} {...restCodeProps}>{children}</code>;
-};
-type AnchorProps = { children?: ReactNode; href?: string } & HTMLAttributes<HTMLAnchorElement>;
-const A = ({ children, href, className, ...rest }: AnchorProps) => <a href={href} className={cn("text-[var(--link)] hover:underline", className)} target="_blank" rel="noopener noreferrer" {...rest}>{children}</a>;
-const H1 = ({ children, className, ...rest }: HTMLAttributes<HTMLHeadingElement>) => <h1 className={cn("text-2xl font-bold mt-4 mb-2 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h1>;
-const H2 = ({ children, className, ...rest }: HTMLAttributes<HTMLHeadingElement>) => <h2 className={cn("text-xl font-semibold mt-3 mb-1 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h2>;
-const H3 = ({ children, className, ...rest }: HTMLAttributes<HTMLHeadingElement>) => <h3 className={cn("text-lg font-semibold mt-2 mb-1", className)} {...rest}>{children}</h3>;
-const Blockquote = ({ children, className, ...rest }: HTMLAttributes<HTMLElement>) => <blockquote className={cn("pl-4 italic border-l-4 border-[var(--border)] my-2 text-[var(--muted-foreground)]", className)} {...rest}>{children}</blockquote>;
-const markdownComponents: Components = { p: P, pre: Pre, code: Code, a: A, h1: H1, h2: H2, h3: H3, ul: Ul, ol: Ol, blockquote: Blockquote };
 
 const ITEMS_PER_PAGE = 12;
 
@@ -353,13 +308,23 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                       <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
                     )}
                   </div>
-                  <HoverCardContent className="w-80 bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body" side="top" align="start" >
+                  <HoverCardContent
+                    className={cn(
+                      "bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body",
+                      "w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw]",
+                      "max-w-lg", // Max width
+                      "max-h-[70vh]",
+                      "overflow-y-auto thin-scrollbar" // Make hover card scrollable
+                    )}
+                    side="top"
+                    align="start"
+                  >
                     <div className="space-y-2">
                       <h4 className="text-sm font-semibold">{note.title}</h4>
                       <p className="text-xs text-[var(--muted-foreground)]">
                         Date: {new Date(note.lastUpdatedAt).toLocaleString()}
                       </p>
-                      <div className="text-sm max-h-40 overflow-y-auto whitespace-pre-wrap break-words thin-scrollbar">
+                      <div className="text-sm whitespace-pre-wrap break-words">
                         <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {note.content}
                         </Markdown>
@@ -414,34 +379,52 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
           setIsCreateModalOpen(true);
         }
       }}>
-        <DialogContent className="bg-[var(--bg)] border-[var(--text)]/10 w-[90vw] max-w-3xl text-[var(--text)]">
+        <DialogContent 
+          className={cn(
+            "bg-[var(--bg)] border-[var(--text)]/10 w-[90vw] max-w-3xl text-[var(--text)]",
+            "flex flex-col max-h-[85vh]",
+            "p-6"
+          )}
+        >
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
             <DialogDescription className="text-[var(--text)]/80 pt-1">
               {editingNote ? 'Update the title or content of your note.' : 'Provide a title (optional) and content for your new note.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+
+          {/* Main content area: Title, scrollable Textarea, Tags */}
+          <div className="flex-1 flex flex-col min-h-0 space-y-4">
+            <div>
             <Input
               placeholder="Note Title (optional)"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="bg-[var(--input-bg)] border-[var(--text)]/10"
+              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)]"
             />
+            </div>
+
+            <div className="flex-1 overflow-y-auto thin-scrollbar min-h-0">
             <Textarea
               placeholder="Your note content..."
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              className="min-h-[30vh] max-h-[60vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 resize-none thin-scrollbar"
+              autosize
+              minRows={5}
+              className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none"
             />
+            </div>
+
+            <div>
             <Input
               placeholder="Tags (comma-separated)"
               value={noteTags}
               onChange={(e) => {
                 setNoteTags(e.target.value);
               }}
-              className="bg-[var(--input-bg)] border-[var(--text)]/10"
+              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)]"
             />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setEditingNote(null); }}>Cancel</Button>
