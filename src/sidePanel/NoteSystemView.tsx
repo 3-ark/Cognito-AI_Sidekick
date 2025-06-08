@@ -381,7 +381,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       }}>
         <DialogContent 
           className={cn(
-            "bg-[var(--bg)] border-[var(--text)]/10 w-[90vw] max-w-3xl text-[var(--text)]",
+            "bg-[var(--bg)] border-[var(--text)]/10 w-[90vw] max-w-3xl text-[var(--text)] overflow-hidden",
             "flex flex-col max-h-[85vh]",
             "p-6"
           )}
@@ -411,7 +411,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
               onChange={(e) => setNoteContent(e.target.value)}
               autosize
               minRows={5}
-              className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none"
+              className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden"
             />
             </div>
 
