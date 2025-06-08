@@ -177,8 +177,8 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
            variant="themedPanel"
            side="left"
            className={cn(
-             "w-[320px] sm:w-[380px]",
              "p-0 border-r-0",
+             "w-[22.857rem] sm:w-[27.143rem]",
              "flex flex-col h-full max-h-screen",
              "[&>button]:hidden",
              "settings-drawer-content",
