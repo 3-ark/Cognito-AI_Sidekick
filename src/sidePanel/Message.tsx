@@ -64,7 +64,7 @@ const ThinkingBlock = ({ content }: { content: string }) => {
 
 const messageMarkdownComponents = {
   ...markdownComponents,
-  pre: (props: any) => <Pre {...props} buttonVariant="copy-button" />,
+  pre: (props: React.ComponentPropsWithoutRef<typeof Pre>) => <Pre {...props} buttonVariant="copy-button" />,
 }
 
 interface MessageProps {
@@ -118,7 +118,8 @@ export const EditableMessage: FC<MessageProps> = ({
         "shadow-lg text-left relative",
         turn.role === 'assistant' ? 'bg-accent border-[var(--text)]/20' : 'bg-primary/10 border-[var(--text)]/20',
         config?.paperTexture ? 'chat-message-bubble' : '',
-        'chatMessage', isEditing ? 'editing' : '' 
+        'chatMessage', isEditing ? 'editing' : '',
+        config && typeof config.fontSize === 'number' && config.fontSize <= 15 ? 'font-semibold' : ''
       )}
       onDoubleClick={() => {
         if (!isEditing) {
