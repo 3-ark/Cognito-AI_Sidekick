@@ -6,5 +6,6 @@ module.exports = [
   'scripting',
   'tabs',
   'declarativeNetRequest',
-  'contextMenus'
+  'contextMenus',
+  'notifications'
 ];

@@ -28,8 +28,7 @@ export const NotePopover = () => {
       setPopoverTitle(config.popoverTitleDraft || '');
       setPopoverTags(config.popoverTagsDraft || '');
     } else {
-      if (config.noteContent !== editableNote) { 
-      }
+      if (config.noteContent !== editableNote)
       setPopoverTitle('');
       setPopoverTags('');
     }
@@ -52,7 +51,7 @@ export const NotePopover = () => {
       popoverTitleDraft: popoverTitle,
       popoverTagsDraft: popoverTags,
     });
-    toast.success('Draft saved!');
+    toast.success('Draft saved!'); 
   };
 
   const handleSaveNoteToFile = async () => {
@@ -88,7 +87,6 @@ export const NotePopover = () => {
     setEditableNote('');
     setPopoverTitle('');
     setPopoverTags('');
-
     updateConfig({
       noteContent: '',
       popoverTitleDraft: '',

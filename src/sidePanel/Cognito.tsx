@@ -7,12 +7,7 @@ import { FaWikipediaW, FaGoogle, FaBrave } from "react-icons/fa6";
 import { SiDuckduckgo } from "react-icons/si";
 
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/src/background/util";
 
 import { useChatTitle } from './hooks/useChatTitle';
@@ -370,6 +365,26 @@ const Cognito = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [config?.chatMode, updateConfig, settingsMode, historyMode]);
+
+  useEffect(() => {
+    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
+      if (message.type === "ACTIVATE_NOTE_SYSTEM_VIEW") {
+        console.log('[Cognito.tsx] Received ACTIVATE_NOTE_SYSTEM_VIEW. Switching to Note System mode.');
+        setSettingsMode(false);
+        setHistoryMode(false);
+        setNoteSystemMode(true);
+        
+        sendResponse({ status: "ACTIVATING_NOTE_SYSTEM_VIEW_ACK" });
+        return true;
+      }
+      return false;
+    };
+
+    chrome.runtime.onMessage.addListener(messageListener);
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
+  }, [setSettingsMode, setHistoryMode, setNoteSystemMode]);
   
   const { appendToNote } = useAddToNote();
 
@@ -450,7 +465,7 @@ const Cognito = () => {
     setSettingsMode(false);
 
     const loadedConfigUpdate: Partial<Config> = {
-      useNote: chat.useNoteActive ?? false, // Restore the 'useNote' state from saved chat
+      useNote: chat.useNoteActive ?? false,
       noteContent: chat.noteContentUsed || '',
     };
 
@@ -619,7 +634,6 @@ const Cognito = () => {
             <NoteSystemView
               triggerOpenCreateModal={triggerNoteCreation}
               onModalOpened={handleNoteModalOpened}
-              // Pass config and updateConfig if NoteSystemView needs them directly
             />
           )}
 

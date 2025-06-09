@@ -74,11 +74,11 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab?.id) {
           console.log(`[NoteSystemView] Component mounted for tab ${tab.id}. Sending SIDE_PANEL_READY signal.`);
-          chrome.runtime.sendMessage({ type: 'SIDE_PANEL_READY', tabId: tab.id }, (response) => {
+          chrome.runtime.sendMessage({ type: 'SIDE_PANEL_READY', tabId: tab.id }, (readyResponse) => {
             if (chrome.runtime.lastError) {
               console.warn('[NoteSystemView] Could not send ready signal:', chrome.runtime.lastError.message);
             } else {
-              console.log('[NoteSystemView] Background acknowledged ready signal:', response);
+              console.log('[NoteSystemView] Background acknowledged ready signal:', readyResponse);
             }
           });
         } else {
@@ -92,23 +92,23 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   }, []);
 
   useEffect(() => {
-    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
       let isHandled = false;
 
       if (message.type === "CREATE_NOTE_FROM_PAGE_CONTENT" && message.payload) {
-        console.log('[NoteSystemView] Received page data. Storing it in state to trigger modal.');
+        console.log('[NoteSystemView] Received page data. Storing it in state to trigger auto-save.');
         setPendingPageData(message.payload);
-        sendResponse({ status: "PAGE_DATA_RECEIVED" });
+        sendResponse({ status: "PAGE_DATA_QUEUED_FOR_AUTO_SAVE" });
         isHandled = true;
       }
       else if (message.type === "ERROR_OCCURRED" && message.payload) {
         console.log('[NoteSystemView] Received ERROR_OCCURRED via runtime message.');
         toast.error(String(message.payload));
-        sendResponse({ status: "ERROR_DISPLAYED" });
+        sendResponse({ status: "ERROR_DISPLAYED_BY_NOTESYSTEM" });
         isHandled = true;
       }
 
-      return isHandled;
+      return isHandled ? true : false;
     };
 
     chrome.runtime.onMessage.addListener(messageListener);
@@ -136,12 +136,36 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   }, [isCreateModalOpen, noteContent, openCreateModal]);
 
   useEffect(() => {
-    if (pendingPageData) {
-      console.log('[NoteSystemView] pendingPageData changed, opening modal now.');
-      openCreateModal({ title: pendingPageData.title, content: pendingPageData.content });
-      setPendingPageData(null);
-    }
-  }, [pendingPageData, openCreateModal]);
+    const autoSaveNote = async () => {
+      if (pendingPageData) {
+        console.log('[NoteSystemView] pendingPageData detected. Attempting automatic save.');
+        
+        const dataToSave = { ...pendingPageData };
+        setPendingPageData(null); 
+
+        if (!dataToSave.content || dataToSave.content.trim() === "") {
+          toast.error("Cannot save note: Content is empty.");
+          return;
+        }
+
+        const noteToSave: Partial<Note> & { content: string } = {
+          title: dataToSave.title.trim() || `Note - ${new Date().toLocaleDateString()}`,
+          content: dataToSave.content,
+          tags: [],
+        };
+
+        try {
+          await saveNoteInSystem(noteToSave);
+          toast.success("Page added to notes!");
+          await fetchNotes();
+        } catch (error) {
+          console.error("[NoteSystemView] Error auto-saving note:", error);
+          toast.error("Failed to auto-save note.");
+        }
+      }
+    };
+    autoSaveNote();
+  }, [pendingPageData, fetchNotes]);
 
   useEffect(() => {
     if (triggerOpenCreateModal) {
@@ -181,14 +205,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       content: noteContent,
       tags: parsedTags,
     };
-    await saveNoteInSystem(noteToSave);
-    toast.success(editingNote ? "Note updated!" : "Note created!");
-    fetchNotes();
-    setIsCreateModalOpen(false);
-    setEditingNote(null);
-    setNoteTitle('');
-    setNoteContent('');
-    setNoteTags('');
+      await saveNoteInSystem(noteToSave);
+      toast.success(editingNote ? "Note updated!" : "Note created!");
+      await fetchNotes();
+      setIsCreateModalOpen(false);
+      setEditingNote(null);
+      setNoteTitle(''); setNoteContent(''); setNoteTags('');
   };
 
   const openEditModal = (note: Note) => {
@@ -288,7 +310,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                             ObsidianMD
                           </Button>
                           <Button
-                            variant="ghost"                            className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
+                            variant="ghost"
+                            className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
                             onClick={() => handleDeleteNote(note.id)}
                           >
                             <GoTrash className="mr-2 size-4" /> Delete </Button>
@@ -312,9 +335,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                     className={cn(
                       "bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body",
                       "w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw]",
-                      "max-w-lg", // Max width
+                      "max-w-lg",
                       "max-h-[70vh]",
-                      "overflow-y-auto thin-scrollbar" // Make hover card scrollable
+                      "overflow-y-auto thin-scrollbar"
                     )}
                     side="top"
                     align="start"
