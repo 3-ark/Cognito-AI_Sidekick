@@ -292,22 +292,13 @@ const PaletteColorPicker = ({
   );
 };
 
-const DEFAULT_CUSTOM_THEME_FALLBACK: Theme = {
-  name: 'custom',
-  active: '#b5d4aa', bg: '#245612', text: '#efeaea', bold: '#fbd709',
-  italic: '#09993e', link: '#587bc5', mute: '#B0B0B0', codeBg: '#efeaea', codeFg: '#245612',
-  preBg: '#efeaea', preFg: '#245612', tableBorder: '#efeaea',
-  error: '#fbd709', success: '#587bc5', warning: '#fbd709',
-};
-
-
 export const Themes = () => {
   const { config, updateConfig } = useConfig();
   const currentFontSize = config?.fontSize || 14;
   
   const [pickerVisibleForKey, setPickerVisibleForKey] = useState<keyof Omit<Theme, 'name'> | null>(null);
-  const [customThemeColors, setCustomThemeColors] = useState<Omit<Theme, 'name'>>(() => { /* ...initialization logic... */
-    const baseDefault = themes.find((t) => t.name === 'custom') || DEFAULT_CUSTOM_THEME_FALLBACK;
+  const [customThemeColors, setCustomThemeColors] = useState<Omit<Theme, 'name'>>(() => {
+    const baseDefault = themes.find((t) => t.name === 'custom')!;
     const { name, ...restOfBaseDefault } = baseDefault;
 
     const configCustom = (typeof config?.customTheme === 'object' && config.customTheme !== null)
@@ -339,7 +330,7 @@ export const Themes = () => {
       const configCustom = (typeof config?.customTheme === 'object' && config.customTheme !== null)
         ? config.customTheme
         : {};
-      const baseDefault = themes.find((t) => t.name === 'custom') || DEFAULT_CUSTOM_THEME_FALLBACK;
+      const baseDefault = themes.find((t) => t.name === 'custom')!;
       const { name, ...restOfBaseDefault } = baseDefault;
       const newCustomColorsCandidate: Omit<Theme, 'name'> = {
         bg: configCustom.bg ?? restOfBaseDefault.bg,
@@ -402,11 +393,11 @@ export const Themes = () => {
     let themeToApply: Theme | undefined;
 
     if (isCustom) {
-      const baseCustomDefinition = themes.find((t) => t.name === 'custom') || DEFAULT_CUSTOM_THEME_FALLBACK;
+      const baseCustomDefinition = themes.find((t) => t.name === 'custom')!;
       themeToApply = {
         ...baseCustomDefinition,
         ...customThemeColors,   
-        name: 'custom',         
+        name: 'custom',
       };
     } else {
       themeToApply = themes.find((t) => t.name === currentThemeName) || themes.find((t) => t.name === 'paper');
@@ -415,8 +406,13 @@ export const Themes = () => {
     if (themeToApply) {
       setTheme(themeToApply, config?.paperTexture ?? true);
     } else {
-      console.warn(`Themes: No theme definition found for "${currentThemeName}". Applying fallback.`);
-      setTheme(DEFAULT_CUSTOM_THEME_FALLBACK, config?.paperTexture ?? true);
+      const ultimateFallbackTheme = themes.find(t => t.name === 'paper') || themes[0];
+      if (ultimateFallbackTheme) {
+        console.warn(`Themes: No theme definition found for "${currentThemeName}". Applying ultimate fallback: ${ultimateFallbackTheme.name}.`);
+        setTheme(ultimateFallbackTheme, config?.paperTexture ?? true);
+      } else {
+        console.error("Themes: Critical error - themes array is empty. Cannot apply any theme.");
+      }
     }
     if (config?.fontSize) {
       document.documentElement.style.setProperty('--global-font-size', `${config.fontSize}px`);
