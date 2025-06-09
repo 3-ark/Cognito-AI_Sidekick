@@ -319,11 +319,11 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                             "bg-[var(--bg)]",
                             "border border-[var(--active)]/20",
                             "rounded-xl shadow-lg",
-                            "max-h-[12rem]",
                             "no-scrollbar",
                             "overflow-y-auto"
                           )}
-                          style={{
+                          style={{ 
+                            maxHeight: `min(calc(50vh - 6rem), 300px)`,
                             top: `${dropdownPosition.top}px`,
                             left: `${dropdownPosition.left}px`,
                             width: `${dropdownPosition.width}px`,
