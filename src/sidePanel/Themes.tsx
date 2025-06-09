@@ -78,7 +78,7 @@ export const themes: Theme[] = [
   },
   {
     name: 'moss',
-    active: '#a4b086',
+    active: '#8d9c6e',
     bg: '#f5e6c4',
     text: '#111111',
     bold: '#af1b1b',
