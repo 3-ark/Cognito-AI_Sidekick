@@ -178,13 +178,16 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
     return (
       <div className={rootComputedClassName}>
         <div className="p-0">
-          <Input
-            type="text"
-            placeholder="Search chat history..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full bg-background rounded-none font-['Space_Mono',_monospace] text-foreground placeholder:text-muted-foreground"
-          />
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search chat history (titles & content)..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full bg-background rounded-none text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10"
+            />
+            <GoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          </div>
         </div>
         <ScrollArea className="flex-1 w-full min-h-0">
           <div className="px-4 pb-4 pt-5 text-center font-['Space_Mono',_monospace] text-foreground/70 h-full flex items-center justify-center">
@@ -199,13 +202,16 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
     return (
       <div className={rootComputedClassName}>
         <div className="p-0">
-          <Input
-            type="text"
-            placeholder="Search chat history..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full bg-background text-foreground font-['Space_Mono',_monospace] placeholder:text-muted-foreground"
-          />
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search chat history (titles & content)..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full bg-background rounded-none text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10"
+            />
+            <GoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          </div>
         </div>
         <ScrollArea className="flex-1 w-full min-h-0">
           <div className="px-4 pb-4 pt-5 text-center font-['Space_Mono',_monospace] text-foreground/70 h-full flex items-center justify-center">
