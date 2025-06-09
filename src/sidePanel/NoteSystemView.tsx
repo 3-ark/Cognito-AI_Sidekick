@@ -212,7 +212,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
         <div className="relative">
           <Input
             type="text"
-            placeholder="Search notes (titles & content)..."
+            placeholder="Search notes (titles & content & tags)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
