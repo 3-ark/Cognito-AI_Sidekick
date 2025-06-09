@@ -47,9 +47,9 @@ export const AddToChat = () => {
               )}
             >
               {!currentModeInConfig ? (
-                <span className="text-sm mr-1 font-bold">Mode</span>
+                <span className="text-sm mr-1 font-semibold">Mode</span>
               ) : (
-                <span className="text-sm font-bold">{currentModeInConfig}</span>
+                <span className="text-sm font-semibold">{currentModeInConfig}</span>
               )}
             </SelectTrigger>
           </TooltipTrigger>
