@@ -261,9 +261,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                 className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
               >
                 <HoverCard openDelay={200} closeDelay={100}>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between overflow-hidden items-center">
                     <HoverCardTrigger asChild>
-                      <h3 className="font-semibold text-md truncate cursor-pointer hover:underline">{note.title}</h3>
+                      <h3 className="flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline">{note.title}</h3>
                     </HoverCardTrigger>
                     <div className="flex-shrink-0">
                       <Popover>
@@ -342,8 +342,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                         Tags: {note.tags.join(', ')}
                       </span>
                     )}
-                    {!note.lastUpdatedAt && !note.url && (!note.tags || note.tags.length === 0) && (
-                      <span>No additional info</span>
+                    {(!note.tags || note.tags.length === 0) && (
+                        <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
                     )}
                   </div>
                   <HoverCardContent
