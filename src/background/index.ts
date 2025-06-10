@@ -9,7 +9,7 @@ chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch(console.error);
 
-const pendingPageContentPayloads = new Map<number, { title: string; content: string }>();
+const pendingPageContentPayloads = new Map<number, { title: string; content: string; url?: string }>();
 
 const ADD_TO_NOTE_MENU_ID = "cognitoAddToNoteSelection";
 const ADD_PAGE_TO_NOTE_SYSTEM_MENU_ID = "cognitoAddPageToNoteSystem";
@@ -159,16 +159,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
               .then((response) => {
                 if (response && response.success) {
                     console.log(`[Background] Received defuddled content for tab ${currentTabId}. Storing it.`);
-                    pendingPageContentPayloads.set(currentTabId, { title: response.title, content: response.content });
+                    pendingPageContentPayloads.set(currentTabId, { title: response.title, content: response.content, url: response.url });
                 } else {
                     console.warn(`[Background] Failed to defuddle page content for tab ${currentTabId}. Response:`, response);
                     const errorMessage = response?.error || "Unknown error processing page content.";
-                    pendingPageContentPayloads.set(currentTabId, { title: "Error", content: errorMessage });
+                    pendingPageContentPayloads.set(currentTabId, { title: "Error", content: errorMessage, url: tab?.url });
                 }
               })
               .catch((error) => {
                 console.error(`[Background] Error sending/receiving DEFUDDLE_PAGE_CONTENT for tab ${currentTabId} after retries:`, error.message);
-                pendingPageContentPayloads.set(currentTabId, { title: "Error", content: `Failed to get page content: ${error.message}. The page might be protected or need a reload.` });
+                pendingPageContentPayloads.set(currentTabId, { title: "Error", content: `Failed to get page content: ${error.message}. The page might be protected or need a reload.`, url: tab?.url });
               })
               .finally(() => {
                 console.log(`[Background] Requesting side panel to switch to Note System View for tab ${currentTabId}.`);

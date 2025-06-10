@@ -47,7 +47,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
   const [noteContent, setNoteContent] = useState('');
   const [noteTags, setNoteTags] = useState('');
   
-  const [pendingPageData, setPendingPageData] = useState<{title: string, content: string} | null>(null);
+  const [pendingPageData, setPendingPageData] = useState<{title: string, content: string, url?: string} | null>(null);
 
   const { config } = useConfig();
 
@@ -152,6 +152,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
           title: dataToSave.title.trim() || `Note - ${new Date().toLocaleDateString()}`,
           content: dataToSave.content,
           tags: [],
+          url: dataToSave.url,
         };
 
         try {
@@ -204,6 +205,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
       content: noteContent,
       tags: parsedTags,
+      url: editingNote?.url, // Preserve URL if editing, new notes from page will get it via pendingPageData
+
     };
       await saveNoteInSystem(noteToSave);
       toast.success(editingNote ? "Note updated!" : "Note created!");
@@ -295,6 +298,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                                   mdContent += `  - ${tag.trim()}\n`;
                                 });
                               }
+                              if (note.url) {
+                                mdContent += `url: ${note.url}\n`;
+                              }
                               mdContent += '---\n\n';
                               mdContent += note.content;
                               const element = document.createElement('a');
@@ -319,16 +325,25 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                       </Popover>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs text-[var(--muted-foreground)]">
-                      Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
-                    </p>
-                    {note.tags && note.tags.length > 0 ? (
-                      <p className="text-xs text-[var(--muted-foreground)] truncate max-w-[50%]">
+                  {/* Combined info line */}
+                  <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
+                    {note.lastUpdatedAt && (
+                      <span className="mr-2">
+                        Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                    {note.url && (
+                      <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]">
+                        Link
+                      </a>
+                    )}
+                    {note.tags && note.tags.length > 0 && (
+                      <span className="truncate max-w-[40%]">
                         Tags: {note.tags.join(', ')}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
+                      </span>
+                    )}
+                    {!note.lastUpdatedAt && !note.url && (!note.tags || note.tags.length === 0) && (
+                      <span>No additional info</span>
                     )}
                   </div>
                   <HoverCardContent

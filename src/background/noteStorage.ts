@@ -17,7 +17,8 @@ export const saveNoteInSystem = async (noteData: Partial<Note> & { content: stri
     content: noteData.content,
     createdAt: existingNote?.createdAt || now,
     lastUpdatedAt: now,
-    tags: noteData.tags, 
+    tags: noteData.tags,
+    url: noteData.url || '',
   };
 
   await localforage.setItem(noteId, noteToSaveToStorage);

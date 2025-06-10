@@ -80,7 +80,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({
         success: true,
         title: firstHeading || defuddleResult.title || fallbackTitle,
-        content: markdownContent
+        content: markdownContent,
+        url: document.location.href
      });
 
       console.log('[Cognito Content Script] Sent successful defuddle response to background.');

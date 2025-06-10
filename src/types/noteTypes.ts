@@ -5,6 +5,7 @@ export interface Note {
   createdAt: number;
   lastUpdatedAt: number;
   tags?: string[];
+  url?: string;
   // Future enhancements: isArchived?: boolean;
 }
 
