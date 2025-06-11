@@ -115,23 +115,128 @@ This setup allows Cognito to understand the context of your browsing and provide
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
 *   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
 *   Potential support for image and voice API interactions for multimodal capabilities.
-*   ~Change notes to link + hover card, add tags, change the dustbin to ...+dropdownmenu/context menu/menu~
-*   A hybrid RAG system starting with BM25 is smart for speed and local search. [wink-bm25-text-search](https://github.com/winkjs/wink-bm25-text-search) – fast, no dependencies, lightweight
+* **task outline for building RAG + memory integration** based on my current design with `note` (short-term memory) and `note system` (long-term searchable notes).
 
-```
-const bm25 = require('wink-bm25-text-search')();
-bm25.defineConfig({ fldWeights: { title: 1, content: 2 } });
+---
 
-bm25.definePrepTasks([
-  // optional: tokenize, lowercase, remove stopwords
-]);
+## 🧩 **PHASE 1: Foundation - Memory Layers + Indexing**
 
-// Add documents (your notes)
-bm25.addDoc({ title: "Page summary", content: "..." }, docId);
+### ✅ 1. **Solidify Data Layers**
 
-// Search
-const results = bm25.search("keyword or phrase");
-```
+* [x] Confirm schema for:
+
+  * `note` (live memory)
+  * `note system` (archived knowledge base)
+* [ ] Ensure `note system` entries have:
+
+  * `id`, `title`, `content`, `created`, `tags`
+  * `embedding` (Float32Array), or deferred embedding
+* [ ] Track whether a note has already been embedded/indexed
+
+---
+
+## 📦 **PHASE 2: RAG Indexing (Hybrid Search)**
+
+### ✅ 2. **BM25 Engine (keyword search)**
+
+* [ ] Build or plug in a BM25 scorer (your own or `MiniSearch`)
+* [ ] Tokenize `note system` content (can use your tokenizer or wink-nlp)
+* [ ] Score/query notes using BM25 at search time
+
+### ✅ 3. **Semantic Embedding + Cosine Similarity**
+
+* [ ] Use `@xenova/transformers` to embed:
+
+  * Each `note system` entry once
+  * Each user query at runtime
+* [ ] Store embeddings in LocalForage alongside note ID
+* [ ] On query, compare query embedding to all stored vectors
+
+  * Use cosine similarity
+  * Return top-K
+
+### ✅ 4. **Hybrid Fusion**
+
+* [ ] Implement score fusion:
+
+  * Normalize BM25 + vector scores
+  * Combine: `finalScore = α * bm25 + (1 - α) * vector`
+  * Or use Reciprocal Rank Fusion (RRF)
+
+---
+
+## 💡 **PHASE 3: Context Construction (RAG Assembly)**
+
+### ✅ 5. **Context Builder**
+
+* [ ] Deduplicate overlapping results (BM25 and vector)
+* [ ] Chunk or truncate large notes to fit LLM context
+* [ ] Package selected top results as `ragContext[]`
+
+---
+
+## 🧠 **PHASE 4: Note Mode Integration (Short-Term Memory)**
+
+### ✅ 6. **`note` Integration for Chat Context**
+
+* [x] Inject live `note` into every chat context as memory
+* [x] Style/label this separately from RAG-based retrievals
+
+---
+
+## 📥 **PHASE 5: Archiving / Promoting Notes**
+
+### ✅ 7. **Archive Path: `note` → `note system`**
+
+* [x] Add “Archive to Note System” button in UI
+* [ ] When archiving:
+
+  * Trigger embedding generation
+  * Add to BM25 index and vector store
+
+---
+
+## 🔍 **PHASE 6: Search Tooling (Optional UI Enhancements)**
+
+* [ ] Add search bar to test hybrid search (notes only)
+* [ ] Display search scores for debugging
+* [ ] Add filters (by tag/date) to restrict RAG input
+
+---
+
+## ⚡ **PHASE 7: Optimization + Scalability (Optional, Later)**
+
+* [ ] Add GPU acceleration (WebGPU)
+* [ ] Shard large note sets (if >20k)
+* [ ] Implement incremental embedding updates
+* [ ] Add embedding model selection
+* [ ] Cache common queries
+
+---
+
+## 🧪 Dev Tip: Test Stages in Isolation
+
+Test each module independently:
+
+1. Search query → BM25 result ✅
+2. Query → embedding → cosine results ✅
+3. Fusion logic ✅
+4. Final context builder ✅
+5. Inject into LLM/chat ✅
+
+---
+
+## ✅ You're Building:
+
+| Component     | Purpose                             |
+| ------------- | ----------------------------------- |
+| `note`        | live memory, always-injected        |
+| `note system` | long-term searchable memory         |
+| Hybrid search | fast + accurate retrieval           |
+| RAG engine    | builds best context on demand       |
+| Archive path  | user-controlled knowledge promotion |
+
+---
 
 [^1]: 
 ```
