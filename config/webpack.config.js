@@ -1,9 +1,9 @@
 const CopyPlugin = require('copy-webpack-plugin');
-const GenerateJsonFromJsPlugin = require('generate-json-from-js-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const dotenv = require('dotenv');
 const webpack = require('webpack');
 const { join } = require('path');
+const { Compilation } = require('webpack');
 const { inDev } = require("./helpers");
 const packageJson = require('../package.json');
 
@@ -60,20 +60,24 @@ const config = {
           filename: 'assets/sidePanel.html',
           chunks: ['app']
         }),
-    ...browsers.map(browser => new GenerateJsonFromJsPlugin({
-          path: join(__dirname, 'manifest', 'v3.js'),
-          filename: 'manifest.json',
-          options: {
-            replacer: (key, value) => {
-              switch (key) {
-                case 'extension_pages':
-                  return value.replace(/\s+/g, ' ');
+    ...browsers.map(browser => ({
+      apply: (compiler) => {
+        compiler.hooks.thisCompilation.tap('CustomGenerateManifestPlugin', (compilation) => {
+          compilation.hooks.processAssets.tap(
+            {
+              name: 'CustomGenerateManifestPlugin',
+              stage: Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+            },
+            (assets) => {
+              const generateManifestFunction = require('./generate-manifest.js');
 
-                default:
-                  return value;
-              }
+              const manifestContent = generateManifestFunction(browser);
+
+              assets['manifest.json'] = new webpack.sources.RawSource(manifestContent);
             }
-          }
+          );
+        });
+      },
     })),
     new CopyPlugin({
       patterns: [
