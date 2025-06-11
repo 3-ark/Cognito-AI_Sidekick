@@ -3,18 +3,7 @@ export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/open
 export const OPENAI_URL = 'https://api.openai.com/v1/models';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/models';
 
-export const personaImages: {
-  Agatha: string;
-  Spike: string;
-  Warren: string;
-  Jet: string;
-  Jan: string;
-  Sherlock: string;
-  Ein: string;
-  Faye: string;
-  default: string;
-  [key: string]: string | undefined;
-} = {
+export const DEFAULT_PERSONA_IMAGES: Record<string, string> = {
   Agatha: 'assets/images/agatha.png',
   Spike: 'assets/images/spike.png',
   Warren: 'assets/images/warren.png',
@@ -25,4 +14,3 @@ export const personaImages: {
   Faye: 'assets/images/faye.png',
   default: 'assets/images/custom.png'
 };
-

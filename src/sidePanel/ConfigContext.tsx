@@ -82,6 +82,7 @@ const defaultConfig: Config = {
   userName: 'user', 
   userProfile: '',
   popoverTitleDraft: '',
+  tools: [],
   popoverTagsDraft: '',
 };
 

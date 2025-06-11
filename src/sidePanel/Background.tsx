@@ -1,11 +1,11 @@
 import { cn } from "@/src/background/util";
 import { useConfig } from './ConfigContext';
-import { personaImages } from "./constants";
+import { DEFAULT_PERSONA_IMAGES } from "./constants";
 
 export const Background = () => {
   const { config } = useConfig();
-  const persona = config?.persona || 'default';
-  const src = personaImages[persona] || personaImages.default;
+  const currentPersona = config?.persona || 'default';
+  const src = config?.personaAvatars?.[currentPersona] || DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
 
   const containerClasses = cn(
     "flex",

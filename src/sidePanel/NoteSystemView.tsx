@@ -205,7 +205,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
       title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
       content: noteContent,
       tags: parsedTags,
-      url: editingNote?.url, // Preserve URL if editing, new notes from page will get it via pendingPageData
+      url: editingNote?.url,
 
     };
       await saveNoteInSystem(noteToSave);

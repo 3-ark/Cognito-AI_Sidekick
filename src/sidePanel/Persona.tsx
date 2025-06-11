@@ -1,4 +1,4 @@
-import { useEffect, useState, ChangeEvent, Dispatch, SetStateAction } from 'react';
+import { useEffect, useRef, useState, ChangeEvent, Dispatch, SetStateAction } from 'react';
 import {
   AccordionItem,
   AccordionContent,
@@ -28,7 +28,8 @@ import { useConfig } from './ConfigContext';
 import { SettingTitle } from './SettingsTitle';
 import { cn } from "@/src/background/util";
 import { Textarea } from "@/components/ui/textarea";
-
+import { AvatarUpload } from './AvatarUpload';
+import { DEFAULT_PERSONA_IMAGES } from './constants';
 const SaveButtons = ({
   hasChange,
   onSave,
@@ -69,6 +70,7 @@ const SaveButtons = ({
   );
 };
 
+// Update the PersonaModal component in Persona.tsx
 const PersonaModal = ({
   isOpen, onOpenChange, personaPrompt, personas, updateConfig, onModalClose
 }: {
@@ -79,15 +81,50 @@ const PersonaModal = ({
   updateConfig: (config: any) => void;
   onModalClose: () => void;
 }) => {
+  const { config } = useConfig();
   const [name, setName] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleCreate = () => {
     if (!name.trim()) return;
-    updateConfig({
-      personas: { ...personas, [name.trim()]: personaPrompt },
+    
+    const newPersonas = { ...personas, [name.trim()]: personaPrompt };
+    let newConfig: any = {
+      personas: newPersonas,
       persona: name.trim()
-    });
+    };
+
+    if (avatarFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        newConfig.personaAvatars = {
+          ...config.personaAvatars,
+          [name.trim()]: event.target?.result as string
+        };
+        updateConfig(newConfig);
+      };
+      reader.readAsDataURL(avatarFile);
+    } else {
+      updateConfig(newConfig);
+    }
+
     setName('');
+    setAvatarFile(null);
+    setAvatarPreview(null);
     onModalClose();
   };
 
@@ -104,28 +141,58 @@ const PersonaModal = ({
           <DialogTitle className="text-[var(--text)]">Create New Persona</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <Label htmlFor="persona-name" className="text-base font-medium text-foreground sr-only">
-            Persona Name
-          </Label>
-          <Input
-            id="persona-name"
-            placeholder="Enter persona name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className={cn(
-              "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-              "hover:border-[var(--active)] hover:brightness-98",
-            )}
-          />
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-full overflow-hidden border border-[var(--text)]/10">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <img 
+                    src={DEFAULT_PERSONA_IMAGES.default} 
+                    alt="Default" 
+                    className="w-full h-full object-cover" 
+                  />
+                )}
+              </div>
+              <Button
+                variant="outline-subtle"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Select Avatar
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="persona-name" className="text-sm font-medium text-foreground">
+                Persona Name
+              </Label>
+              <Input
+                id="persona-name"
+                placeholder="Enter persona name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className={cn(
+                  "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
+                  "hover:border-[var(--active)] hover:brightness-98",
+                )}
+              />
+            </div>
+          </div>
         </div>
         <DialogFooter className="sm:justify-end">
           <Button type="button" variant="outline-subtle" size="sm"
             onClick={onModalClose}
           > Cancel </Button>
           <Button type="button" variant="active-bordered" size="sm"
-            className={cn(
-            )}
-            disabled={!name.trim()} onClick={handleCreate}
+            disabled={!name.trim()} 
+            onClick={handleCreate}
           > Create </Button>
         </DialogFooter>
       </DialogContent>
@@ -190,33 +257,41 @@ const PersonaSelect = ({
   persona: string;
   updateConfig: (config: any) => void;
 }) => {
+  const { config } = useConfig();
+  
   return (
-    <Select
-      value={persona}
-      onValueChange={(value) => updateConfig({ persona: value })}
-    >
-      <SelectTrigger
-        variant="settings"
-        className={cn(
-          "flex w-full",
-          "data-[placeholder]:text-muted-foreground"
-        )}
-      >
-        <SelectValue placeholder="Select persona" />
-      </SelectTrigger>
-      <SelectContent
-        variant="settingsPanel"
-        className={cn(
-        )}
-      >
-        {Object.keys(personas).map((p) => (
-          <SelectItem
-            key={p} value={p}
-            focusVariant="activeTheme"
-          > {p} </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="flex items-center gap-2 w-full">
+      <AvatarUpload personaName={persona} />
+      <div className="flex-1"> {/* Wrapper div takes the flex-1 property */}
+        <Select
+          value={persona}
+          onValueChange={(value) => updateConfig({ persona: value })}
+          // className="flex-1" removed from here
+        >
+          <SelectTrigger
+            variant="settings"
+            className={cn(
+              "flex w-full", // This will make the trigger fill the new flex-1 div
+              "data-[placeholder]:text-muted-foreground"
+            )}
+          >
+            <SelectValue placeholder="Select persona" />
+          </SelectTrigger>
+          <SelectContent
+            variant="settingsPanel"
+          >
+            {Object.keys(personas).map((p) => (
+              <SelectItem
+                key={p} value={p}
+                focusVariant="activeTheme"
+              > 
+                {p}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   );
 };
 

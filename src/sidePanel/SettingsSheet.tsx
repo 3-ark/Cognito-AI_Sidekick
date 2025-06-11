@@ -2,38 +2,17 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { IoMoonOutline, IoSunnyOutline } from 'react-icons/io5';
 import { FiX } from 'react-icons/fi';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetOverlay,
-} from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { type Config } from "@/src/types/config";
 import { themes as appThemes, type Theme as AppTheme } from './Themes';
 import { cn } from "@/src/background/util";
 import { useUpdateModels } from './hooks/useUpdateModels';
-import { personaImages } from './constants';
+import { DEFAULT_PERSONA_IMAGES } from './constants';
 import AnimatedBackground from './AnimatedBackground';
 
 const SheetThemeButton = ({ theme, updateConfig, size = "h-7 w-7" }: { theme: AppTheme; updateConfig: (newConfig: Partial<Config>) => void; size?: string }) => (
@@ -93,7 +72,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
 
 
   const currentPersona = config?.persona || 'default';
-  const personaImageSrc = personaImages[currentPersona] || personaImages.default;
   const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
 
   const filteredModels =
@@ -235,15 +213,9 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-4",)}>
                 <div>
                   <div className="flex items-center justify-between mt-5 mb-3">
-                    <div className="flex items-center space-x-2">
                       <label htmlFor="persona-select" className="text-[var(--text)] opacity-80 font-['Bruno_Ace_SC'] text-lg shrink-0">
                         Persona
                       </label>
-                      <Avatar className="h-8 w-8 border border-[var(--active)]">
-                        <AvatarImage src={personaImageSrc} alt={currentPersona} />
-                        <AvatarFallback>{currentPersona.substring(0, 1).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                    </div>
                     <div className="flex items-center space-x-1.5">
                       {presetThemesForSheet.map(theme => (
                         <SheetThemeButton
@@ -266,18 +238,28 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                       >
                         <SelectValue placeholder="Select Persona..." />
                       </SelectTrigger>
-                      <SelectContent
-                        variant="settingsPanel"
-                      >
-                        {Object.keys(config?.personas || {}).map((p) => (
-                          <SelectItem key={p} value={p} 
-                          className={cn("hover:brightness-95 focus:bg-[var(--active)]", 
-                          "font-['Space_Mono',_monospace]")}
-                          >
+                      <SelectContent variant="settingsPanel">
+                         {Object.keys(config?.personas || {}).map((p) => {
+                            const personaAvatar = config?.personaAvatars?.[p] || DEFAULT_PERSONA_IMAGES[p] || DEFAULT_PERSONA_IMAGES.default;
+                            return (
+                         <SelectItem 
+                            key={p} 
+                            value={p} 
+                            className={cn(
+                               "hover:brightness-95 focus:bg-[var(--active)]", 
+                                "font-['Space_Mono',_monospace]",
+                               "flex items-center gap-2"
+                                      )}
+                        >
+                        <Avatar className="h-5 w-5">
+                            <AvatarImage src={personaAvatar} alt={p} />
+                            <AvatarFallback>{p.substring(0, 1).toUpperCase()}</AvatarFallback>
+                            </Avatar>
                             {p}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                        </SelectItem>
+                      );
+                   })}
+                   </SelectContent>
                     </Select>
                   </div>
                 </div>

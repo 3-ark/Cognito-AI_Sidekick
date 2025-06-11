@@ -19,7 +19,7 @@ import { GoPlus } from "react-icons/go";
 import { BsFiletypeMd } from "react-icons/bs";
 
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
-import { personaImages } from './constants';
+import { DEFAULT_PERSONA_IMAGES } from './constants';
 
 function getStatusText(mode: ChatMode, status: ChatStatus): string {
   if (status === 'idle') return 'Online';
@@ -229,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const currentPersona = config?.persona || 'default';
-  const personaImageSrc = personaImages[currentPersona] || personaImages.default;
+  const currentPersonaAvatar = config?.personaAvatars?.[currentPersona] || DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
 
   const visibleTitle = chatTitle && !settingsMode && !historyMode && !noteSystemMode;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -346,8 +346,8 @@ export const Header: React.FC<HeaderProps> = ({
                     <FiX size="22px" />
                   ) : (
                     <Avatar className="h-8 w-8 border border-[var(--active)]">
-                      <AvatarImage src={personaImageSrc} alt={currentPersona} />
-                      <AvatarFallback>{(currentPersona === 'default' ? 'C' : currentPersona.substring(0, 1)).toUpperCase()}</AvatarFallback>
+                      <AvatarImage src={currentPersonaAvatar} alt={currentPersona} />
+                      <AvatarFallback>{currentPersona.substring(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                   )}
                 </Button>

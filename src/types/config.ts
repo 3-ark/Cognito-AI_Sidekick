@@ -15,6 +15,11 @@ export interface Model {
   context_length?: number;
   name?: string;
 }
+export interface Tool {
+  name: string;
+  description: string;
+}
+export type Tools = Tool[];
 
 export interface TtsSettings {
   selectedVoice?: string;
@@ -41,10 +46,11 @@ export type ChatStatus =
 export interface Config {
   personas: Record<string, string>;
   persona: string;
+  personaAvatars?: Record<string, string>;
   generateTitle?: boolean;
   backgroundImage?: boolean;
   animatedBackground?: boolean;
-  webMode?: 'Duckduckgo' | 'Brave' | 'Google' | 'Wikipedia' | 'GoogleCustomSearch' | string; // Added GoogleCustomSearch
+  webMode?: 'Duckduckgo' | 'Brave' | 'Google' | 'Wikipedia' | 'GoogleCustomSearch' | string;
   webLimit?: number;
   serpMaxLinksToVisit?: number;
   wikiNumBlocks?: number;
@@ -114,6 +120,7 @@ export interface Config {
   userProfile?: string;
   popoverTitleDraft?: string;
   popoverTagsDraft?: string;
+  tools?: Tools;
 }
 
 export interface ConfigContextType {
