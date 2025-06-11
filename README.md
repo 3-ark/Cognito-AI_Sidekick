@@ -123,7 +123,7 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 ### ✅ 1. **Solidify Data Layers**
 
-* [ ] Confirm schema for:
+* [x] Confirm schema for:
 
   * `note` (live memory)
   * `note system` (archived knowledge base)
@@ -179,8 +179,8 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 ### ✅ 6. **`note` Integration for Chat Context**
 
-* [ ] Inject live `note` into every chat context as memory
-* [ ] Style/label this separately from RAG-based retrievals
+* [x] Inject live `note` into every chat context as memory
+* [x] Style/label this separately from RAG-based retrievals
 
 ---
 
@@ -188,7 +188,7 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 ### ✅ 7. **Archive Path: `note` → `note system`**
 
-* [ ] Add “Archive to Note System” button in UI
+* [x] Add “Archive to Note System” button in UI
 * [ ] When archiving:
 
   * Trigger embedding generation
