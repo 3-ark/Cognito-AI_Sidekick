@@ -109,7 +109,7 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Evaluation and integration of community pull requests.
 *   **Enhanced Agent Capabilities:**
     *   "Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.
-    *   Autonomously invoke internal tools (like “save note”, “search note”, “summarize page”) without switching modes. Here’s how to pull it off: Adding a small tool-invoking agent layer; Capturing tool-friendly intent (few-shot or system prompt); Internally calling functions when confidence is high. [^1]
+    *   Autonomously invoke internal tools (like ~“save note”~, “search note”, “summarize page”) without switching modes. Here’s how to pull it off: Adding a small tool-invoking agent layer; Capturing tool-friendly intent (few-shot or system prompt); Internally calling functions when confidence is high.
     *   Better websearch with [Deepsearch](https://github.com/google-gemini/gemini-fullstack-langgraph-quickstart)
     *   "Short-term Memory" (state management) for multi-step tasks within the same context (e.g., web search followed by page parsing and comparison). Note would be used for this.
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
@@ -237,23 +237,6 @@ Test each module independently:
 | Archive path  | user-controlled knowledge promotion |
 
 ---
-
-[^1]: 
-```
-const userPrompt = "Summarize this page and save to my notes";
-
-const tools = [
-  { name: "saveNote", description: "Save text content to note system" },
-  ...
-];
-
-const res = await openai.chat.completions.create({
-  model: "gpt-4",
-  messages: [...],
-  tools,
-  tool_choice: "auto"
-});
-```
 
 *(This section will be regularly updated based on project progress)*
 
