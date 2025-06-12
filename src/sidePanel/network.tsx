@@ -3,8 +3,9 @@ import '../types/config.ts';
 import type { Config, Model } from 'src/types/config';
 
 interface ApiMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  name?: string; // Optional, used for tool messages
 }
 
 const cleanResponse = (response: string): string => {

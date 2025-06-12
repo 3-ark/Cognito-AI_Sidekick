@@ -48,7 +48,7 @@ export const useUpdateModels = () => {
       host: HOST_OLLAMA,
       isEnabled: (cfg) => !!cfg.ollamaUrl && cfg.ollamaConnected === true,
       getUrl: (cfg) => `${cfg.ollamaUrl}/api/tags`,
-      parseFn: (data, host) => (data?.models as Model[] ?? []).map(m => ({ ...m, id: m.id ?? m.name, host })),
+      parseFn: (data, host) => (data?.models as Model[] ?? []).map(m => ({ ...m, id: m.id ?? m.name, host })), // Use name if id missing
       onFetchFail: (_, updateCfg) => updateCfg({ ollamaConnected: false, ollamaUrl: '' }),
     },
     {

@@ -6,6 +6,7 @@ import type { Config, Model } from 'src/types/config';
 import { normalizeApiEndpoint } from 'src/background/util';
 import { handleHighCompute, handleMediumCompute } from './computeHandlers';
 import { ChatMode, ChatStatus } from '../../types/config';
+import { useTools } from './useTools';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -21,8 +22,9 @@ try {
 }
 
 interface ApiMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  name?: string;
 }
 
 export const getAuthHeader = (config: Config, currentModel: Model) => {
@@ -90,6 +92,7 @@ const useSendMessage = (
 ) => {
   const completionGuard = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { toolDefinitions, executeToolCall } = useTools();
 
   const updateAssistantTurn = (callId: number | null, update: string, isFinished: boolean, isError?: boolean, isCancelled?: boolean) => {
     if (completionGuard.current !== callId && !isFinished && !isError && !isCancelled) {
@@ -149,6 +152,17 @@ const useSendMessage = (
         }
       }
     }
+  };
+
+  const turnToApiMessage = (turn: MessageTurn): ApiMessage => {
+    const apiMsg: ApiMessage = {
+      role: turn.role,
+      content: turn.rawContent || ''
+    };
+    if (turn.role === 'tool' && turn.name) {
+      apiMsg.name = turn.name;
+    }
+    return apiMsg;
   };
 
   const onSend = async (overridedMessage?: string) => {
@@ -398,13 +412,26 @@ const useSendMessage = (
     if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
     if (noteContextString) systemPromptParts.push(noteContextString);
+    // Scraped content from URLs in message should come before page/web context
+    if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
-    if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
+
+    // Add custom tool definitions to system prompt
+    if (toolDefinitions && toolDefinitions.length > 0) {
+      const toolDescriptions = toolDefinitions.map(tool => ({
+        name: tool.function.name,
+        description: tool.function.description,
+        parameters: tool.function.parameters
+      }));
+      // Instruct LLM to respond with ONLY the JSON for a tool call
+      const toolsPrompt = `You have access to the following tools. To use a tool, you MUST respond with a JSON object ONLY, with the structure: {"tool_name": "name_of_tool", "tool_arguments": {"arg1": "value1", ...}}. Do not add any other text, explanation, or formatting before or after this JSON. If you don't need to use a tool, respond normally.\n\nAvailable tools:\n${JSON.stringify(toolDescriptions, null, 2)}`;
+      systemPromptParts.push("## AVAILABLE TOOLS\n" + toolsPrompt);
+    }
 
     const systemContent = systemPromptParts.join('\n\n').trim();
 
-    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx: ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}`)
+    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx: ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`)
 
     // --- Step 4: Execute based on Compute Level ---
     try {
@@ -457,31 +484,100 @@ const useSendMessage = (
         if (systemContent.trim() !== '') {
           messagesForApiPayload.push({ role: 'system', content: systemContent });
         }
-        messagesForApiPayload.push(...messageForApi);
+        // Add history turns and the current user message
+        messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage)); // Use existing history
+        messagesForApiPayload.push({ role: 'user', content: message });
 
-        console.log(`[${callId}] useSendMessage: Sending chat request to ${url} with system prompt: "${systemContent}"`); // Log the system prompt
-        await fetchDataAsStream(
-          url,
-          {
-            ...configBody,
-            model: config?.selectedModel || '',
-            messages: messagesForApiPayload,
-            temperature: config?.temperature ?? 0.7,
-            max_tokens: config?.maxTokens ?? 32048,
-            top_p: config?.topP ?? 1,
-            presence_penalty: config?.presencepenalty ?? 0,
-          },
-          (part: string, isFinished?: boolean, isError?: boolean) => {
-            updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError));
-            if (isFinished || isError) {
-              console.log(`[${callId}] fetchDataAsStream Callback: Stream finished/errored.`);
+        const processLlmResponse = async () => {
+          await fetchDataAsStream(
+            url,
+            {
+              ...configBody,
+              model: config?.selectedModel || '',
+              messages: messagesForApiPayload,
+              temperature: config?.temperature ?? 0.7,
+              max_tokens: config?.maxTokens ?? 32048,
+              top_p: config?.topP ?? 1,
+              presence_penalty: config?.presencepenalty ?? 0,
+            },
+          async (part: string, isFinished?: boolean, isError?: boolean, rawResponse?: any) => {
+            if (controller.signal.aborted && !isFinished && !isError) {
+              console.log(`[${callId}] processLlmResponse: Aborted during streaming. Update will be handled by onStop or final error.`);
+              return;
+            }
+
+            if (isFinished && !isError) {
+              const assistantResponseContent = part;
+              try {
+                const potentialToolCall = JSON.parse(assistantResponseContent);
+                if (potentialToolCall && potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') {
+                  console.log(`[${callId}] Detected custom tool call:`, potentialToolCall.tool_name);
+                  // Update assistant's turn to show the tool call JSON itself
+                  updateAssistantTurn(callId, assistantResponseContent, true, false);
+                  // Add the assistant's tool call message to turns before executing
+
+                  const executionResult = await executeToolCall({
+                    name: potentialToolCall.tool_name,
+                    arguments: JSON.stringify(potentialToolCall.tool_arguments),
+                  });
+
+                  const toolResultTurn: MessageTurn = {
+                    role: 'tool',
+                    name: executionResult.name,
+                    rawContent: executionResult.result,
+                    status: 'complete',
+                    timestamp: Date.now(),
+                  };
+                  setTurns(prevTurns => [...prevTurns, toolResultTurn]);
+
+                  // The assistant's response that was parsed as a tool call
+                  const assistantToolCallApiMessage: ApiMessage = {
+                    role: 'assistant',
+                    content: assistantResponseContent // This is the raw JSON string from the LLM
+                  };
+
+                  // Prepare for the second LLM call
+                  const messagesForNextApiCall: ApiMessage[] = [
+                    ...messagesForApiPayload, // Contains: system, history before current user, current user message
+                    assistantToolCallApiMessage,
+                    turnToApiMessage(toolResultTurn)
+                  ];
+
+                  const finalAssistantPlaceholder: MessageTurn = {
+                      role: 'assistant', rawContent: '', status: 'streaming', timestamp: Date.now() + 1
+                  };
+                  setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
+
+                  console.log(`[${callId}] Sending tool result back to LLM and awaiting final response.`);
+                  await fetchDataAsStream( // Second call
+                    url,
+                    { 
+                       ...configBody, model: config?.selectedModel || '', messages: messagesForNextApiCall,
+                       temperature: config?.temperature ?? 0.7, max_tokens: config?.maxTokens ?? 32048,
+                       top_p: config?.topP ?? 1, presence_penalty: config?.presencepenalty ?? 0,
+                    },
+                    (finalPart, finalIsFinished, finalIsError) => {
+                      updateAssistantTurn(callId, finalPart, Boolean(finalIsFinished), Boolean(finalIsError));
+                    },
+                    authHeader, currentModel.host || '', controller.signal
+                  );
+                  return;
+                }
+              } catch (e) {
+                // Not a JSON or not our tool call structure, treat as a regular message
+              }
+              updateAssistantTurn(callId, assistantResponseContent, true, false);
+            } else {
+              updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
             }
           },
           authHeader,
           currentModel.host || '',
           controller.signal
-        );
-        console.log(`[${callId}] useSendMessage: fetchDataAsStream call INITIATED.`);
+          );
+        };
+        console.log(`[${callId}] useSendMessage: Initial LLM call (processLlmResponse) INITIATED.`);
+        await processLlmResponse();
       }
     } catch (error) {
       if (controller.signal.aborted) {

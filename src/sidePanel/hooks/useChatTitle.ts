@@ -6,11 +6,11 @@ import { fetchDataAsStream } from '../network';
 import { MessageTurn } from '../ChatHistory';
 
 interface ApiMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
+  name?: string; // Optional, used for tool messages
 }
 
-// Add helper function to extract title from COT response
 const extractTitle = (response: string): string => {
   // First remove any thinking blocks
   const titleOnly = response
@@ -24,7 +24,7 @@ const extractTitle = (response: string): string => {
   }
 
   // Limit to a maximum of 4 words
-  const words = titleOnly.split(/\s+/); // Split by any whitespace
+  const words = titleOnly.split(/\s+/);
   return words.slice(0, 4).join(' ') || "New Chat";
 };
 

@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 const dateToString = (date: number | Date): string => new Date(date).toLocaleDateString('sv-SE');
 
 export interface MessageTurn {
-  role: 'user' | 'assistant';
-  status: 'complete' | 'streaming' | 'error' | 'cancelled';
+  role: 'user' | 'assistant' | 'tool' ;
+  status: 'complete' | 'streaming' | 'error' | 'cancelled' | 'awaiting_tool_results';
   rawContent: string;
   webDisplayContent?: string;
   timestamp: number;
+  name?: string; // Optional name for tool calls
 }
 export type ChatMessage = {
   id: string;
