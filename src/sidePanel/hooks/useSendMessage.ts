@@ -23,8 +23,17 @@ try {
 
 interface ApiMessage {
   role: 'user' | 'assistant' | 'system' | 'tool';
-  content: string;
+  content: string | null;
   name?: string;
+  tool_call_id?: string;
+  tool_calls?: {
+    id: string;
+    type: 'function';
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }[];
 }
 
 export const getAuthHeader = (config: Config, currentModel: Model) => {
@@ -159,8 +168,12 @@ const useSendMessage = (
       role: turn.role,
       content: turn.rawContent || ''
     };
-    if (turn.role === 'tool' && turn.name) {
-      apiMsg.name = turn.name;
+    if (turn.role === 'tool') {
+      if (turn.name) apiMsg.name = turn.name;
+      if (turn.tool_call_id) apiMsg.tool_call_id = turn.tool_call_id;
+    }
+    if (turn.role === 'assistant' && turn.tool_calls) {
+      apiMsg.tool_calls = turn.tool_calls;
     }
     return apiMsg;
   };
@@ -261,7 +274,7 @@ const useSendMessage = (
     if (performSearch) {
       console.log(`[${callId}] useSendMessage: Optimizing query...`);
       setChatStatus('thinking');    
-      const historyForQueryOptimization: ApiMessage[] = currentTurns.map(turn => ({
+      const historyForQueryOptimization= currentTurns.map(turn => ({
         role: turn.role,
         content: turn.rawContent
       }));
@@ -412,12 +425,10 @@ const useSendMessage = (
     if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
     if (noteContextString) systemPromptParts.push(noteContextString);
-    // Scraped content from URLs in message should come before page/web context
     if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
 
-    // Add custom tool definitions to system prompt
     if (toolDefinitions && toolDefinitions.length > 0) {
       const toolDescriptions = toolDefinitions.map(tool => ({
         name: tool.function.name,
@@ -513,7 +524,6 @@ const useSendMessage = (
                   console.log(`[${callId}] Detected custom tool call:`, potentialToolCall.tool_name);
                   // Update assistant's turn to show the tool call JSON itself
                   updateAssistantTurn(callId, assistantResponseContent, true, false);
-                  // Add the assistant's tool call message to turns before executing
 
                   const executionResult = await executeToolCall({
                     name: potentialToolCall.tool_name,
@@ -521,27 +531,32 @@ const useSendMessage = (
                   });
 
                   const toolResultTurn: MessageTurn = {
-                    role: 'tool',
-                    name: executionResult.name,
-                    rawContent: executionResult.result,
-                    status: 'complete',
-                    timestamp: Date.now(),
-                  };
+                  role: 'tool',
+                  tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, // Ensure we always have a tool_call_id
+                  name: executionResult.name,
+                  rawContent: executionResult.result,
+                  status: 'complete',
+                  timestamp: Date.now(),
+                  };                  
                   setTurns(prevTurns => [...prevTurns, toolResultTurn]);
 
-                  // The assistant's response that was parsed as a tool call
                   const assistantToolCallApiMessage: ApiMessage = {
-                    role: 'assistant',
-                    content: assistantResponseContent // This is the raw JSON string from the LLM
+                  role: 'assistant',
+                  content: null,
+                  tool_calls: [{
+                      id: executionResult.toolCallId || `call_${Date.now()}`,
+                      type: 'function',
+                      function: {
+                          name: potentialToolCall.tool_name,
+                          arguments: JSON.stringify(potentialToolCall.tool_arguments)
+                                }
+                     }]
                   };
-
-                  // Prepare for the second LLM call
                   const messagesForNextApiCall: ApiMessage[] = [
-                    ...messagesForApiPayload, // Contains: system, history before current user, current user message
+                    ...messagesForApiPayload,
                     assistantToolCallApiMessage,
                     turnToApiMessage(toolResultTurn)
                   ];
-
                   const finalAssistantPlaceholder: MessageTurn = {
                       role: 'assistant', rawContent: '', status: 'streaming', timestamp: Date.now() + 1
                   };
@@ -563,7 +578,6 @@ const useSendMessage = (
                   return;
                 }
               } catch (e) {
-                // Not a JSON or not our tool call structure, treat as a regular message
               }
               updateAssistantTurn(callId, assistantResponseContent, true, false);
             } else {

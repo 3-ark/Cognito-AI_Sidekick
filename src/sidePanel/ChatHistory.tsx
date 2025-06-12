@@ -13,9 +13,19 @@ export interface MessageTurn {
   status: 'complete' | 'streaming' | 'error' | 'cancelled' | 'awaiting_tool_results';
   rawContent: string;
   webDisplayContent?: string;
+  tool_call_id?: string;
   timestamp: number;
-  name?: string; // Optional name for tool calls
+  name?: string;
+  tool_calls?: {
+    id: string;
+    type: 'function';
+    function: {
+      name: string;
+      arguments: string;
+    };
+}[];
 }
+
 export type ChatMessage = {
   id: string;
   last_updated: number;

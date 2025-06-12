@@ -7,8 +7,17 @@ import { MessageTurn } from '../ChatHistory';
 
 interface ApiMessage {
   role: 'user' | 'assistant' | 'system' | 'tool';
-  content: string;
-  name?: string; // Optional, used for tool messages
+  content: string | null;
+  name?: string;
+  tool_call_id?: string; 
+  tool_calls?: {
+    id: string;
+    type: 'function';
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }[];
 }
 
 const extractTitle = (response: string): string => {

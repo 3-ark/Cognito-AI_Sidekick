@@ -6,15 +6,15 @@ import { saveNoteInSystem } from 'src/background/noteStorage';
 interface SaveNoteArgs {
   content: string;
   title?: string;
-  tags?: string[] | string; // Allow string to match runtime checks
+  tags?: string[] | string;
 }
 
 interface UpdateMemoryArgs {
   summary: string; // The summary provided by the LLM
 }
 
-// Defines the structure for a tool call as expected from the LLM
 export interface LLMToolCall {
+  id: string;
   type: 'function';
   function: {
     name: string;
@@ -22,7 +22,6 @@ export interface LLMToolCall {
   };
 }
 
-// Defines the structure for providing tool execution results back to the LLM
 export interface ToolResult {
   tool_call_id: string;
   role: 'tool';
@@ -44,7 +43,7 @@ export interface ToolDefinition {
     description: string;
     parameters: {
       type: 'object';
-      structure?: string; // Optional, e.g., 'markdown' for formatted text
+      structure?: string;
       properties: {
         [key: string]: ToolParameterProperty;
       };
@@ -65,7 +64,6 @@ export const useTools = () => {
    */
   const saveNote = useCallback(async (args: SaveNoteArgs): Promise<{ success: boolean; message: string }> => {
     const { content, title } = args;
-    // LLM might send tags as string or array, so we handle both.
     const llmTagsInput = args.tags;
 
     if (!content || content.trim() === '') {
