@@ -31,14 +31,34 @@ export const saveNoteInSystem = async (noteData: Partial<Note> & { content: stri
 export const getAllNotesFromSystem = async (): Promise<Note[]> => {
   const keys = await localforage.keys();
   const noteKeys = keys.filter(key => key.startsWith(NOTE_STORAGE_PREFIX));
-  const notes: Note[] = [];
+  const processedNotes: Note[] = [];
   for (const key of noteKeys) {
-    const note = await localforage.getItem<Note>(key);
-    if (note) {
-      notes.push(note);
+    // Fetch as 'any' to handle potential malformed data, then validate
+    const rawNoteData = await localforage.getItem<any>(key);
+    if (rawNoteData) {
+      let tagsArray: string[] = [];
+      if (rawNoteData.tags) {
+        if (typeof rawNoteData.tags === 'string') {
+          // Convert comma-separated string to array
+          tagsArray = rawNoteData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+        } else if (Array.isArray(rawNoteData.tags)) {
+          tagsArray = rawNoteData.tags.map((tag: any) => String(tag).trim()).filter((tag: string) => tag.length > 0);
+        }
+      }
+      
+      const validatedNote: Note = {
+        id: rawNoteData.id,
+        title: rawNoteData.title,
+        content: rawNoteData.content,
+        createdAt: rawNoteData.createdAt,
+        lastUpdatedAt: rawNoteData.lastUpdatedAt,
+        tags: tagsArray, // Use the sanitized tags array
+        url: rawNoteData.url || '',
+      };
+      processedNotes.push(validatedNote);
     }
   }
-  return notes.sort((a, b) => b.lastUpdatedAt - a.lastUpdatedAt);
+  return processedNotes.sort((a, b) => b.lastUpdatedAt - a.lastUpdatedAt);
 };
 
 /**

@@ -337,13 +337,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                         Link
                       </a>
                     )}
-                    {note.tags && note.tags.length > 0 && (
-                      <span className="truncate max-w-[40%]">
+                    {note.tags && note.tags.length > 0 ? (
+                      <span className="truncate max-w-[40%] tag-span">
                         Tags: {note.tags.join(', ')}
                       </span>
-                    )}
-                    {(!note.tags || note.tags.length === 0) && (
-                        <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
+                    ) : (
+                      <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
                     )}
                   </div>
                   <HoverCardContent
@@ -367,7 +366,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                           {note.content}
                         </Markdown>
                       </div>
-                      {note.tags && note.tags.length > 0 && (
+                      {note.tags && note.tags.length > 0 ? (
                         <div className="border-t border-[var(--border)] pt-2 mt-2">
                           <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
                           <div className="flex flex-wrap gap-1">
@@ -378,7 +377,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
                             ))}
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </HoverCardContent>
                 </HoverCard>

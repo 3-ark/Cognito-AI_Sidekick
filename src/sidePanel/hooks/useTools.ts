@@ -6,7 +6,7 @@ import { saveNoteInSystem } from 'src/background/noteStorage';
 interface SaveNoteArgs {
   content: string;
   title?: string;
-  tags?: string[];
+  tags?: string[] | string; // Allow string to match runtime checks
 }
 
 interface UpdateMemoryArgs {
@@ -37,10 +37,6 @@ interface ToolParameterProperty {
   items?: { type: string; };
 }
 
-/**
- * Describes the schema for a tool that the LLM can use.
- * This structure is inspired by OpenAI's function calling.
- */
 export interface ToolDefinition {
   type: 'function';
   function: {
@@ -48,6 +44,7 @@ export interface ToolDefinition {
     description: string;
     parameters: {
       type: 'object';
+      structure?: string; // Optional, e.g., 'markdown' for formatted text
       properties: {
         [key: string]: ToolParameterProperty;
       };
@@ -67,7 +64,9 @@ export const useTools = () => {
    * @param args An object containing the note's content, an optional title, and optional tags.
    */
   const saveNote = useCallback(async (args: SaveNoteArgs): Promise<{ success: boolean; message: string }> => {
-    const { content, title, tags } = args;
+    const { content, title } = args;
+    // LLM might send tags as string or array, so we handle both.
+    const llmTagsInput = args.tags;
 
     if (!content || content.trim() === '') {
       const msg = 'Note content cannot be empty for saving to system.';
@@ -75,10 +74,16 @@ export const useTools = () => {
       return { success: false, message: msg };
     }
 
+    let parsedTags: string[] = [];
+    if (typeof llmTagsInput === 'string') {
+      parsedTags = llmTagsInput.split(',').map((tag: string) => tag.trim()).filter(tag => tag.length > 0);
+    } else if (Array.isArray(llmTagsInput)) {
+      parsedTags = llmTagsInput.map((tag: string) => String(tag).trim()).filter(tag => tag.length > 0);
+    }
+
     try {
       const timestamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       const finalTitle = title?.trim() || `Note from AI - ${timestamp}`;
-      const parsedTags = tags || [];
       await saveNoteInSystem({ title: finalTitle, content: content, tags: parsedTags });
       const msg = 'Note saved to system successfully!';
       toast.success(msg);
@@ -133,6 +138,7 @@ export const useTools = () => {
         description: 'Saves a new note to the user\'s persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.',
         parameters: {
           type: 'object',
+          structure: 'markdown', // Optional, can be used to indicate the format of the content
           properties: {
             content: {
               type: 'string',

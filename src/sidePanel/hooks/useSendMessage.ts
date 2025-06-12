@@ -424,8 +424,7 @@ const useSendMessage = (
         description: tool.function.description,
         parameters: tool.function.parameters
       }));
-      // Instruct LLM to respond with ONLY the JSON for a tool call
-      const toolsPrompt = `You have access to the following tools. To use a tool, you MUST respond with a JSON object ONLY, with the structure: {"tool_name": "name_of_tool", "tool_arguments": {"arg1": "value1", ...}}. Do not add any other text, explanation, or formatting before or after this JSON. If you don't need to use a tool, respond normally.\n\nAvailable tools:\n${JSON.stringify(toolDescriptions, null, 2)}`;
+      const toolsPrompt = `This is a strict instruction. You have access to the following tools. To use a tool, you MUST respond with a JSON object ONLY, with the structure: {"tool_name": "name_of_tool", "tool_arguments": {"arg1": "value1", ...}}. Do not add any other text, explanation, or formatting before or after this JSON. If you don't need to use a tool, respond normally.\n\nAvailable tools:\n${JSON.stringify(toolDescriptions, null, 2)}`;
       systemPromptParts.push("## AVAILABLE TOOLS\n" + toolsPrompt);
     }
 
