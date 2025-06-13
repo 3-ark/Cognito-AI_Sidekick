@@ -169,7 +169,7 @@ const useSendMessage = (
     let contentValue: string | null = turn.rawContent || '';
 
     if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
-      contentValue = ""; // Changed from null to empty string
+      contentValue = "";
     }
 
     const apiMsg: ApiMessage = {
@@ -178,13 +178,11 @@ const useSendMessage = (
     };
 
     if (turn.role === 'tool') {
-      // These fields are specific to tool role messages (tool results)
-      if (turn.name) apiMsg.name = turn.name; // Function name that was executed
-      if (turn.tool_call_id) apiMsg.tool_call_id = turn.tool_call_id; // ID of the tool call
+      if (turn.name) apiMsg.name = turn.name;
+      if (turn.tool_call_id) apiMsg.tool_call_id = turn.tool_call_id;
     }
 
     if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
-      // This field is specific to assistant role messages that request tool calls
       apiMsg.tool_calls = turn.tool_calls;
     }
 
@@ -456,7 +454,6 @@ const useSendMessage = (
 
     console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx: ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`)
 
-    // --- Step 4: Execute based on Compute Level ---
     try {
       setChatStatus('thinking'); 
       if (config?.computeLevel === 'high' && currentModel) {
@@ -545,18 +542,17 @@ const useSendMessage = (
                       arguments: JSON.stringify(potentialToolCall.tool_arguments)
                     }
                   }];
-                  // Update assistant's turn to show the tool call JSON itself AND include structured tool_calls
                   updateAssistantTurn(callId, assistantResponseContent, true, false, false, structuredToolCallsForAssistant);
 
                   const executionResult = await executeToolCall({
-                    id: consistentToolCallId, // Pass the generated ID
-                    name: potentialToolCall.tool_name, // This is how executeToolCall expects name if not full LLMToolCall
-                    arguments: JSON.stringify(potentialToolCall.tool_arguments) // This is how executeToolCall expects arguments
+                    id: consistentToolCallId,
+                    name: potentialToolCall.tool_name,
+                    arguments: JSON.stringify(potentialToolCall.tool_arguments)
                   });
 
                   const toolResultTurn: MessageTurn = {
                   role: 'tool',
-                  tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, // Ensure we always have a tool_call_id
+                  tool_call_id: executionResult.toolCallId || `call_${Date.now()}`,
                   name: executionResult.name,
                   rawContent: executionResult.result,
                   status: 'complete',
@@ -564,12 +560,10 @@ const useSendMessage = (
                   };                  
                   setTurns(prevTurns => [...prevTurns, toolResultTurn]);
 
-                  // structuredToolCallsForAssistant was defined in Step 1 and passed to updateAssistantTurn.
-                  // It holds: [{ id: consistentToolCallId, type: 'function', function: { name: potentialToolCall.tool_name, arguments: ... } }]
                   const assistantApiMessageWithToolCall: ApiMessage = {
                     role: 'assistant',
-                    content: "", // Changed from null to empty string
-                    tool_calls: structuredToolCallsForAssistant // From Step 1
+                    content: "",
+                    tool_calls: structuredToolCallsForAssistant
                   };
 
                   const toolResultApiMessage = turnToApiMessage(toolResultTurn);
@@ -600,9 +594,7 @@ const useSendMessage = (
                   return;
                 }
               } catch (e) {
-                // Not a tool call, or JSON parsing failed for other reasons.
               }
-              // Standard final update for assistant response if not a tool call or if tool call processing failed before this point
               updateAssistantTurn(callId, assistantResponseContent, true, false);
             } else {
               updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
