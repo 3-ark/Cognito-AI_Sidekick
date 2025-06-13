@@ -1,53 +1,84 @@
 ![](docs/banner.png)
-# Cognito: Your AI Sidekick for Chrome 🚀
+# Cognito: AI-Powered Web Notes Assistant 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub version](https://img.shields.io/github/v/release/3-ark/Cognito)](https://github.com/3-ark/Cognito/releases/latest)
 
-**Cognito supercharges your Chrome browser with AI, acting as your intelligent sidekick to interpret your needs, guide your browsing, query information, and interact naturally with web content.**
+**Cognito A lightweight yet powerful Chrome extension and assistant system that combines LLM tools, web search, a smart note-taking workflow, and interact naturally with web content. - designed for effortless research, contextual memory, and semantic search (coming soon).**
 
 <!-- Optional: Add a slightly larger, more engaging screenshot or GIF here if available. docs/screenshot.png is good. -->
 ![](docs/web.gif) ![](docs/local.gif) 
 
 
-## ✨ Core Features
+---
 
-*   **Seamless AI Integration:** Connect to a wide array of powerful AI models:
-    *   **Local Models:** Ollama, LM Studio
-    *   **Cloud Services:** OpenAI (ChatGPT), Gemini, Groq, OpenRouter
-    *   **Custom Connections:** Configure custom model endpoints.
-*   **Intelligent Content Interaction:**
-    *   **Instant Summaries:** Get the gist of any webpage in seconds.
-    *   **Contextual Q&A:** Ask questions about the current page, PDFs, or selected text.
-    *   **Smart Web Search:** Conduct context-aware searches using Google, DuckDuckGo, and Wikipedia, with the ability to fetch and analyze content from search results.
-*   **Personalized Experience:**
-    *   **Customizable Personas:** Choose from 7 pre-built AI personalities (Researcher, Strategist, etc.) or create your own.
-    *   **Computation Levels:** Adjust AI's problem-solving approach from quick answers (Low) to multi-step task decomposition (Medium, High) for complex queries. *(Beta: Note token usage - High Compute can use 100-150x more tokens than Low Compute.)*
-    *   **Themes & Appearance:** Customize the look and feel.
-*   **Productivity Boosters:**
-    *   **Note Taking:** Save context, chat snippets, and important information directly within the side panel.
-    *   **Text-to-Speech (TTS):** Hear AI responses read aloud (supports browser TTS and integration with external services like Piper).
-    *   **Chat History:** Keep track of your interactions.
-*   **Developer-Friendly:** Built with a modern tech stack, open-source, and ready for contributions.
+## ✨ Features
 
-## 🛠️ How It Works
+### 🖱️ One-Click Note Capture
 
-Cognito is a Chrome extension built with a modular architecture:
+* **Right-click any page** to instantly add it to your notes.
+* Automatically captures title, URL, and context.
+* Uses AI to clean and structure the content.
 
-*   **Side Panel (React & Redux):** The main user interface where you interact with the AI, manage settings, and view results. Built with React for a dynamic experience and Redux (via `webext-redux`) for robust state management.
-*   **Background Script:** The engine of the extension. It handles communication with AI services, manages long-running tasks, injects content scripts, and coordinates actions across the extension.
-*   **Content Scripts:** Injected into web pages to securely access and relay page content (text, HTML) to the Side Panel and Background Script for processing by the AI.
+### 🔎 Smart Web & Wiki Search
 
-This setup allows Cognito to understand the context of your browsing and provide relevant AI assistance without leaving your current tab.
+* AI chooses **semantic keywords** for Wikipedia or full web search.
+* Automatically summarizes results or extracts key content.
+* Use inside chat, or directly trigger via tools.
 
-## 💻 Technology Stack
+### 💾 Structured Note System
 
-*   **React:** For building the interactive Side Panel UI.
-*   **TypeScript:** For robust and maintainable code.
-*   **Redux & `webext-redux`:** For state management across the extension components.
-*   **Tailwind CSS:** For styling the user interface.
-*   **Webpack:** For bundling the extension.
-*   Various UI libraries (Radix UI components like `@radix-ui/react-accordion`, `lucide-react` for icons) for a polished look and feel.
+* Notes include:
+
+  * `title`, `content`, `tags`, `url`, and `id`
+* Supports **Markdown with YAML frontmatter** for easy export.
+* Great for syncing with Obsidian or static site knowledge bases.
+
+### 🛠️ Tool-Based LLM Interaction
+
+* Uses tools like:
+
+  * `saveNote`
+  * `updateMemory`
+  * `searchWeb`
+* Responses are structured in **pure JSON**, enabling predictable parsing and automation.
+* System prompts enforce tool discipline per persona.
+
+### 🧠 Memory & Context Engine
+
+* Short- and long-term memory support via `updateMemory`.
+* Auto-injects parsed web page content for interactive Q\&A.
+* Future-proofed for RAG/vector integration.
+
+---
+
+## 🧩 Architecture Overview
+
+```
+[User Interaction]
+     ↓
+[Chat UI / Page UI]
+     ↓
+[LLM + Personas]
+     ↓                ↘
+[Tool Call JSON]   [Page Context Parser]
+     ↓                ↓
+[Tool Engine] ← [Web Scraper / Wiki Search]
+     ↓
+[Note System + Memory Manager]
+```
+
+---
+
+## 🧙‍♂️ Personas
+
+Each persona defines an LLM **policy** and **tool behavior**. For example:
+
+* 🧠 `strictJsonAgent`: Only uses tools, outputs raw JSON, never explains.
+* 🔍 `researchAssistant`: Uses `searchWeb` intelligently, stores structured summaries.
+* 🗃️ `memoryCurator`: Organizes long-term memory, updates facts via `updateMemory`.
+
+---
 
 ## 🚀 Getting Started
 
@@ -87,6 +118,46 @@ This setup allows Cognito to understand the context of your browsing and provide
 5.  Enable **Developer mode**.
 6.  Click **Load unpacked** and select the `dist/chrome` folder.
 
+---
+
+## 📦 Exports
+
+Each note is exported as:
+
+```yaml
+---
+title: "Understanding Transformers"
+tags: ["AI", "LLM", "Deep Learning"]
+url: "https://example.com/article"
+id: "note-xyz123"
+---
+
+Transformers are a deep learning architecture...
+```
+
+
+---
+
+## 🛠️ How It Works
+
+Cognito is a Chrome extension built with a modular architecture:
+
+*   **Side Panel (React & Redux):** The main user interface where you interact with the AI, manage settings, and view results. Built with React for a dynamic experience and Redux (via `webext-redux`) for robust state management.
+*   **Background Script:** The engine of the extension. It handles communication with AI services, manages long-running tasks, injects content scripts, and coordinates actions across the extension.
+*   **Content Scripts:** Injected into web pages to securely access and relay page content (text, HTML) to the Side Panel and Background Script for processing by the AI.
+
+This setup allows Cognito to understand the context of your browsing and provide relevant AI assistance without leaving your current tab.
+
+## 💻 Technology Stack
+
+*   **React:** For building the interactive Side Panel UI.
+*   **TypeScript:** For robust and maintainable code.
+*   **Redux & `webext-redux`:** For state management across the extension components.
+*   **Tailwind CSS:** For styling the user interface.
+*   **Webpack:** For bundling the extension.
+*   Various UI libraries (Radix UI components like `@radix-ui/react-accordion`, `lucide-react` for icons) for a polished look and feel.
+
+
 ## 📖 Usage Examples
 
 *   **Summarize a News Article:** Open a lengthy article, open the Cognito side panel, and click "Summarize Page" or type "Summarize this page."
@@ -115,9 +186,12 @@ This setup allows Cognito to understand the context of your browsing and provide
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
 *   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
 *   Potential support for image and voice API interactions for multimodal capabilities.
-* **task outline for building RAG + memory integration** based on my current design with `note` (short-term memory) and `note system` (long-term searchable notes).
+*   Task planning (`plan`, `remindMe`)
+*   Timeline view for notes
+*   Local-first note editor
 
 ---
+* **task outline for building RAG + memory integration** based on my current design with `note` (short-term memory) and `note system` (long-term searchable notes).
 
 ## 🧩 **PHASE 1: Foundation - Memory Layers + Indexing**
 
