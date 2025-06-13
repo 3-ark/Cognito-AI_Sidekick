@@ -464,14 +464,14 @@ const Cognito = () => {
     setChatStatus('idle');
     setSettingsMode(false);
 
-    const loadedConfigUpdate: Partial<Config> = {
+    updateConfig({
       useNote: chat.useNoteActive ?? false,
-      noteContent: chat.noteContentUsed || '',
-    };
+      selectedModel: chat.model || config.selectedModel,
+      chatMode: chat.chatMode === 'page' || chat.chatMode === 'web' ? chat.chatMode : undefined, // Ensure valid chatMode
+      webMode: chat.webMode || config.webMode,
+    });
 
-    updateConfig(loadedConfigUpdate);
-
-    if (loadedConfigUpdate.chatMode !== 'page') {
+    if (chat.chatMode !== 'page') {
       storage.deleteItem('pagestring');
       storage.deleteItem('pagehtml');
       storage.deleteItem('alttexts');

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -21,18 +21,15 @@ export const NotePopover = () => {
   const [isSpeakingNote, setIsSpeakingNote] = useState(false);
   const [popoverTags, setPopoverTags] = useState('');
   const [popoverTitle, setPopoverTitle] = useState('');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setEditableNote(config.noteContent || '');
       setPopoverTitle(config.popoverTitleDraft || '');
       setPopoverTags(config.popoverTagsDraft || '');
-    } else {
-      if (config.noteContent !== editableNote)
-      setPopoverTitle('');
-      setPopoverTags('');
     }
-  }, [isOpen, config]);
+  }, [isOpen, config.noteContent, config.popoverTitleDraft, config.popoverTagsDraft]);
 
   useEffect(() => {
     if (!isOpen && isSpeakingNote) {
@@ -45,14 +42,40 @@ export const NotePopover = () => {
     }
   }, [isOpen, isSpeakingNote, editableNote]);
 
-  const handleSaveNote = () => {
-    updateConfig({
-      noteContent: editableNote,
-      popoverTitleDraft: popoverTitle,
-      popoverTagsDraft: popoverTags,
-    });
-    toast.success('Draft saved!'); 
-  };
+  // Auto-save effect
+  useEffect(() => {
+    if (!isOpen) { // If popover is closed, clear any pending save and do nothing.
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+        debounceTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Clear any existing timeout to reset the debounce timer
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      // Only update if there's an actual change compared to the current config
+      if (editableNote !== (config.noteContent || '') ||
+          popoverTitle !== (config.popoverTitleDraft || '') ||
+          popoverTags !== (config.popoverTagsDraft || '')) {
+        updateConfig({
+          noteContent: editableNote,
+          popoverTitleDraft: popoverTitle,
+          popoverTagsDraft: popoverTags,
+        });
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [isOpen, editableNote, popoverTitle, popoverTags, config.noteContent, config.popoverTitleDraft, config.popoverTagsDraft, updateConfig]);
 
   const handleSaveNoteToFile = async () => {
     chrome.runtime.sendMessage({
@@ -116,10 +139,6 @@ export const NotePopover = () => {
     }
   };
 
-  const isContentUnchanged = editableNote === (config.noteContent || '');
-  const isTitleUnchanged = popoverTitle === (config.popoverTitleDraft || '');
-  const isTagsUnchanged = popoverTags === (config.popoverTagsDraft || '');
-  const isSaveDisabled = isContentUnchanged && isTitleUnchanged && isTagsUnchanged;
   const isArchiveDisabled =
     !popoverTitle.trim() &&
     !editableNote.trim() &&
@@ -234,37 +253,26 @@ export const NotePopover = () => {
                 >
                   Clear
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSaveNote}
-                  className={cn(
-                    "border-[var(--border)] text-[var(--text)]",
-                    "text-xs px-2 py-1 h-auto w-16"
-                    )}
-                  disabled={isSaveDisabled}
-                >
-                  Save
-                </Button>
-                 <Tooltip>
+                <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       onClick={handleSaveNoteToFile}
                       disabled={isArchiveDisabled}
                       className={cn(
-                        "text-xs px-2 py-1 h-auto w-10"
+                        "text-xs px-2 py-1 h-auto w-10" // Adjusted to ensure icon is visible
                       )}
                     >
                       <IoArchiveOutline size={16} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">Save to File</TooltipContent>
+                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">Archive & Clear</TooltipContent>
                 </Tooltip>
               </div>
             </div>
           </div>
       </PopoverContent>
     </Popover>
-    </TooltipProvider>
+  </TooltipProvider>
   );
 };
