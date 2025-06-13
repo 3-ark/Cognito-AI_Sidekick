@@ -542,7 +542,7 @@ const useSendMessage = (
 
                   const assistantToolCallApiMessage: ApiMessage = {
                   role: 'assistant',
-                  content: null,
+                  content: "", // Changed from null to empty string
                   tool_calls: [{
                       id: executionResult.toolCallId || `call_${Date.now()}`,
                       type: 'function',
