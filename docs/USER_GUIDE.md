@@ -1,20 +1,103 @@
-# User Guide
+## 1. Overview
 
-Welcome to the application! This guide will help you understand its features and how to use them effectively.
+Cognito is your intelligent browser assistant, designed to make your web experience smarter and more efficient. It acts as an AI Sidekick directly within your Chrome browser, offering features like:
+
+*   Instant summaries of web pages.
+*   Intelligent interactions: Ask questions about what you're reading, content from URLs, PDFs, or your notes.
+*   Smart web search capabilities.
+*   Flexible AI integration: Connect to powerful local AI models (like Ollama or LM Studio) or cloud-based services (OpenAI, Gemini).
+*   And much more!
+
+This guide will help you understand how to install, configure, and use Cognito to its full potential.
+
+## 3. Installation and Setup
+
+There are two main ways to install Cognito:
+
+### A. Installing the Latest Release (Recommended for Most Users)
+
+1.  **Download:** Get the latest release package (usually a `.zip` file) from the [official Cognito releases page](https://github.com/3-ark/Cognito/releases).
+2.  **Extract:** Unzip the downloaded file into a dedicated folder on your computer.
+3.  **Enable Developer Mode in Chrome:**
+    *   Open Chrome and navigate to `chrome://extensions`.
+    *   In the top-right corner, toggle on "Developer mode."
+4.  **Load the Extension:**
+    *   Click the "Load unpacked" button that appears after enabling Developer mode.
+    *   Select the folder where you extracted the Cognito files.
+5.  Cognito should now be installed and visible in your Chrome extensions list!
+
+### B. Installing from Source (For Developers or Advanced Users)
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/3-ark/Cognito.git
+    ```
+2.  **Navigate to Directory:**
+    ```bash
+    cd Cognito
+    ```
+3.  **Install Dependencies and Build:**
+    ```bash
+    npm install && npm start
+    ```
+    This command will install all necessary software packages and then build the extension. The compiled extension files will be located in a folder named `dist/chrome`.
+4.  **Enable Developer Mode in Chrome:** (If not already enabled)
+    *   Open Chrome and navigate to `chrome://extensions`.
+    *   Toggle on "Developer mode."
+5.  **Load the Extension:**
+    *   Click the "Load unpacked" button.
+    *   Select the `dist/chrome` folder from the cloned project directory.
+
+## Cognito Application User Guide
+
+Welcome to the Cognito application! This guide will help you understand its features and how to use them effectively.
 
 ## Table of Contents
-- [Core Chat Functionality](#core-chat-functionality)
-- [Main Menu & Quick Access](#main-menu--quick-access)
-- [Note-Taking Features](#note-taking-features)
-- [Model Management](#model-management)
-- [Connecting to LLM Services (API Settings)](#connecting-to-llm-services-api-settings)
-- [Advanced Model Settings](#advanced-model-settings)
-- [Context Source Settings](#context-source-settings)
-- [Compute Levels](#compute-levels)
-- [Text-to-Speech (TTS)](#text-to-speech-tts)
-- [Themes & Appearance](#themes--appearance)
-- [Special Features](#special-features)
-- [Personas (AI Personalities) 🥷](#personas-ai-personalities-)
+
+*   [Overview](#1-overview)
+*   [Installation and Setup](#3-installation-and-setup)
+    *   [Installing the Latest Release (Recommended for Most Users)](#a-installing-the-latest-release-recommended-for-most-users)
+    *   [Installing from Source (For Developers or Advanced Users)](#b-installing-from-source-for-developers-or-advanced-users)
+*   [Cognito Application User Guide](#cognito-application-user-guide)
+*   [Core Chat Functionality](#core-chat-functionality)
+    *   [Sending a Message](#sending-a-message)
+    *   [Chat Modes](#chat-modes)
+    *   [Using Your Notes as Context](#using-your-notes-as-context)
+    *   [Searching Chat History](#searching-chat-history)
+    *   [Automatic Chat Title Generation](#automatic-chat-title-generation)
+*   [Main Menu & Quick Access](#main-menu--quick-access)
+*   [Note-Taking Features](#note-taking-features)
+    *   [Appending Selected Text to Popover Note](#appending-selected-text-to-popover-note)
+    *   [AI-Powered Note Saving (`saveNote` Tool)](#ai-powered-note-saving-savenote-tool)
+    *   [AI-Powered Memory Updates (`updateMemory` Tool)](#ai-powered-memory-updates-updatememory-tool)
+    *   [Searching Notes](#searching-notes)
+*   [Model Management](#model-management)
+    *   [Fetching and Selecting Models](#fetching-and-selecting-models)
+*   [Connecting to LLM Services (API Settings)](#connecting-to-llm-services-api-settings)
+*   [Advanced Model Settings](#advanced-model-settings)
+    *   [Model Interaction Parameters](#model-interaction-parameters)
+    *   [Model List Management (Visibility/Enabled Models)](#model-list-management-visibilityenabled-models)
+*   [Context Source Settings](#context-source-settings)
+    *   [Page Context Settings (for "Page Mode")](#page-context-settings-for-page-mode)
+    *   [Web Search Settings (for "Web Mode")](#web-search-settings-for-web-mode)
+*   [Compute Levels](#compute-levels)
+*   [Text-to-Speech (TTS)](#text-to-speech-tts)
+    *   [Enabling and Configuration](#enabling-and-configuration)
+    *   [How it Works](#how-it-works)
+*   [Themes & Appearance](#themes--appearance)
+    *   [Predefined Themes](#predefined-themes)
+    *   [Custom Theme](#custom-theme)
+    *   [Appearance Toggles](#appearance-toggles)
+    *   [Font Size](#font-size)
+*   [Special Features](#special-features)
+    *   [Automatic URL Content Scraping](#automatic-url-content-scraping)
+    *   [PDF Content Extraction (in Page Mode)](#pdf-content-extraction-in-page-mode)
+*   [Personas (AI Personalities) 🥷](#personas-ai-personalities-)
+    *   [Selecting a Persona](#selecting-a-persona)
+    *   [Managing Personas](#managing-personas)
+    *   [Default Persona](#default-persona)
+    *   [Example Personas and Their Focus:](#example-personas-and-their-focus)
+*   [Troubleshooting](#troubleshooting)
 
 ## Core Chat Functionality
 
@@ -27,8 +110,8 @@ To start interacting with the AI, simply type your message in the input field at
 The application offers different modes to tailor the AI's responses based on your needs:
 
 *   **Standard Chat Mode (`chat`)**: This is the default mode. The AI will respond based on its general knowledge and the conversation history.
-*   **Web Mode (`web`)**: When in this mode, the AI will first perform a web search based on your query. The search results are then used as context to provide a more informed and up-to-date answer. The application may also optimize your query behind the scenes to get better search results.
-*   **Page Mode (`page`)**: In this mode, the AI will use the content of the currently active browser tab as context for its responses. This is particularly useful when you want to ask questions about or summarize the content of a webpage you are viewing. This mode can also extract text from PDF documents open in the browser.
+*   **Web Mode (`web`)**: When in this mode, the AI will first perform a web search based on your query. To provide more comprehensive answers, Web Mode goes beyond just using search snippets; it can actively visit the top few search result pages, fetch their main content, and use this deeper information as context. The application may also optimize your query behind the scenes to get better search results.
+*   **Page Mode (`page`)**: In this mode, the AI will use the content of the currently active browser tab (webpage or PDF) as context for its responses. You can ask questions or request summaries about this content. Additionally, Cognito can understand questions about text within your Cognito notes or content from URLs you provide directly in the chat. Often, a dedicated "Summarize this page" button or command is available for quick summaries.
 
 ### Using Your Notes as Context
 You can allow the AI to use the content of your popover note as additional context for its responses. Toggle the "Use Note" option in the settings. When enabled, the information in your popover note will be considered by the AI, which can be helpful for remembering preferences or specific details you'vesaved.
@@ -43,7 +126,6 @@ If you need to find past conversations, you can use the search feature within th
 *   Search is case-insensitive.
 *   If no chats match your query, a "No results found" message will be displayed.
 *   The search results are paginated if they span multiple pages.
-    *   *Technical Hook: Search logic is primarily in `src/sidePanel/ChatHistory.tsx`.*
 
 ### Automatic Chat Title Generation
 The application automatically generates a concise title for new chats based on the initial messages. This helps you quickly identify past conversations. If a title isn't generated, or if you'd like to change it, you can typically do so manually (details may vary based on your specific version of the application).
@@ -63,18 +145,15 @@ The application has a slide-out main menu, typically accessed from an icon in th
     *   **Chat History:** Takes you to the view where you can browse and load past conversations.
     *   **Note System:** Opens the interface for managing your saved notes.
 
-*Technical Component: `src/sidePanel/SettingsSheet.tsx`*
-
 ## Note-Taking Features
 
-The application provides several ways to take and manage notes.
+The application provides several ways to take and manage notes. These notes are particularly valuable because they can be saved and later injected as context for the AI. For example, you can save key data points in a note and then instruct Cognito to use this specific information when answering a question, comparing information, or generating content.
 
 ### Appending Selected Text to Popover Note
 You can quickly add text from web pages to your popover note:
 1.  Select the text you want to save on any webpage.
 2.  Right-click and choose the option to "Add to Note" (the exact wording might vary).
 3.  The selected text will be appended to your current popover note. If the note is empty, the selected text will become its content. A separator is added if there's existing content.
-    *   *Technical Hook: `useAddToNote.ts` - `appendToNote()`*
 
 ### AI-Powered Note Saving (`saveNote` Tool)
 The AI can help you create more structured notes based on your conversation:
@@ -84,7 +163,6 @@ The AI can help you create more structured notes based on your conversation:
     *   It can assign a `title` to the note (or a default one will be generated).
     *   It can add `tags` (e.g., `["project-alpha", "meeting-summary"]`) to help categorize the note.
 *   **Where are they saved?**: These notes are saved in the application's persistent note storage system, separate from the quick popover note. You can view them in the "Notes" section or a similar area in the application.
-    *   *Technical Hook: `useTools.ts` - `saveNote()`*
 
 ### AI-Powered Memory Updates (`updateMemory` Tool)
 The AI can also remember specific pieces of information or summaries by adding them to your popover note, which acts as a persistent "memory":
@@ -93,7 +171,6 @@ The AI can also remember specific pieces of information or summaries by adding t
     *   The AI will append a `summary` of the information to your existing popover note.
     *   A timestamp is typically added to the summary (e.g., "User prefers concise answers. (on YYYY-MM-DD)").
 *   **Purpose**: This helps the AI maintain context over longer interactions and allows you to easily refer back to important details you've asked it to remember.
-    *   *Technical Hook: `useTools.ts` - `updateMemory()`*
 
 ### Searching Notes
 The Note System also includes a search function to help you quickly find specific notes:
@@ -106,41 +183,27 @@ The Note System also includes a search function to help you quickly find specifi
 *   Search is case-insensitive.
 *   A "No notes found" message will appear if your query doesn't match any notes.
 *   Results are paginated.
-    *   *Technical Hook: Search logic is primarily in `src/sidePanel/NoteSystemView.tsx`.*
 
 ## Model Management
 
-The application allows you to connect to and switch between different Large Language Models (LLMs) from various providers.
+The application allows you to connect to and switch between different Large Language Models (LLMs) from various providers. Cognito offers the flexibility to choose your preferred AI engine by supporting two main types of connections, allowing you to balance power, privacy, and cost:
 
-### Connecting to LLM Providers
-You can configure the application to connect to several LLM providers, including:
-*   Ollama (for locally hosted models)
-*   OpenAI
-*   Gemini
-*   Groq
-*   OpenRouter
-*   LMStudio
-*   Custom Endpoints (for other compatible APIs)
+*   **Local Models (e.g., Ollama, LM Studio):** If you have AI models running locally on your computer, Cognito can connect to them. This is an excellent option for users who prioritize data privacy, want to use specialized open-source models, or need offline access.
+*   **Cloud Services (e.g., OpenAI, Gemini):** You can also configure Cognito to use powerful cloud-based AI services. This option often gives you access to the latest, largest, and most capable models.
 
-You'll typically need to provide API keys or specific URLs in the application's settings to enable these providers.
+Configuration for these different AI models will typically be found in Cognito's settings panel, detailed in the "Connecting to LLM Services (API Settings)" section.
 
 ### Fetching and Selecting Models
-*   Once a provider is configured and enabled, the application will attempt to fetch a list of available models from it.
+*   Once a provider is configured and enabled (see below), the application will attempt to fetch a list of available models from it.
 *   All available models from your configured providers will be aggregated into a single list.
 *   You can then select your preferred model from this list in the settings panel. The chosen model will be used for all subsequent chat interactions.
 *   The list of models is periodically updated. If your currently selected model becomes unavailable, the application will attempt to select another one (usually the first in the list).
-    *   *Technical Hook: `useUpdateModels.ts` - `fetchAllModels()`*
 
 ## Connecting to LLM Services (API Settings)
 
-To use the AI, you first need to connect the application to one or more Large Language Model (LLM) providers. This is done in the "API Access" or "Connect" section of the main settings panel.
+To use the AI, you first need to connect the application to one or more Large Language Model (LLM) providers. This is done in the "API Access" or "Connect" section of the main settings panel. For each supported service, you may need to provide an API Key or a specific Endpoint URL.
 
-For each supported service, you may need to provide:
-
-*   **API Key:** A secret key provided by the LLM service (e.g., OpenAI, Gemini, Groq, OpenRouter).
-*   **Endpoint URL:** For services like Ollama or LM Studio (which you might host locally), or for custom OpenAI-compatible APIs, you'll need to provide the specific server address.
-
-### Supported Services typically include:
+Supported services and their typical requirements include:
 *   **OpenAI:** Requires an API key.
 *   **Ollama:** Requires the URL of your Ollama server (e.g., `http://localhost:11434`). The app will then attempt to fetch models from this server.
 *   **Groq:** Requires a Groq API key.
@@ -150,8 +213,6 @@ For each supported service, you may need to provide:
 *   **Custom Endpoint:** Allows you to connect to other OpenAI-compatible APIs by providing the base URL and an optional API key.
 
 Ensure you save your settings after entering API keys or URLs. The application will use these to fetch available models and communicate with the LLMs.
-
-*Technical Component: `src/sidePanel/Connect.tsx`*
 
 ## Advanced Model Settings
 
@@ -173,8 +234,6 @@ Changes to these parameters are usually saved automatically.
     *   **Refresh Model List:** Manually trigger a re-fetch of models from your configured services.
     *   **Manage Model Visibility:** You might be able to hide or show specific models in the main selection dropdowns, helping you curate a shorter list of your preferred models. (The exact UI for this can vary).
 
-*Technical Component: `src/sidePanel/ModelSettingsPanel.tsx`*
-
 ## Context Source Settings
 
 These settings control how much information from external sources (like web pages or search results) is provided to the AI.
@@ -182,12 +241,10 @@ These settings control how much information from external sources (like web page
 ### Page Context Settings (for "Page Mode")
 Located in the "Page Context" or a similar section in settings:
 *   **Content Character Limit:** You can set a limit on the number of characters extracted from a webpage when using "Page Mode." This helps manage the amount of data sent to the AI and can affect performance and cost.
-    *   *Technical Component: `src/sidePanel/PageContext.tsx`*
 
 ### Web Search Settings (for "Web Mode")
 Found in the "Web Search" or a similar section in settings:
 *   **Search Results Character Limit:** You can define the maximum number of characters from web search results that will be provided to the AI as context in "Web Mode."
-    *   *Technical Component: `src/sidePanel/WebSearch.tsx`*
 
 ## Compute Levels
 
@@ -200,7 +257,6 @@ The application offers different "compute levels" that affect how the AI process
     *   It then processes these subtasks, often in batches.
     *   Finally, it synthesizes the results of the subtasks into a comprehensive answer.
     *   You may see "Monitoring" messages indicating the AI is working on subtasks.
-    *   *Technical Hook: `computeHandlers.ts` - `handleMediumCompute()`*
 
 *   **High Compute**:
     *   This is the most advanced level. The AI employs a multi-stage approach:
@@ -210,9 +266,13 @@ The application offers different "compute levels" that affect how the AI process
         4.  **Synthesis**: Results from steps are synthesized into a stage result, and then all stage results are synthesized into the final answer.
     *   This level is designed for complex queries requiring detailed planning and execution by the AI.
     *   You will likely see "Monitoring" messages as the AI progresses through stages and steps.
-    *   *Technical Hook: `computeHandlers.ts` - `handleHighCompute()`*
 
-**Note**: The availability and behavior of compute levels might vary. Higher levels generally provide more thoroughness at the cost of increased response time.
+**Note**: The availability and behavior of compute levels might vary.
+*   **Important Considerations (Beta Feature):**
+    *   The Computation Levels feature, especially Medium and High, is considered experimental.
+    *   **Token Usage:** Higher computation levels significantly increase token consumption. High Compute can use 100-150x more tokens than Low Compute for the same query. This means more processing time and potentially higher costs if you are using paid AI services.
+    *   **Potential Instability:** As an experimental feature, you might encounter unexpected behavior or errors, especially with High compute. Report any issues to help improve Cognito.
+Use these levels judiciously, matching the complexity of your query to the appropriate computation level. Higher levels generally provide more thoroughness at the cost of increased response time and token usage.
 
 ## Text-to-Speech (TTS)
 
@@ -230,11 +290,9 @@ The application can read AI messages aloud using your browser's built-in Text-to
     *   The currently selected rate is displayed next to the slider.
 
 ### How it Works
-*   The TTS feature uses your browser's Web Speech API. Voice availability and quality can vary between browsers and operating systems.
-*   When an AI message is received and TTS is active (the specific toggle/condition for TTS being active for message reading is usually found near the chat input or main settings, not detailed in `TtsSettings.tsx` but implied by `speakMessage` usage elsewhere), the `speakMessage` function is called.
+*   The TTS feature uses your browser's Web Speech API. Voice availability and quality can vary between browsers and operating systems. For users seeking more natural-sounding voices, using the Microsoft Edge browser (which has its own advanced TTS capabilities) or exploring third-party Chrome extensions/APIs that integrate local TTS services (such as Piper, Kokoro-FastAPI, or Orpheus-FastAPI) might provide an enhanced audio experience.
+*   When an AI message is received and TTS is active (the specific toggle/condition for TTS being active for message reading is usually found near the chat input or main settings), the `speakMessage` function is called.
 *   You can typically stop ongoing speech, and some controls might offer pause/resume, though these depend on browser support and how they are implemented in the main chat interface.
-
-*Technical Hooks: `src/sidePanel/TtsSettings.tsx` for UI, `src/background/ttsUtils.ts` for core functions like `getAvailableVoices`, `speakMessage`, `stopSpeech`, `pauseSpeech`, `resumeSpeech`.*
 
 ## Themes & Appearance
 
@@ -248,7 +306,7 @@ The application comes with several built-in themes that change the color scheme:
 *   **Light**: A standard light mode theme.
 *   **Dark**: A standard dark mode theme.
 
-You can switch between these by selecting your desired theme (the exact UI element for this, like a dropdown, might be directly in the "Customize" section or a general appearance setting, often inferred by `config.theme` being updated).
+You can switch between these by selecting your desired theme.
 
 ### Custom Theme
 *   You have the option to create a **Custom** theme.
@@ -274,8 +332,6 @@ Within the "Customize" section, you can also find toggles for various visual ele
 *   Adjust the global font size for the application using a slider.
 *   The range is typically from 7px to 20px.
 
-*Technical Hooks: `src/sidePanel/Themes.tsx` - handles theme definitions, UI for toggles, font size, custom theme color picking, and applies theme changes via the `setTheme` function.*
-
 ## Special Features
 
 The application includes several special features to enhance its contextual understanding and capabilities.
@@ -284,12 +340,10 @@ The application includes several special features to enhance its contextual unde
 *   If you include one or more URLs (e.g., `https://example.com`) directly in your message to the AI, the application will attempt to fetch the content from these web addresses.
 *   This scraped content is then provided to the AI as additional context for formulating its response.
 *   This is useful if you want the AI to discuss, summarize, or answer questions about specific online articles or resources without needing to be in "Web Mode".
-    *   *Technical Hook: `useSendMessage.ts` - URL detection and `scrapeUrlContent()` from `network.tsx`*
 
 ### PDF Content Extraction (in Page Mode)
 *   As mentioned in the "Page Mode" section, when you are viewing a PDF document in your browser and activate Page Mode, the application will attempt to extract the text content from the PDF.
 *   This extracted text is then used as context for the AI, allowing you to ask questions about or summarize the PDF's content.
-    *   *Technical Hook: `useSendMessage.ts` - `extractTextFromPdf()`*
 
 ## Personas (AI Personalities) 🥷
 
@@ -325,4 +379,34 @@ Within the "Persona" section of the main settings panel:
 ### Default Persona
 The application usually comes with a default persona (e.g., "Ein," a general helpful assistant) that will be used if no other persona is selected or if your chosen persona is somehow unavailable.
 
-*Technical Hooks: `src/sidePanel/Persona.tsx` handles the UI and logic for persona management. Persona prompts are stored in `config.personas` and selected persona in `config.persona`. Avatars are in `config.personaAvatars`.*
+### Example Personas and Their Focus:
+Cognito may offer a range of personas, each designed with a slightly different style and area of expertise. Examples include:
+*   **Ein:** Academic researcher - Good for in-depth analysis and factual information.
+*   **Warren:** Business analyst - Focuses on business and financial contexts.
+*   **Jet:** Friendly assistant - Provides general assistance with a conversational tone.
+*   **Agatha:** Creative thinker - Useful for brainstorming and imaginative tasks.
+*   **Jan:** Strategist - Helps with planning and strategic thinking.
+*   **Sherlock:** Detective - Ideal for problem-solving and uncovering details.
+*   **Spike:** All-around assistant - A versatile persona for various tasks.
+You can typically switch between personas in the Cognito settings or directly within the side panel interface.
+
+## Troubleshooting
+
+_(This section will be populated with common issues and solutions if any are apparent from the existing documentation or if common patterns for such extensions are known. Initially, it might contain general advice.)_
+
+*   **Extension Not Loading:**
+    *   Ensure Developer Mode is enabled in `chrome://extensions`.
+    *   Double-check that you selected the correct folder (the extracted folder for release, or `dist/chrome` for source install) when clicking "Load unpacked."
+*   **AI Not Responding:**
+    *   Check your AI model configuration in Cognito's settings. Ensure API keys (for cloud services) are correctly entered or that your local model server (if used) is running and accessible.
+    *   If using a cloud model, verify your internet connection.
+    *   Try switching to a different AI model, a different persona, or a lower computation level to see if the issue is specific to one setting.
+*   **Summarization or Page Analysis Issues:**
+    *   Some web pages with very complex structures, dynamic content, or paywalls might be challenging for the extension to parse perfectly.
+    *   Ensure the page is fully loaded before asking Cognito to summarize or analyze it.
+*   **High Token Usage or Slow Responses:**
+    *   Remember that Medium and High computation levels consume significantly more tokens and time. Use them only when necessary for complex tasks.
+    *   If using a cloud service, check your usage limits and billing with the AI provider.
+
+---
+This document aims to be a comprehensive guide. If you encounter issues not covered here or have suggestions, consider reporting them via the project's GitHub issues page.
