@@ -198,7 +198,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                </Tooltip>
              </div>
              <SheetTitle className="text-center font-['Bruno_Ace_SC'] tracking-tight -mt-10 cognito-title-container">
-               <a href="https://github.com/3-ark/Cognito" target="_blank" rel="noopener noreferrer"
+               <a href="https://github.com/3-ark/Cognito/docs/User_Guide.md" target="_blank" rel="noopener noreferrer"
                   className={cn(
                     "text-xl font-semibold text-[var(--text)] bg-[var(--active)] inline-block px-3 py-1 rounded-md no-underline",
                     "cognito-title-blade-glow"

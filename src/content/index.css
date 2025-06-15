@@ -681,3 +681,31 @@ html[data-paper-texture="true"] #root::before {
   scrollbar-width: thin; /* For Firefox */
   scrollbar-color: rgba(128, 128, 128, 0.5) transparent; /* Thumb and track color for Firefox */
 }
+
+.tool-turn-message {
+  width: 100%;
+  max-width: calc(100% - 2rem);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  background-color: transparent;
+  border: none;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-style: italic;
+  box-shadow: none;
+}
+
+.dark .tool-turn-message {
+}
+
+.tool-turn-message .message-markdown {
+  color: #6B7280;
+}
+
+.dark .tool-turn-message .message-markdown {
+  color: #9CA3AF;
+}
