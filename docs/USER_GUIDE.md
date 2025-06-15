@@ -301,7 +301,7 @@ You can customize the application's look and feel through the "Customize" sectio
 ### Predefined Themes
 The application comes with several built-in themes that change the color scheme:
 *   **Paper**: A light, parchment-like theme.
-*   **Smoke**: A grayish, muted theme.
+*   **night-sepia**: A dark, soft theme.
 *   **Moss**: A theme with earthy tones.
 *   **Light**: A standard light mode theme.
 *   **Dark**: A standard dark mode theme.
