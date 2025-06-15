@@ -52,6 +52,42 @@ export interface ToolDefinition {
   };
 }
 
+export const extractAndParseJsonArguments = (argsString: string): any => {
+  try {
+    return JSON.parse(argsString);
+  } catch (e) {
+  }
+
+  const jsonFenceMatch = argsString.match(/```json\n([\s\S]*?)\n```/);
+  if (jsonFenceMatch && jsonFenceMatch[1]) {
+    try {
+      return JSON.parse(jsonFenceMatch[1]);
+    } catch (e) {
+    }
+  }
+
+  const genericFenceMatch = argsString.match(/```\n([\s\S]*?)\n```/);
+  if (genericFenceMatch && genericFenceMatch[1]) {
+    try {
+      return JSON.parse(genericFenceMatch[1]);
+    } catch (e) {
+    }
+  }
+
+  const firstBrace = argsString.indexOf('{');
+  const lastBrace = argsString.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const potentialJson = argsString.substring(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(potentialJson);
+    } catch (e) {
+      console.warn('Failed to parse extracted JSON-like string:', potentialJson, e);
+    }
+  }
+
+  throw new Error('Failed to parse arguments string as JSON after multiple attempts.');
+};
+
 /**
  * Custom hook for providing tools to the LLM.
  */
@@ -200,7 +236,7 @@ export const useTools = () => {
     }
 
     try {
-      const args = JSON.parse(rawArguments);
+      const args = extractAndParseJsonArguments(rawArguments);
       if (toolName === 'saveNote') {
         const { success, message } = await saveNote(args as SaveNoteArgs);
         return { toolCallId, name: toolName, result: message };

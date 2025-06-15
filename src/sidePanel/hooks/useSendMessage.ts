@@ -11,6 +11,37 @@ import type { LLMToolCall } from './useTools';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
+export const robustlyParseLlmResponseForToolCall = (responseText: string): any | null => {
+  try {
+    return JSON.parse(responseText);
+  } catch (e) { /* Ignore */ }
+
+  const jsonFenceMatch = responseText.match(/```json\n([\s\S]*?)\n```/s);
+  if (jsonFenceMatch && jsonFenceMatch[1]) {
+    try {
+      return JSON.parse(jsonFenceMatch[1]);
+    } catch (e) { /* Ignore */ }
+  }
+
+  const genericFenceMatch = responseText.match(/```\n([\s\S]*?)\n```/s);
+  if (genericFenceMatch && genericFenceMatch[1]) {
+    try {
+      return JSON.parse(genericFenceMatch[1]);
+    } catch (e) { /* Ignore */ }
+  }
+
+  const firstBrace = responseText.indexOf('{');
+  const lastBrace = responseText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const potentialJson = responseText.substring(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(potentialJson);
+    } catch (e) { /* Ignore */ }
+  }
+
+  return null;
+};
+
 try {
   const workerUrl = chrome.runtime.getURL('pdf.worker.mjs');
   if (workerUrl) {
@@ -529,17 +560,19 @@ const useSendMessage = (
             if (isFinished && !isError) {
               const assistantResponseContent = part;
               try {
-                const potentialToolCall = JSON.parse(assistantResponseContent);
+                const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
                 if (potentialToolCall && potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') {
                   console.log(`[${callId}] Detected custom tool call:`, potentialToolCall.tool_name);
 
                   const consistentToolCallId = `tool_${callId}_${potentialToolCall.tool_name.replace(/\s+/g, '_')}_${Date.now()}`;
+                  const stringifiedArguments = JSON.stringify(potentialToolCall.tool_arguments);
+                  
                   const structuredToolCallsForAssistant: LLMToolCall[] = [{
                     id: consistentToolCallId,
                     type: 'function',
                     function: {
                       name: potentialToolCall.tool_name,
-                      arguments: JSON.stringify(potentialToolCall.tool_arguments)
+                      arguments: stringifiedArguments // Use stringified arguments
                     }
                   }];
                   updateAssistantTurn(callId, assistantResponseContent, true, false, false, structuredToolCallsForAssistant);
@@ -547,7 +580,7 @@ const useSendMessage = (
                   const executionResult = await executeToolCall({
                     id: consistentToolCallId,
                     name: potentialToolCall.tool_name,
-                    arguments: JSON.stringify(potentialToolCall.tool_arguments)
+                    arguments: stringifiedArguments
                   });
 
                   const toolResultTurn: MessageTurn = {
