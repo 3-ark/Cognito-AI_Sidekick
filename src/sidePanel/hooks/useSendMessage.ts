@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useRef } from 'react';
 import { MessageTurn } from '../ChatHistory';
-import { fetchDataAsStream, webSearch, processQueryWithAI, scrapeUrlContent } from '../network';
+import { fetchDataAsStream, webSearch, processQueryWithAI } from '../network';
+import { scrapeUrlContent } from '../utils/scrapers';
 import storage from 'src/background/storageUtil';
 import type { Config, Model } from 'src/types/config';
 import { normalizeApiEndpoint } from 'src/background/util';
