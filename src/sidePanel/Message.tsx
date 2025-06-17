@@ -235,6 +235,8 @@ export const EditableMessage: FC<MessageProps> = ({
             </Button>
           </div>
         </div>
+      ) : turn.role === 'tool' ? (
+        <FetcherDisplay turn={turn} />
       ) : (
         <div className="message-markdown markdown-body relative z-[1] text-foreground">
           {shouldRenderRawContentAsMain && (
@@ -250,7 +252,7 @@ export const EditableMessage: FC<MessageProps> = ({
                 const match = part.match(thinkRegex);
                 if (match && match[1]) {
                   return <ThinkingBlock key={`think_${partIndex}`} content={match[1]} />;
-                } else if (part.trim() !== '') { 
+                } else if (part.trim() !== '') {
                   return (
                     <div key={`content_${partIndex}`} className="message-content">
                     <Markdown
@@ -269,6 +271,61 @@ export const EditableMessage: FC<MessageProps> = ({
           )}
         </div>
       )}
+    </div>
+  );
+};
+
+const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { config } = useConfig(); // Added to use config for styling if needed
+
+  if (turn.name === 'fetcher') {
+    return (
+      <div className="my-2"> {/* Added margin for spacing consistent with ThinkingBlock */}
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "mb-1",
+                "border-foreground text-foreground hover:text-accent-foreground"
+                // Consider adding specific styling for fetcher if needed, similar to ThinkingBlock
+              )}
+            >
+              {isOpen ? 'Hide Fetched Content' : 'Show Fetched Content'}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div
+              className={cn(
+                "p-3 rounded-md border border-dashed",
+                "bg-muted", // Consistent with ThinkingBlock
+                "border-muted-foreground", // Consistent with ThinkingBlock
+                "text-muted-foreground" // Consistent with ThinkingBlock
+              )}
+            >
+              <div className="markdown-body"> {/* Ensures markdown styles are applied */}
+                <Markdown
+                  remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
+                  components={messageMarkdownComponents} // Reusing existing components
+                >
+                  {turn.rawContent || ''}
+                </Markdown>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    );
+  }
+
+  // Fallback for other tools or if turn.name is undefined
+  return (
+    <div className="message-markdown markdown-body relative z-[1] text-foreground">
+      <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={messageMarkdownComponents}>
+        {turn.rawContent || ''}
+      </Markdown>
     </div>
   );
 };
