@@ -5,7 +5,7 @@ import { scrapeUrlContent } from '../utils/scrapers';
 import storage from 'src/background/storageUtil';
 import type { Config, Model } from 'src/types/config';
 import { normalizeApiEndpoint } from 'src/background/util';
-import { handleHighCompute, handleMediumCompute } from './computeHandlers';
+import { handleHighCompute, handleMediumCompute } from '../utils/computeHandlers';
 import { ChatMode, ChatStatus } from '../../types/config';
 import { useTools } from './useTools';
 import type { LLMToolCall } from './useTools';
