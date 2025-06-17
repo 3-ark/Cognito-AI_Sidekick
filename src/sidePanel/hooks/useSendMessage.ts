@@ -184,14 +184,30 @@ const useSendMessage = (
     });
 
     if (isFinished || (isError === true) || (isCancelled === true)) {
-      console.log(`[${callId}] updateAssistantTurn: Final state (Finished: ${isFinished}, Error: ${isError}, Cancelled: ${isCancelled}). Clearing guard and loading.`);
-      setLoading(false);
-      setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done');
+      let justFinishedLlmToolCallJson = false;
+      if (isFinished && !isError && !isCancelled) {
+        const potentialToolCall = robustlyParseLlmResponseForToolCall(update); // 'update' is 'finalContentForTurn'
+        if (potentialToolCall &&
+            ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
+             (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
+          justFinishedLlmToolCallJson = true;
+        }
+      }
 
-      if (completionGuard.current === callId) {
-        completionGuard.current = null;
-        if (abortControllerRef.current) {
-            abortControllerRef.current = null;
+      console.log(`[${callId}] updateAssistantTurn: Final state (Finished: ${isFinished}, Error: ${isError}, Cancelled: ${isCancelled}). Tool JSON just finished: ${justFinishedLlmToolCallJson}.`);
+      setLoading(false);
+
+      if (justFinishedLlmToolCallJson) {
+        console.log(`[${callId}] updateAssistantTurn: Detected finalization of LLM's tool call JSON. Completion guard will NOT be cleared yet to allow for final response processing.`);
+      } else {
+        setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done');
+        if (completionGuard.current === callId) {
+          completionGuard.current = null;
+          if (abortControllerRef.current) {
+              abortControllerRef.current = null;
+          }
+        } else {
+          console.log(`[${callId}] updateAssistantTurn: Guard mismatch or already cleared (current: ${completionGuard.current}). Not clearing guard again.`);
         }
       }
     }
@@ -562,33 +578,51 @@ const useSendMessage = (
               const assistantResponseContent = part;
               try {
                 const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
-                if (potentialToolCall && potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') {
-                  console.log(`[${callId}] Detected custom tool call:`, potentialToolCall.tool_name);
+                if (potentialToolCall &&
+                    ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
+                     (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
+                  
+                  const toolName = potentialToolCall.tool_name || potentialToolCall.name;
+                  const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
+                  const stringifiedArguments = JSON.stringify(toolArgumentsObject);
 
-                  const consistentToolCallId = `tool_${callId}_${potentialToolCall.tool_name.replace(/\s+/g, '_')}_${Date.now()}`;
-                  const stringifiedArguments = JSON.stringify(potentialToolCall.tool_arguments);
+                  console.log(`[${callId}] Detected custom tool call:`, toolName);
+
+                  const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
                   
                   const structuredToolCallsForAssistant: LLMToolCall[] = [{
                     id: consistentToolCallId,
                     type: 'function',
                     function: {
-                      name: potentialToolCall.tool_name,
-                      arguments: stringifiedArguments // Use stringified arguments
+                      name: toolName,
+                      arguments: stringifiedArguments
                     }
                   }];
                   updateAssistantTurn(callId, assistantResponseContent, true, false, false, structuredToolCallsForAssistant);
 
                   const executionResult = await executeToolCall({
                     id: consistentToolCallId,
-                    name: potentialToolCall.tool_name,
+                    name: toolName,
                     arguments: stringifiedArguments
                   });
+
+                  let contentForToolTurn: string;
+                  if (currentModel?.host === 'gemini') {
+                    try {
+                      const parsedResult = JSON.parse(executionResult.result);
+                      contentForToolTurn = JSON.stringify({ result: parsedResult });
+                    } catch (e) {
+                      contentForToolTurn = JSON.stringify({ result: executionResult.result });
+                    }
+                  } else {
+                    contentForToolTurn = executionResult.result;
+                  }
 
                   const toolResultTurn: MessageTurn = {
                   role: 'tool',
                   tool_call_id: executionResult.toolCallId || `call_${Date.now()}`,
                   name: executionResult.name,
-                  rawContent: executionResult.result,
+                  rawContent: contentForToolTurn,
                   status: 'complete',
                   timestamp: Date.now(),
                   };                  
