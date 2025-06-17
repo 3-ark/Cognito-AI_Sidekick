@@ -171,7 +171,7 @@ export const EditableMessage: FC<MessageProps> = ({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true); // Use capture phase to potentially override other listeners
+    document.addEventListener('keydown', handleKeyDown, true);
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };
@@ -277,11 +277,11 @@ export const EditableMessage: FC<MessageProps> = ({
 
 const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { config } = useConfig(); // Added to use config for styling if needed
+  const { config } = useConfig();
 
   if (turn.name === 'fetcher') {
     return (
-      <div className="my-2"> {/* Added margin for spacing consistent with ThinkingBlock */}
+      <div className="my-2">
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
           <CollapsibleTrigger asChild>
             <Button
@@ -290,7 +290,6 @@ const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
               className={cn(
                 "mb-1",
                 "border-foreground text-foreground hover:text-accent-foreground"
-                // Consider adding specific styling for fetcher if needed, similar to ThinkingBlock
               )}
             >
               {isOpen ? 'Hide Fetched Content' : 'Show Fetched Content'}
@@ -300,15 +299,15 @@ const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
             <div
               className={cn(
                 "p-3 rounded-md border border-dashed",
-                "bg-muted", // Consistent with ThinkingBlock
-                "border-muted-foreground", // Consistent with ThinkingBlock
-                "text-muted-foreground" // Consistent with ThinkingBlock
+                "bg-muted",
+                "border-muted-foreground",
+                "text-muted-foreground"
               )}
             >
-              <div className="markdown-body"> {/* Ensures markdown styles are applied */}
+              <div className="markdown-body">
                 <Markdown
                   remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
-                  components={messageMarkdownComponents} // Reusing existing components
+                  components={messageMarkdownComponents}
                 >
                   {turn.rawContent || ''}
                 </Markdown>
