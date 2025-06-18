@@ -217,7 +217,7 @@ const useSendMessage = (
     let contentValue: string | null = turn.rawContent || '';
 
     if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
-      contentValue = "";
+      // contentValue = "";
     }
 
     const apiMsg: ApiMessage = {
@@ -630,7 +630,7 @@ const useSendMessage = (
 
                   const assistantApiMessageWithToolCall: ApiMessage = {
                     role: 'assistant',
-                    content: "",
+                    // content: "",
                     tool_calls: structuredToolCallsForAssistant
                   };
 
@@ -642,7 +642,10 @@ const useSendMessage = (
                     toolResultApiMessage
                   ];
                   const finalAssistantPlaceholder: MessageTurn = {
-                      role: 'assistant', rawContent: '', status: 'streaming', timestamp: Date.now() + 1
+                      role: 'assistant', 
+                      // rawContent: '',
+                      status: 'streaming', 
+                      timestamp: Date.now() + 1
                   };
                   setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
 
