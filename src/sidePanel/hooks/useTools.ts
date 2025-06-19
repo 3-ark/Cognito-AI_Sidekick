@@ -48,7 +48,6 @@ export interface ToolDefinition {
     description: string;
     parameters: {
       type: 'object';
-      structure?: string;
       properties: {
         [key: string]: ToolParameterProperty;
       };
@@ -165,7 +164,6 @@ export const useTools = () => {
         description: 'Saves a new note to the user\'s persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.',
         parameters: {
           type: 'object',
-          structure: 'markdown',
           properties: {
             content: {
               type: 'string',
