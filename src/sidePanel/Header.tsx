@@ -463,6 +463,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <DropdownMenuPrimitive.Item
                         className={cn(
                           dropdownItemClasses,
+                          "gap-2",
                           "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                         )}
                         onSelect={() => setIsEditProfileDialogOpen(true)}
@@ -480,6 +481,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <DropdownMenuPrimitive.SubTrigger
                           className={cn(
                             dropdownSubTriggerClasses,
+                            "gap-2",
                             "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                           )}
                         >
