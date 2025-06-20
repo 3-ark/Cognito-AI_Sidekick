@@ -26,6 +26,7 @@ import storage from '../background/storageUtil';
 import ChannelNames from '../types/ChannelNames';
 import { useAddToNote } from './hooks/useAddToNote';
 import { NoteSystemView } from './NoteSystemView';
+import { Note } from '../types/noteTypes';
 
 function bridge() {
 
@@ -258,6 +259,7 @@ const Cognito = () => {
   const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
   const [triggerNoteCreation, setTriggerNoteCreation] = useState(false);
   const [triggerImportNoteFlow, setTriggerImportNoteFlow] = useState(false);
+  const [selectedNotesForContext, setSelectedNotesForContext] = useState<Note[]>([]);
 
   const toastIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -333,7 +335,6 @@ const Cognito = () => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
 
-      // Don't trigger shortcuts if settings or history mode is active
       if (settingsMode || historyMode || noteSystemMode) {
         return;
       }
@@ -424,6 +425,7 @@ const Cognito = () => {
     turns,
     webContent,
     config,
+    selectedNotesForContext,
     setTurns,
     setMessage,
     setWebContent,
@@ -446,6 +448,7 @@ const Cognito = () => {
     setHistoryMode(false);
     setSettingsMode(false); 
     setNoteSystemMode(false);
+    setSelectedNotesForContext([]); // Clear selected notes on reset
     if (containerRef.current) {
         containerRef.current.scrollTop = 0;
     }
@@ -825,8 +828,13 @@ const Cognito = () => {
               isLoading={isLoading}
               message={message}
               setMessage={setMessage}
-              onSend={() => onSend(message)}
+              onSend={async () => {
+                await onSend(message); 
+                setSelectedNotesForContext([]); 
+              }}
               onStopRequest={onStop}
+              selectedNotesForContext={selectedNotesForContext}
+              setSelectedNotesForContext={setSelectedNotesForContext}
             />
           </div>
         )}

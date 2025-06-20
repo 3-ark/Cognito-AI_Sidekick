@@ -4,6 +4,9 @@ import type { SpeechRecognition as SpeechRecognitionInstance, SpeechRecognitionE
 import { useEffect, useRef, useState, useCallback, Dispatch, SetStateAction, MouseEvent } from 'react';
 import { FaRegStopCircle } from 'react-icons/fa';
 import { BsMic, BsSend, BsStopCircle } from "react-icons/bs";
+import { Note } from '../types/noteTypes';
+import { getAllNotesFromSystem } from '../background/noteStorage';
+import NoteSelectionMenu from './NoteSelectionMenu';
 import { useConfig } from './ConfigContext';
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
@@ -23,13 +26,28 @@ interface InputProps {
     setMessage: Dispatch<SetStateAction<string>>; 
     onSend: () => void;
     onStopRequest: () => void;
+    selectedNotesForContext: Note[];
+    setSelectedNotesForContext: Dispatch<SetStateAction<Note[]>>;
 }
 
-export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend, onStopRequest }) => {
+export const Input: FC<InputProps> = ({ 
+    isLoading, 
+    message, 
+    setMessage, 
+    onSend, 
+    onStopRequest,
+    selectedNotesForContext,
+    setSelectedNotesForContext
+}) => {
   const { config } = useConfig();
   const ref = useRef<HTMLTextAreaElement>(null);
   const [isListening, setIsListening] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [showNoteSelection, setShowNoteSelection] = useState<boolean>(false);
+  const [noteSearchQuery, setNoteSearchQuery] = useState<string>("");
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [selectedNoteIndex, setSelectedNoteIndex] = useState<number>(-1);
 
   const setMessageRef = useRef<Dispatch<SetStateAction<string>>>(setMessage);
   useEffect(() => {
@@ -145,39 +163,163 @@ export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend, 
     }
   };
 
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showNoteSelection &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node) &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setShowNoteSelection(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside as unknown as EventListener);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside as unknown as EventListener);
+    };
+  }, [showNoteSelection]);
+
   const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (isLoading) return;
-    if (event.key === 'Enter' && message.trim() && !event.altKey && !event.metaKey && !event.shiftKey) {
+
+    if (showNoteSelection) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSelectedNoteIndex((prevIndex) =>
+          prevIndex < filteredNotes.length - 1 ? prevIndex + 1 : prevIndex
+        );
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedNoteIndex((prevIndex) =>
+          prevIndex > 0 ? prevIndex - 1 : 0
+        );
+      } else if (event.key === 'Enter' && selectedNoteIndex >= 0 && selectedNoteIndex < filteredNotes.length) {
+        event.preventDefault();
+        handleNoteClick(filteredNotes[selectedNoteIndex]);
+      } else if (event.key === 'Escape') {
+        setShowNoteSelection(false);
+      }
+    } else if (event.key === 'Enter' && message.trim() && !event.altKey && !event.metaKey && !event.shiftKey) {
       event.preventDefault();
       event.stopPropagation();
       onSend();
     }
   };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const currentMessage = event.target.value;
+    setMessage(currentMessage);
+
+    const activeTitlesInInput: string[] = [];
+    const linkRegex = /@\[([^\]]+)\]/g;
+    let titleMatch;
+    while ((titleMatch = linkRegex.exec(currentMessage)) !== null) {
+      activeTitlesInInput.push(titleMatch[1]);
+    }
+
+    const currentSelectedNotesFromProps = selectedNotesForContext;
+    const newSelectedNotesForContext = currentSelectedNotesFromProps.filter(note => 
+      activeTitlesInInput.includes(note.title)
+    );
+
+    if (newSelectedNotesForContext.length !== currentSelectedNotesFromProps.length) {
+      setSelectedNotesForContext(newSelectedNotesForContext);
+    }
+
+    const lastAtIndex = currentMessage.lastIndexOf("@");
+    const isNewQueryAttempt = lastAtIndex !== -1 && (lastAtIndex === currentMessage.length - 1 || !currentMessage.substring(lastAtIndex + 1).includes("]"));
+
+
+    if (isNewQueryAttempt && !showNoteSelection) {
+        setShowNoteSelection(true);
+        getAllNotesFromSystem().then((fetchedNotes) => {
+            setAllNotes(fetchedNotes);
+            const availableNotesForSelection = fetchedNotes.filter(
+                (note) => !activeTitlesInInput.includes(note.title)
+            );
+            
+            const query = currentMessage.substring(lastAtIndex + 1);
+            setNoteSearchQuery(query);
+
+            const notesMatchingQuery = availableNotesForSelection.filter((note) =>
+                note.title.toLowerCase().includes(query.toLowerCase())
+            );
+            setFilteredNotes(notesMatchingQuery);
+            setSelectedNoteIndex(notesMatchingQuery.length > 0 ? 0 : -1);
+        });
+    } else if (showNoteSelection && currentMessage.includes("@")) {
+        const availableNotesForSelection = allNotes.filter(
+            (note) => !activeTitlesInInput.includes(note.title)
+        );
+
+        const query = currentMessage.substring(currentMessage.lastIndexOf("@") + 1);
+        setNoteSearchQuery(query);
+
+        const notesMatchingQuery = availableNotesForSelection.filter((note) =>
+            note.title.toLowerCase().includes(query.toLowerCase())
+        );
+        setFilteredNotes(notesMatchingQuery);
+        setSelectedNoteIndex(notesMatchingQuery.length > 0 ? 0 : -1);
+    } else if ((!currentMessage.includes("@") || !isNewQueryAttempt) && showNoteSelection) {
+        setShowNoteSelection(false);
+        setNoteSearchQuery("");
+        setSelectedNoteIndex(-1);
+        setFilteredNotes([]);
+    }
+  };
+
+  const handleNoteClick = (note: Note) => {
+    setMessage(prevMessage => `${prevMessage.substring(0, prevMessage.lastIndexOf("@"))}@[${note.title}]`);
+    
+    setSelectedNotesForContext(prevNotes => [...prevNotes, note]);
+    
+    setShowNoteSelection(false);
+    setNoteSearchQuery("");
+    setFilteredNotes([]); 
+    setSelectedNoteIndex(-1);
+    inputRef.current?.focus(); 
+  };
+
   return (
-    <div className={cn(
-      "flex w-full border border-[var(--active)]/50 items-center mb-1 gap-0 p-0 bg-[var(--card,var(--bg-secondary))] rounded-lg shadow-md",
-      isFocused && "input-breathing"
-    )}>
-      <AddToChat /> 
-      <Textarea
-        autosize
-        ref={ref}
-        minRows={1}
-        maxRows={8}
-        autoComplete="off"
-        id="user-input"
-        placeholder={placeholderText}
-        value={message}
-        autoFocus
-        onChange={event => setMessage(event.target.value)}
-        onKeyDown={handleTextareaKeyDown}
-        className="flex-grow !bg-transparent p-1 border-none shadow-none outline-none focus-visible:ring-0"
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-      />
-      {isSpeechRecognitionSupported && (
-        <TooltipProvider delayDuration={500}>
+    <>
+      <div ref={menuRef}>
+        <NoteSelectionMenu
+          notes={filteredNotes}
+          onSelectNote={handleNoteClick}
+          isOpen={showNoteSelection}
+          selectedIndex={selectedNoteIndex}
+        />
+      </div>
+      <div className={cn(
+        "flex w-full border border-[var(--active)]/50 items-center mb-1 gap-0 p-0 bg-[var(--card,var(--bg-secondary))] rounded-lg shadow-md",
+        isFocused && "input-breathing"
+      )}>
+        <AddToChat />
+        <Textarea
+          autosize
+          ref={inputRef}
+          minRows={1}
+          maxRows={8}
+          autoComplete="off"
+          id="user-input"
+          placeholder={placeholderText}
+          value={message}
+          autoFocus
+          onChange={handleInputChange}
+          onKeyDown={handleTextareaKeyDown}
+          className="flex-grow !bg-transparent p-1 border-none shadow-none outline-none focus-visible:ring-0"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+          }}
+        />
+        {isSpeechRecognitionSupported && (
+          <TooltipProvider delayDuration={500}>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -237,6 +379,7 @@ export const Input: FC<InputProps> = ({ isLoading, message, setMessage, onSend, 
           <TooltipContent side="top" className="bg-secondary/50 text-foreground"><p>{isLoading ? "Stop" : "Send"}</p></TooltipContent>
         </Tooltip>
       </TooltipProvider>
-    </div>
+      </div>
+    </>
   );
 };
