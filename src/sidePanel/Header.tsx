@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiTrash2, FiShare, FiChevronLeft } from 'react-icons/fi';
+import { FiX, FiTrash2, FiShare, FiChevronLeft, FiUpload } from 'react-icons/fi';
 import { TbReload, TbJson } from "react-icons/tb";
 import { useConfig } from './ConfigContext';
 import { cn } from "@/src/background/util";
@@ -206,6 +206,7 @@ interface HeaderProps {
   chatMode: ChatMode;
   chatStatus: ChatStatus;
   onAddNewNoteRequest?: () => void;
+  onImportNoteRequest?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -225,6 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
   chatMode,
   chatStatus,
   onAddNewNoteRequest,
+  onImportNoteRequest,
 }) => {
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
@@ -547,23 +549,61 @@ export const Header: React.FC<HeaderProps> = ({
                 </TooltipContent>
               </Tooltip>
             )}
-            {noteSystemMode && onAddNewNoteRequest && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="Add New Note"
-                    variant="ghost"
-                    size="sm"
-                    className="text-[var(--text)] rounded-md"
-                    onClick={onAddNewNoteRequest}
+            {noteSystemMode && (
+              <DropdownMenuPrimitive.Root>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuPrimitive.Trigger asChild>
+                      <Button
+                        aria-label="Note Options"
+                        variant="ghost"
+                        size="sm"
+                        className="text-[var(--text)] rounded-md"
+                      >
+                        <GoPlus size="18px" />
+                      </Button>
+                    </DropdownMenuPrimitive.Trigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
+                    Note Options
+                  </TooltipContent>
+                </Tooltip>
+                <DropdownMenuPrimitive.Portal>
+                  <DropdownMenuPrimitive.Content
+                    className={cn(
+                      dropdownContentClasses,
+                      "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl"
+                    )}
+                    sideOffset={5}
+                    align="end"
                   >
-                    <GoPlus size="18px" /> {/* Adjusted icon size for consistency */}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                  Add New Note
-                </TooltipContent>
-              </Tooltip>
+                    {onAddNewNoteRequest && (
+                      <DropdownMenuPrimitive.Item
+                        className={cn(
+                          dropdownItemClasses,
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                        )}
+                        onSelect={onAddNewNoteRequest}
+                      >
+                        <GoPlus className="mr-auto h-4 w-4" />
+                        New Note
+                      </DropdownMenuPrimitive.Item>
+                    )}
+                    {onImportNoteRequest && (
+                      <DropdownMenuPrimitive.Item
+                        className={cn(
+                          dropdownItemClasses,
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                        )}
+                        onSelect={onImportNoteRequest}
+                      >
+                        <FiUpload className="mr-auto h-4 w-4" />
+                        Import Note
+                      </DropdownMenuPrimitive.Item>
+                    )}
+                  </DropdownMenuPrimitive.Content>
+                </DropdownMenuPrimitive.Portal>
+              </DropdownMenuPrimitive.Root>
             )}
           </div>
         </div>

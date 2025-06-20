@@ -257,6 +257,7 @@ const Cognito = () => {
   const [isWebSearchHovering, setIsWebSearchHovering] = useState(false);
   const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
   const [triggerNoteCreation, setTriggerNoteCreation] = useState(false);
+  const [triggerImportNoteFlow, setTriggerImportNoteFlow] = useState(false);
 
   const toastIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -406,6 +407,15 @@ const Cognito = () => {
       port.disconnect();
     };
   }, [appendToNote]);
+
+  const handleImportNoteRequest = () => {
+    setNoteSystemMode(true); 
+    setTriggerImportNoteFlow(true);
+  };
+
+  const handleImportTriggered = () => {
+    setTriggerImportNoteFlow(false);
+  };
 
   const { chatTitle, setChatTitle } = useChatTitle(isLoading, turns, message);
   const { onSend, onStop } = useSendMessage(
@@ -612,7 +622,11 @@ const Cognito = () => {
             setSettingsMode={setSettingsMode}
             settingsMode={settingsMode}
             noteSystemMode={noteSystemMode}
-            onAddNewNoteRequest={noteSystemMode ? () => setTriggerNoteCreation(true) : undefined}
+            onAddNewNoteRequest={() => {
+              setNoteSystemMode(true);
+              setTriggerNoteCreation(true);
+            }}
+            onImportNoteRequest={handleImportNoteRequest}
             setNoteSystemMode={setNoteSystemMode}
             chatMode={(config?.chatMode as ChatMode) || 'chat'}
             chatStatus={chatStatus}
@@ -634,6 +648,8 @@ const Cognito = () => {
             <NoteSystemView
               triggerOpenCreateModal={triggerNoteCreation}
               onModalOpened={handleNoteModalOpened}
+              triggerImportNoteFlow={triggerImportNoteFlow}
+              onImportTriggered={handleImportTriggered}
             />
           )}
 

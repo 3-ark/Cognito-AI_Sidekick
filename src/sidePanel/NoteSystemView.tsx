@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, ComponentPropsWithoutRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, ComponentPropsWithoutRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,8 @@ import { markdownComponents, Pre as SharedPre } from '@/components/MarkdownCompo
 interface NoteSystemViewProps {
   triggerOpenCreateModal: boolean;
   onModalOpened: () => void;
+  triggerImportNoteFlow: boolean;
+  onImportTriggered: () => void;
 }
 
 const noteSystemMarkdownComponents = {
@@ -37,9 +39,15 @@ const noteSystemMarkdownComponents = {
 
 const ITEMS_PER_PAGE = 12;
 
-export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreateModal, onModalOpened }) => {
+export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ 
+  triggerOpenCreateModal, 
+  onModalOpened,
+  triggerImportNoteFlow,
+  onImportTriggered,
+}) => {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -175,6 +183,71 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
     }
   }, [triggerOpenCreateModal, onModalOpened, openCreateModal]);
 
+  const handleImportNote = () => {
+    fileInputRef.current?.click();
+  };
+
+  useEffect(() => {
+    if (triggerImportNoteFlow) {
+      handleImportNote();
+      onImportTriggered();
+    }
+  }, [triggerImportNoteFlow, onImportTriggered]);
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target?.result as string;
+        let title = file.name.replace(/\.[^/.]+$/, ""); // Remove extension for title
+        let processedContent = content;
+
+        const fileType = file.name.split('.').pop()?.toLowerCase();
+
+        if (fileType === 'html' || fileType === 'htm') {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(content, 'text/html');
+          processedContent = doc.body.textContent || "";
+          const pageTitle = doc.title || file.name.replace(/\.[^/.]+$/, "");
+          if (pageTitle) title = pageTitle;
+        }
+        // For .txt and .md, content is used directly, title is filename without extension, should be changed with import tags
+
+        if (!processedContent.trim()) {
+          toast.error("Cannot import note: Content is empty after processing.");
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+
+        const newNote: Partial<Note> & { content: string } = {
+          title: title,
+          content: processedContent,
+          tags: ['imported'], // Default tag, to be polished.
+          // url: file.type === 'text/html' ? /* logic to get source URL if available, else undefined */ : undefined,
+        };
+
+        await saveNoteInSystem(newNote);
+        await fetchNotes();
+        toast.success(`Note imported successfully: ${file.name}`);
+      } catch (error) {
+        console.error("Error importing note:", error);
+        toast.error(`Failed to import note: ${file.name}.`);
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.onerror = () => {
+      toast.error(`Error reading file: ${file.name}`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
+
   const filteredNotes = useMemo(() => {
     if (!searchQuery) return allNotes;
     const lowerCaseQuery = searchQuery.toLowerCase();
@@ -233,6 +306,14 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ triggerOpenCreat
 
   return (
     <div className="flex flex-col h-full text-[var(--text)]">
+      <input
+        data-testid="hidden-file-input"
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileSelected}
+        accept=".txt,.md,.html,.htm"
+      />
       <div className="p-0">
         <div className="relative">
           <Input
