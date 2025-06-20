@@ -288,17 +288,17 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 const defuddleResult = defuddleInstance.parse();
                 
                 if (defuddleResult.content) {
-                  finalHtmlToConvert = defuddleResult.content; // Use Defuddle's cleaned HTML string
+                  finalHtmlToConvert = defuddleResult.content;
                 }
                 potentialTitle = defuddleResult.title || doc.title || potentialTitle;
                 console.log(`[NoteSystemView] Defuddle processed HTML for: ${file.name}. Title: ${potentialTitle}`);
               } else {
                 console.warn(`[NoteSystemView] Defuddle library not available for ${file.name}. Using raw HTML body.`);
-                potentialTitle = doc.title || potentialTitle; // Still try to get title from doc
+                potentialTitle = doc.title || potentialTitle;
               }
             } catch (defuddleError) {
               console.error(`[NoteSystemView] Error using Defuddle for ${file.name}:`, defuddleError);
-              potentialTitle = doc.title || potentialTitle; // Fallback title from doc
+              potentialTitle = doc.title || potentialTitle;
             }
             
             rawContentFromFile = turndownService.turndown(finalHtmlToConvert);
