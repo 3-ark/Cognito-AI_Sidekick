@@ -15,6 +15,11 @@ import { cn } from '@/src/background/util';
 import { useConfig } from './ConfigContext';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import * as pdfjsLib from 'pdfjs-dist';
+import TurndownService from 'turndown';
+import { gfm } from 'turndown-plugin-gfm';
+import yaml from 'js-yaml';
+import Defuddle from 'defuddle';
 import ChannelNames from '../types/ChannelNames';
 import { markdownComponents, Pre as SharedPre } from '@/components/MarkdownComponents';
 
@@ -38,6 +43,33 @@ const noteSystemMarkdownComponents = {
 };
 
 const ITEMS_PER_PAGE = 12;
+
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  hr: '---',
+  bulletListMarker: '*',
+  codeBlockStyle: 'fenced',
+  emDelimiter: '_',
+  strongDelimiter: '**',
+  linkStyle: 'inlined',
+  linkReferenceStyle: 'full',
+});
+turndownService.use(gfm);
+
+try {
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL) {
+    const workerUrl = chrome.runtime.getURL('pdf.worker.mjs');
+    if (workerUrl) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+    } else {
+      console.warn("[NoteSystemView] Could not get worker URL via chrome.runtime.getURL for 'pdf.worker.mjs'. Attempting default path or expecting it to be globally set.");
+    }
+  } else {
+    console.warn("[NoteSystemView] chrome.runtime.getURL is not available. PDF.js worker might not be configured correctly for this environment.");
+  }
+} catch (e) {
+  console.error("[NoteSystemView] Error setting pdf.js worker source:", e);
+}
 
 export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ 
   triggerOpenCreateModal, 
@@ -195,57 +227,169 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   }, [triggerImportNoteFlow, onImportTriggered]);
 
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
+    let importSuccessCount = 0;
+    let importErrorCount = 0;
+
+    const readFileAsArrayBuffer = (inputFile: File): Promise<ArrayBuffer> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(inputFile);
+      });
+    };
+
+    const readFileAsText = (inputFile: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(inputFile);
+      });
+    };
+
+    for (const file of files) {
       try {
-        const content = e.target?.result as string;
-        let title = file.name.replace(/\.[^/.]+$/, ""); // Remove extension for title
-        let processedContent = content;
-
         const fileType = file.name.split('.').pop()?.toLowerCase();
+        let defaultTitleFromFile = file.name.replace(/\.[^/.]+$/, "");
+        let rawContentFromFile = "";
+        let potentialTitle = defaultTitleFromFile;
 
-        if (fileType === 'html' || fileType === 'htm') {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(content, 'text/html');
-          processedContent = doc.body.textContent || "";
-          const pageTitle = doc.title || file.name.replace(/\.[^/.]+$/, "");
-          if (pageTitle) title = pageTitle;
+        if (fileType === 'pdf') {
+          const arrayBuffer = await readFileAsArrayBuffer(file);
+          const typedarray = new Uint8Array(arrayBuffer);
+          const pdfDoc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          let pdfText = "";
+          for (let i = 1; i <= pdfDoc.numPages; i++) {
+            const page = await pdfDoc.getPage(i);
+            const textContent = await page.getTextContent();
+            pdfText += textContent.items.map(item => {
+              if ('str' in item) {
+                return item.str;
+              }
+              return '';
+            }).join(" ") + "\n";
+          }
+          rawContentFromFile = pdfText.trim();
+        } else {
+          rawContentFromFile = await readFileAsText(file); // This is the text content for HTML, MD, TXT
+          if (fileType === 'html' || fileType === 'htm') {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(rawContentFromFile, 'text/html'); // Parse the raw HTML string
+            
+            let finalHtmlToConvert = doc.body.innerHTML; // Default to original body HTML
+
+            try {
+              if (typeof Defuddle === 'function') {
+                const defuddleInstance = new Defuddle(doc, { markdown: false, url: file.name });
+                const defuddleResult = defuddleInstance.parse();
+                
+                if (defuddleResult.content) {
+                  finalHtmlToConvert = defuddleResult.content; // Use Defuddle's cleaned HTML string
+                }
+                potentialTitle = defuddleResult.title || doc.title || potentialTitle;
+                console.log(`[NoteSystemView] Defuddle processed HTML for: ${file.name}. Title: ${potentialTitle}`);
+              } else {
+                console.warn(`[NoteSystemView] Defuddle library not available for ${file.name}. Using raw HTML body.`);
+                potentialTitle = doc.title || potentialTitle; // Still try to get title from doc
+              }
+            } catch (defuddleError) {
+              console.error(`[NoteSystemView] Error using Defuddle for ${file.name}:`, defuddleError);
+              potentialTitle = doc.title || potentialTitle; // Fallback title from doc
+            }
+            
+            rawContentFromFile = turndownService.turndown(finalHtmlToConvert);
+          }
         }
-        // For .txt and .md, content is used directly, title is filename without extension, should be changed with import tags
 
-        if (!processedContent.trim()) {
-          toast.error("Cannot import note: Content is empty after processing.");
-          if (fileInputRef.current) fileInputRef.current.value = '';
-          return;
+        if (!rawContentFromFile.trim()) {
+          toast.error(`Cannot import '${file.name}': Content is empty.`);
+          importErrorCount++;
+          continue; 
+        }
+
+        let noteTitleToSave = potentialTitle;
+        let noteContentToSave = rawContentFromFile;
+        let noteTagsToSave = ['imported'];
+        let noteUrlToSave: string | undefined = undefined;
+
+        if (fileType === 'md' || fileType === 'txt' || fileType === 'html' || fileType === 'htm') {
+          const frontmatterRegex = /^---\s*([\s\S]*?)\s*---\s*([\s\S]*)$/;
+          const match = frontmatterRegex.exec(rawContentFromFile);
+          if (match) {
+            const yamlString = match[1];
+            const mainContent = match[2];
+            try {
+              const frontmatter = yaml.load(yamlString) as any;
+              if (frontmatter && typeof frontmatter === 'object') {
+                if (typeof frontmatter.title === 'string' && frontmatter.title.trim()) {
+                  noteTitleToSave = frontmatter.title.trim();
+                }
+                if (Array.isArray(frontmatter.tags) && frontmatter.tags.every((tag: unknown): tag is string => typeof tag === 'string')) {
+                  noteTagsToSave = frontmatter.tags.map((tag: string) => tag.trim()).filter((tag: string) => tag);
+                } else if (typeof frontmatter.tags === 'string') {
+                  noteTagsToSave = [frontmatter.tags.trim()].filter(tag => tag);
+                }
+                if (noteTagsToSave.length === 0) noteTagsToSave = ['imported'];
+                if (typeof frontmatter.url === 'string' && frontmatter.url.trim()) {
+                  noteUrlToSave = frontmatter.url.trim();
+                }
+                noteContentToSave = mainContent.trim();
+              }
+            } catch (yamlError) {
+              console.warn(`Failed to parse YAML frontmatter for ${file.name}:`, yamlError);
+            }
+          }
+        }
+
+        if (!noteContentToSave.trim() && fileType !== 'pdf') {
+          toast.error(`Cannot import '${file.name}': Main content empty after frontmatter.`);
+          importErrorCount++;
+          continue;
         }
 
         const newNote: Partial<Note> & { content: string } = {
-          title: title,
-          content: processedContent,
-          tags: ['imported'], // Default tag, to be polished.
-          // url: file.type === 'text/html' ? /* logic to get source URL if available, else undefined */ : undefined,
+          title: noteTitleToSave,
+          content: noteContentToSave,
+          tags: noteTagsToSave,
+          url: noteUrlToSave,
         };
 
         await saveNoteInSystem(newNote);
-        await fetchNotes();
-        toast.success(`Note imported successfully: ${file.name}`);
+        toast.success(`Note imported: ${file.name}`);
+        importSuccessCount++;
+
       } catch (error) {
-        console.error("Error importing note:", error);
-        toast.error(`Failed to import note: ${file.name}.`);
-      } finally {
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+        console.error(`Error importing note ${file.name}:`, error);
+        let errorMessage = `Failed to import ${file.name}.`;
+        if (error instanceof Error && error.message) {
+            errorMessage += ` Reason: ${error.message}`;
         }
+        toast.error(errorMessage);
+        importErrorCount++;
       }
-    };
-    reader.onerror = () => {
-      toast.error(`Error reading file: ${file.name}`);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-    reader.readAsText(file);
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    if (importSuccessCount > 0) {
+      await fetchNotes();
+    }
+    
+    if (files.length > 1) {
+        if (importSuccessCount === files.length) {
+            toast.success(`All ${files.length} notes imported successfully!`);
+        } else if (importErrorCount === files.length) {
+            toast.error(`Failed to import any of the ${files.length} notes.`);
+        } else {
+            toast.loading(`Imported ${importSuccessCount} of ${files.length} notes. See other notifications for details.`, { duration: 4000 });
+        }
+    }
   };
 
   const filteredNotes = useMemo(() => {
@@ -312,7 +456,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         ref={fileInputRef}
         style={{ display: 'none' }}
         onChange={handleFileSelected}
-        accept=".txt,.md,.html,.htm"
+        accept=".txt,.md,.html,.htm,.pdf"
+        multiple
       />
       <div className="p-0">
         <div className="relative">
