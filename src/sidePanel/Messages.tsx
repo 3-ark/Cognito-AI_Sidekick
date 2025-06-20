@@ -177,7 +177,7 @@ export const Messages: React.FC<MessagesProps> = ({
                 )}
               >
                 {editingIndex !== i && (
-                  <Button aria-label="Copy" variant="message-action" size="xs" onClick={() => copyMessage(turn.rawContent)} title="Copy message">
+                  <Button aria-label="Copy" variant="message-action" size="xs" onClick={() => copyMessage(turn.content)} title="Copy message">
                     <FiCopy className="text-[var(--text)]" />
                   </Button>
                 )}
@@ -198,7 +198,7 @@ export const Messages: React.FC<MessagesProps> = ({
                   </>
                 )}
                 {speakingIndex !== i && (
-                  <Button aria-label="Speak" variant="message-action" size="xs" onClick={() => handlePlay(i, turn.rawContent)} title="Speak message">
+                  <Button aria-label="Speak" variant="message-action" size="xs" onClick={() => handlePlay(i, turn.content)} title="Speak message">
                     <FiPlay className="text-[var(--text)]" />
                   </Button>
                 )}
@@ -226,7 +226,7 @@ export const Messages: React.FC<MessagesProps> = ({
                   )}
               >
                 {editingIndex !== i && (
-                  <Button aria-label="Copy" variant="message-action" size="sm" onClick={() => copyMessage(turn.rawContent)} title="Copy message">
+                  <Button aria-label="Copy" variant="message-action" size="sm" onClick={() => copyMessage(turn.content)} title="Copy message">
                     <FiCopy className="text-[var(--text)]" />
                   </Button>
                 )}

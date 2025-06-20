@@ -157,7 +157,7 @@ const useSendMessage = (
         if (isError) {
           const errorTurn: MessageTurn = {
             role: 'assistant',
-            rawContent: `Error: ${update || 'Unknown operation error'}`,
+            content: `Error: ${update || 'Unknown operation error'}`,
             status: 'error',
             timestamp: Date.now(),
             ...(toolCallsPayload && { tool_calls: toolCallsPayload })
@@ -172,7 +172,7 @@ const useSendMessage = (
       let finalContentForTurn: string;
       
       if (isCancelled) {
-        const existingContent = lastTurn.rawContent || "";
+        const existingContent = lastTurn.content || "";
         finalContentForTurn = existingContent + (existingContent ? " " : "") + update;
       } else if (isError) {
         finalContentForTurn = `Error: ${update || 'Unknown stream/handler error'}`;
@@ -180,7 +180,7 @@ const useSendMessage = (
         finalContentForTurn = update; 
       }
       
-      return [...prevTurns.slice(0, -1), { ...lastTurn, rawContent: finalContentForTurn, status: updatedStatus, timestamp: Date.now(), ...(toolCallsPayload && { tool_calls: toolCallsPayload }) }];
+      return [...prevTurns.slice(0, -1), { ...lastTurn, content: finalContentForTurn, status: updatedStatus, timestamp: Date.now(), ...(toolCallsPayload && { tool_calls: toolCallsPayload }) }];
     });
 
     if (isFinished || (isError === true) || (isCancelled === true)) {
@@ -214,7 +214,7 @@ const useSendMessage = (
   };
 
   const turnToApiMessage = (turn: MessageTurn): ApiMessage => {
-    let contentValue: string | null = turn.rawContent || '';
+    let contentValue: string | null = turn.content || '';
 
     if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
       // contentValue = "";
@@ -301,7 +301,7 @@ const useSendMessage = (
     const userTurn: MessageTurn = {
       role: 'user',
       status: 'complete',
-      rawContent: message,
+      content: message,
       timestamp: Date.now()
     };
     setTurns(prevTurns => [...prevTurns, userTurn]);
@@ -310,7 +310,7 @@ const useSendMessage = (
 
     const assistantTurnPlaceholder: MessageTurn = {
         role: 'assistant',
-        rawContent: '',
+        content: '',
         status: 'streaming',
         timestamp: Date.now() + 1 
     };
@@ -335,7 +335,7 @@ const useSendMessage = (
       setChatStatus('thinking');    
       const historyForQueryOptimization= currentTurns.map(turn => ({
         role: turn.role,
-        content: turn.rawContent
+        content: turn.content
       }));
       try {
         const optimizedQuery = await processQueryWithAI(
@@ -401,7 +401,7 @@ const useSendMessage = (
 
     const messageForApi: ApiMessage[] = currentTurns
       .map((turn): ApiMessage => ({
-        content: turn.rawContent || '',
+        content: turn.content || '',
         role: turn.role
       }))
       .concat({ role: 'user', content: message });
@@ -622,7 +622,7 @@ const useSendMessage = (
                   role: 'tool',
                   tool_call_id: executionResult.toolCallId || `call_${Date.now()}`,
                   name: executionResult.name,
-                  rawContent: contentForToolTurn,
+                  content: contentForToolTurn,
                   status: 'complete',
                   timestamp: Date.now(),
                   };                  
@@ -643,7 +643,7 @@ const useSendMessage = (
                   ];
                   const finalAssistantPlaceholder: MessageTurn = {
                       role: 'assistant', 
-                      // rawContent: '',
+                      // content: '',
                       status: 'streaming', 
                       timestamp: Date.now() + 1
                   };

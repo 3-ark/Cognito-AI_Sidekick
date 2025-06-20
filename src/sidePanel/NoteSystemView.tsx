@@ -451,7 +451,6 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   return (
     <div className="flex flex-col h-full text-[var(--text)]">
       <input
-        data-testid="hidden-file-input"
         type="file"
         ref={fileInputRef}
         style={{ display: 'none' }}

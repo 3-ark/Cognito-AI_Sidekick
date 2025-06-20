@@ -130,27 +130,27 @@ export const EditableMessage: FC<MessageProps> = ({
 
   const showToolCallBlock = turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0 && !isEditing;
 
-  let shouldRenderRawContentAsMain = true;
+  let shouldRendercontentAsMain = true;
   if (showToolCallBlock) {
-    const trimmedRawContent = (turn.rawContent || '').trim();
-    if (trimmedRawContent === '') {
-      shouldRenderRawContentAsMain = false;
+    const trimmedcontent = (turn.content || '').trim();
+    if (trimmedcontent === '') {
+      shouldRendercontentAsMain = false;
     } else if (
-      (trimmedRawContent.startsWith('{') && trimmedRawContent.endsWith('}')) ||
-      (trimmedRawContent.startsWith('[') && trimmedRawContent.endsWith(']'))
+      (trimmedcontent.startsWith('{') && trimmedcontent.endsWith('}')) ||
+      (trimmedcontent.startsWith('[') && trimmedcontent.endsWith(']'))
     ) {
       try {
-        JSON.parse(trimmedRawContent);
-        shouldRenderRawContentAsMain = false;
+        JSON.parse(trimmedcontent);
+        shouldRendercontentAsMain = false;
       } catch (e) {
-        shouldRenderRawContentAsMain = true;
+        shouldRendercontentAsMain = true;
       }
     } else {
-      shouldRenderRawContentAsMain = true;
+      shouldRendercontentAsMain = true;
     }
   }
 
-  const contentToRender = shouldRenderRawContentAsMain ? (turn.rawContent || '') : '';
+  const contentToRender = shouldRendercontentAsMain ? (turn.content || '') : '';
   const parts = contentToRender.split(/(<think>[\s\S]*?<\/think>)/g).filter(part => part && part.trim() !== '');
   const thinkRegex = /<think>([\s\S]*?)<\/think>/;
 
@@ -195,7 +195,7 @@ export const EditableMessage: FC<MessageProps> = ({
       )}
       onDoubleClick={() => {
         if (!isEditing) {
-          onStartEdit(index, turn.rawContent);
+          onStartEdit(index, turn.content);
         }
       }}
     >
@@ -239,7 +239,7 @@ export const EditableMessage: FC<MessageProps> = ({
         <FetcherDisplay turn={turn} />
       ) : (
         <div className="message-markdown markdown-body relative z-[1] text-foreground">
-          {shouldRenderRawContentAsMain && (
+          {shouldRendercontentAsMain && (
             <>
               {turn.role === 'assistant' && turn.webDisplayContent && (
                 <div className="message-prefix">
@@ -309,7 +309,7 @@ const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
                   remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
                   components={messageMarkdownComponents}
                 >
-                  {turn.rawContent || ''}
+                  {turn.content || ''}
                 </Markdown>
               </div>
             </div>
@@ -323,7 +323,7 @@ const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
   return (
     <div className="message-markdown markdown-body relative z-[1] text-foreground">
       <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={messageMarkdownComponents}>
-        {turn.rawContent || ''}
+        {turn.content || ''}
       </Markdown>
     </div>
   );

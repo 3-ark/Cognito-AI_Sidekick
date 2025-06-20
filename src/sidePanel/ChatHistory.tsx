@@ -11,7 +11,7 @@ const dateToString = (date: number | Date): string => new Date(date).toLocaleDat
 export interface MessageTurn {
   role: 'user' | 'assistant' | 'tool' ;
   status: 'complete' | 'streaming' | 'error' | 'cancelled' | 'awaiting_tool_results';
-  rawContent: string;
+  content: string;
   webDisplayContent?: string;
   tool_call_id?: string;
   timestamp: number;
@@ -93,7 +93,7 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
     const lowerCaseQuery = searchQuery.toLowerCase();
     return allMessagesFromServer.filter(message => {
       const titleMatch = message.title?.toLowerCase().includes(lowerCaseQuery);
-      const contentMatch = message.turns.some(turn => turn.rawContent.toLowerCase().includes(lowerCaseQuery));
+      const contentMatch = message.turns.some(turn => turn.content.toLowerCase().includes(lowerCaseQuery));
       return titleMatch || contentMatch;
     });
   }, [allMessagesFromServer, searchQuery]);
@@ -140,7 +140,7 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
         if (!searchQuery) return true;
         const lowerCaseQuery = searchQuery.toLowerCase();
         const titleMatch = message.title?.toLowerCase().includes(lowerCaseQuery);
-        const contentMatch = message.turns.some(turn => turn.rawContent.toLowerCase().includes(lowerCaseQuery));
+        const contentMatch = message.turns.some(turn => turn.content.toLowerCase().includes(lowerCaseQuery));
         return titleMatch || contentMatch;
       });
 

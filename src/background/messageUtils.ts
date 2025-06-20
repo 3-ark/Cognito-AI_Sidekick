@@ -34,7 +34,7 @@ export const downloadText = async (turns: MessageTurn[]) => {
     if (turn.role === 'assistant' && turn.webDisplayContent) {
         turnText += `~From the Internet~\n${turn.webDisplayContent}\n\n---\n\n`;
     }
-    turnText += turn.rawContent;
+    turnText += turn.content;
     return turnText;
 }).join('\n\n');
   const element = document.createElement('a');
@@ -170,7 +170,7 @@ export const downloadMarkdown = (turns: MessageTurn[]) => {
     const roleName = turn.role === 'assistant' ? assistantPersonaName : (turn.role === 'user' ? userNameToDisplay : turn.role);
     const prefix = `### ${roleName}`;
 
-    let content = turn.rawContent;
+    let content = turn.content;
     
     // keep code blocks
     content = content.replace(/```([\s\S]*?)```/g, '\n```$1```\n');

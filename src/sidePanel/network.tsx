@@ -134,9 +134,9 @@ Output:
     }
 
     const responseData = await response.json();
-    const rawContent = responseData?.choices?.[0]?.message?.content;
-    return typeof rawContent === 'string'
-      ? cleanResponse(rawContent)
+    const content = responseData?.choices?.[0]?.message?.content;
+    return typeof content === 'string'
+      ? cleanResponse(content)
       : query;
 
   } catch (error: any) {

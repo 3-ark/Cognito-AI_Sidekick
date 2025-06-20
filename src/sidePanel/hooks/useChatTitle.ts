@@ -64,7 +64,7 @@ export const useChatTitle = (isLoading: boolean, turns: MessageTurn[], message: 
 
       const messagesForTitle: ApiMessage[] = [
         ...turns.slice(0, 2).map((turn): ApiMessage => ({
-          content: turn.rawContent || '',
+          content: turn.content || '',
           role: turn.role
         })),
         { 

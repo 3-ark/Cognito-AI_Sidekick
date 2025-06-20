@@ -457,7 +457,7 @@ const Cognito = () => {
       const last = prevTurns[prevTurns.length - 1];
       const secondLast = prevTurns[prevTurns.length - 2];
       if (last.role === 'assistant' && secondLast.role === 'user') {
-        setMessage(secondLast.rawContent);
+        setMessage(secondLast.content);
         return prevTurns.slice(0, -2);
       }
       return prevTurns;
@@ -594,7 +594,7 @@ const Cognito = () => {
     setTurns(prevTurns => {
       const updatedTurns = [...prevTurns];
       if (updatedTurns[index]) {
-        updatedTurns[index] = { ...updatedTurns[index], rawContent: newContent };
+        updatedTurns[index] = { ...updatedTurns[index], content: newContent };
       }
       return updatedTurns;
     });
