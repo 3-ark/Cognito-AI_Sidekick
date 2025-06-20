@@ -587,13 +587,14 @@ export const Header: React.FC<HeaderProps> = ({
                         onSelect={onAddNewNoteRequest}
                       >
                         <GoPlus className="mr-auto h-4 w-4" />
-                        New Note
+                        Add New Note
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onImportNoteRequest && (
                       <DropdownMenuPrimitive.Item
                         className={cn(
                           dropdownItemClasses,
+                          "gap-2",
                           "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                         )}
                         onSelect={onImportNoteRequest}
