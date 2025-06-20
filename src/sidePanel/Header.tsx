@@ -580,7 +580,8 @@ export const Header: React.FC<HeaderProps> = ({
                     {onAddNewNoteRequest && (
                       <DropdownMenuPrimitive.Item
                         className={cn(
-                          dropdownItemClasses,
+                          dropdownItemClasses, 
+                          "gap-2",
                           "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                         )}
                         onSelect={onAddNewNoteRequest}
