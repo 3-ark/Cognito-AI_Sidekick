@@ -9,7 +9,7 @@ import { handleHighCompute, handleMediumCompute } from '../utils/computeHandlers
 import { ChatMode, ChatStatus } from '../../types/config';
 import { useTools } from './useTools';
 import type { LLMToolCall } from './useTools';
-
+import type { Note } from '../../types/noteTypes';
 import * as pdfjsLib from 'pdfjs-dist';
 
 export const robustlyParseLlmResponseForToolCall = (responseText: string): any | null => {
@@ -125,6 +125,7 @@ const useSendMessage = (
   currentTurns: MessageTurn[],
   _webContent: string, 
   config: Config | null | undefined,
+  selectedNotesForContext: Note[],
   setTurns: Dispatch<SetStateAction<MessageTurn[]>>,
   setMessage: Dispatch<SetStateAction<string>>,
   setWebContent: Dispatch<SetStateAction<string>>,
@@ -186,7 +187,7 @@ const useSendMessage = (
     if (isFinished || (isError === true) || (isCancelled === true)) {
       let justFinishedLlmToolCallJson = false;
       if (isFinished && !isError && !isCancelled) {
-        const potentialToolCall = robustlyParseLlmResponseForToolCall(update); // 'update' is 'finalContentForTurn'
+        const potentialToolCall = robustlyParseLlmResponseForToolCall(update);
         if (potentialToolCall &&
             ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
              (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
@@ -241,15 +242,20 @@ const useSendMessage = (
     const callId = Date.now();
     console.log(`[${callId}] useSendMessage: onSend triggered.`);
     
-    const message = overridedMessage || "";
+    const originalMessageFromInput = overridedMessage || ""; 
+    const messageForLLM = originalMessageFromInput.replace(/@\[([^\]]+)\]/g, '').trim();
+        
+    console.log(`[${callId}] Original message from input: "${originalMessageFromInput}"`);
+    console.log(`[${callId}] Message for LLM (cleaned): "${messageForLLM}"`);
 
     if (!config) {
       console.log(`[${callId}] useSendMessage: Bailing out: Missing config.`);
       setLoading(false);
       return;
     }
-    if (!message || !config) {
-      console.log(`[${callId}] useSendMessage: Bailing out: Missing message or config.`);
+    if (!originalMessageFromInput.trim() && (!selectedNotesForContext || selectedNotesForContext.length === 0)) {
+      console.log(`[${callId}] useSendMessage: Bailing out: Empty message and no notes selected for context.`);
+      setLoading(false);
       return;
     }
 
@@ -281,7 +287,7 @@ const useSendMessage = (
 
     // --- URL Detection and Scraping ---
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = message.match(urlRegex);
+    const urls = originalMessageFromInput.match(urlRegex);
     let scrapedContent = '';
     if (urls && urls.length > 0) {
       setChatStatus('searching');
@@ -301,7 +307,7 @@ const useSendMessage = (
     const userTurn: MessageTurn = {
       role: 'user',
       status: 'complete',
-      content: message,
+      content: originalMessageFromInput,
       timestamp: Date.now()
     };
     setTurns(prevTurns => [...prevTurns, userTurn]);
@@ -317,7 +323,7 @@ const useSendMessage = (
     setTurns(prevTurns => [...prevTurns, assistantTurnPlaceholder]);
     console.log(`[${callId}] useSendMessage: Assistant placeholder turn added early.`);
 
-    let queryForProcessing = message;
+    let queryForProcessing = messageForLLM;
     let searchRes: string = '';
     let processedQueryDisplay = '';
 
@@ -339,27 +345,29 @@ const useSendMessage = (
       }));
       try {
         const optimizedQuery = await processQueryWithAI(
-          message,
+          messageForLLM,
           config,
           currentModel,
           authHeader, 
           controller.signal,
           historyForQueryOptimization
         );
-        if (optimizedQuery && optimizedQuery.trim() && optimizedQuery !== message) {
+        if (optimizedQuery && optimizedQuery.trim() && optimizedQuery !== messageForLLM) {
           queryForProcessing = optimizedQuery;
           processedQueryDisplay = `**Optimized query:** "*${queryForProcessing}*"\n\n`;
           console.log(`[${callId}] useSendMessage: Query optimized to: "${queryForProcessing}"`);
         } else {
-          processedQueryDisplay = `**Original query:** "${queryForProcessing}"\n\n`;
-          console.log(`[${callId}] useSendMessage: Using original query: "${queryForProcessing}"`);
+          queryForProcessing = messageForLLM;
+          processedQueryDisplay = `**Original query:** "*${queryForProcessing}"\n\n`;
+          console.log(`[${callId}] useSendMessage: Using original query (cleaned): "${queryForProcessing}"`);
         }
       } catch (optError) {
         console.error(`[${callId}] Query optimization failed:`, optError);
-        processedQueryDisplay = `**Fallback query:** "${queryForProcessing}"\n\n`;
+        queryForProcessing = messageForLLM;
+        processedQueryDisplay = `**Fallback query:** "*${queryForProcessing}*"\n\n`;
       }
     } else {
-      queryForProcessing = message;
+      queryForProcessing = messageForLLM;
     }
 
     if (performSearch) {
@@ -392,7 +400,7 @@ const useSendMessage = (
       }
     }
     
-    const messageToUse = performSearch ? queryForProcessing : message;
+    const messageToUse = queryForProcessing;
     const webLimit = 1000 * (config?.webLimit || 1);
     const limitedWebResult = webLimit && typeof searchRes === 'string'
       ? searchRes.substring(0, webLimit)
@@ -404,7 +412,7 @@ const useSendMessage = (
         content: turn.content || '',
         role: turn.role
       }))
-      .concat({ role: 'user', content: message });
+      .concat({ role: 'user', content: messageForLLM });
 
     let pageContentForLlm = '';
     if (config?.chatMode === 'page') {
@@ -466,6 +474,16 @@ const useSendMessage = (
     const noteContextString = (config?.useNote && config.noteContent)
       ? `Refer to this note for context: ${config.noteContent}`
       : '';
+
+    let notesContextContent = "";
+    if (selectedNotesForContext && selectedNotesForContext.length > 0) {
+      notesContextContent = selectedNotesForContext.map(note => {
+        return "```" + note.title + "\n" + note.content + "\n```";
+      }).join("\n\n");
+      console.log(`[${callId}] Constructed notesContextContent (from prop) length: ${notesContextContent.length}`);
+    } else {
+      console.log(`[${callId}] No notes provided via selectedNotesForContext prop, notesContextContent is empty.`);
+    }
     
     let userContextStatement = '';
     const userName = config.userName?.trim();
@@ -484,6 +502,7 @@ const useSendMessage = (
     if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
     if (noteContextString) systemPromptParts.push(noteContextString);
+    if (notesContextContent) systemPromptParts.push(notesContextContent);
     if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
@@ -500,7 +519,7 @@ const useSendMessage = (
 
     const systemContent = systemPromptParts.join('\n\n').trim();
 
-    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx: ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`)
+    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx (single): ${!!noteContextString}, NotesCtx (multi): ${!!notesContextContent}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`);
 
     try {
       setChatStatus('thinking'); 
@@ -553,8 +572,8 @@ const useSendMessage = (
           messagesForApiPayload.push({ role: 'system', content: systemContent });
         }
         // Add history turns and the current user message
-        messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage)); // Use existing history
-        messagesForApiPayload.push({ role: 'user', content: message });
+        messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage)); 
+        messagesForApiPayload.push({ role: 'user', content: messageForLLM });
 
         const processLlmResponse = async () => {
           await fetchDataAsStream(
@@ -628,6 +647,7 @@ const useSendMessage = (
                   };                  
                   setTurns(prevTurns => [...prevTurns, toolResultTurn]);
 
+                  // @ts-ignore Gemini API buggy requirement
                   const assistantApiMessageWithToolCall: ApiMessage = {
                     role: 'assistant',
                     // content: "",
@@ -641,6 +661,7 @@ const useSendMessage = (
                     assistantApiMessageWithToolCall,
                     toolResultApiMessage
                   ];
+                  // @ts-ignore For gemini api buggy requirement  
                   const finalAssistantPlaceholder: MessageTurn = {
                       role: 'assistant', 
                       // content: '',
@@ -650,7 +671,7 @@ const useSendMessage = (
                   setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
 
                   console.log(`[${callId}] Sending tool result back to LLM and awaiting final response.`);
-                  await fetchDataAsStream( // Second call
+                  await fetchDataAsStream(
                     url,
                     { 
                        ...configBody, model: config?.selectedModel || '', messages: messagesForNextApiCall,
