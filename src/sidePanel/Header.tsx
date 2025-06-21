@@ -589,7 +589,7 @@ export const Header: React.FC<HeaderProps> = ({
                         onSelect={onAddNewNoteRequest}
                       >
                         <GoPlus className="mr-auto h-4 w-4" />
-                        Add New Note
+                        Create Note
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onImportNoteRequest && (
