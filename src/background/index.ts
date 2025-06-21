@@ -17,7 +17,7 @@ const processingAddPageActions = new Set<number>();
 
 chrome.contextMenus.create({
   id: ADD_TO_NOTE_MENU_ID,
-  title: "Add to Cognito Note",
+  title: "Add to Cognito Memory Note",
   contexts: ["selection"],
   enabled: false,
 }, () => {
@@ -51,7 +51,7 @@ chrome.runtime.onInstalled.addListener(() => {
     }
     chrome.contextMenus.create({
       id: ADD_TO_NOTE_MENU_ID,
-      title: "Add to Cognito Note",
+      title: "Add to Cognito Memory Note",
       contexts: ["selection"],
       enabled: false,
     }, () => {
