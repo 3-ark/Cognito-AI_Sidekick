@@ -183,7 +183,7 @@ export const NotePopover = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="use-note-switch" className="text-[var(--text)] font-medium cursor-pointer">
-                Use Note in Chat
+                Use Memory
               </Label>
               <Switch
                 id="use-note-switch"
