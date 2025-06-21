@@ -201,11 +201,11 @@ This setup allows Cognito to understand the context of your browsing and provide
 
   * `note` (live memory)
   * `note system` (archived knowledge base)
-* [ ] Ensure `note system` entries have:
+* [x] Ensure `note system` entries have:
 
   * `id`, `title`, `content`, `created`, `tags`
   * `embedding` (Float32Array), or deferred embedding
-* [ ] Track whether a note has already been embedded/indexed
+* [x] Track whether a note has already been embedded/indexed
 
 ---
 
