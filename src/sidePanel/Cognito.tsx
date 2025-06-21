@@ -1,13 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import localforage from 'localforage';
-import { TbWorldSearch, TbBrowserPlus, TbApi } from "react-icons/tb";
-import { BiBrain } from "react-icons/bi";
-import { FaWikipediaW, FaGoogle, FaBrave } from "react-icons/fa6";
-import { SiDuckduckgo } from "react-icons/si";
-
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip"; // Keep TooltipProvider as it wraps the whole component
 import { cn } from "@/src/background/util";
 
 import { useChatTitle } from './hooks/useChatTitle';
@@ -22,221 +16,18 @@ import { Input } from './Input';
 import { Messages } from './Messages';
 import { downloadImage, downloadJson, downloadText, downloadMarkdown } from '../background/messageUtils';
 import { Settings } from './Settings';
-import storage from '../background/storageUtil';
+// import storage from '../background/storageUtil'; // No longer directly used
+import { clearPageContextFromStorage } from './utils/storageUtils';
+import { ActionButtons } from './components/ActionButtons';
+import { PageActionButtons } from './components/PageActionButtons';
+import { WebSearchModeButtons } from './components/WebSearchModeButtons';
+import { injectBridge } from './utils/contentExtraction';
 import ChannelNames from '../types/ChannelNames';
 import { useAddToNote } from './hooks/useAddToNote';
 import { NoteSystemView } from './NoteSystemView';
 import { Note } from '../types/noteTypes';
 
-function bridge() {
-
-    let title = '';
-    let textContent = '';
-    let htmlContent = '';
-    let altTexts = '';
-    let tableData = '';
-    let metaDescription = '';
-    let metaKeywords = '';
-
-    try {
-        title = document.title || '';
-
-        const MAX_BODY_CHARS_FOR_DIRECT_EXTRACTION = 5_000_000; // Approx 5MB of text
-        let bodyElement = document.body;
-
-        if (document.body && document.body.innerHTML.length > MAX_BODY_CHARS_FOR_DIRECT_EXTRACTION) {
-            console.warn(`[Cognito Bridge] Document body is very large (${document.body.innerHTML.length} chars). Attempting to use a cloned, simplified version for text extraction to improve performance/stability.`);
-
-            const clonedBody = document.body.cloneNode(true) as HTMLElement;
-            clonedBody.querySelectorAll('script, style, noscript, iframe, embed, object').forEach(el => el.remove());
-            textContent = (clonedBody.textContent || '').replace(/\s\s+/g, ' ').trim();
-            htmlContent = document.body.innerHTML.replace(/\s\s+/g, ' ');
-
-        } else if (document.body) {
-            textContent = (document.body.innerText || '').replace(/\s\s+/g, ' ').trim();
-            htmlContent = (document.body.innerHTML || '').replace(/\s\s+/g, ' ');
-        } else {
-            console.warn('[Cognito Bridge] document.body is not available.');
-        }
-
-        altTexts = Array.from(document.images)
-            .map(img => img.alt)
-            .filter(alt => alt && alt.trim().length > 0)
-            .join('. ');
-
-        tableData = Array.from(document.querySelectorAll('table'))
-            .map(table => (table.innerText || '').replace(/\s\s+/g, ' '))
-            .join('\n');
-
-        const descElement = document.querySelector('meta[name="description"]');
-        metaDescription = descElement ? descElement.getAttribute('content') || '' : '';
-
-        const keywordsElement = document.querySelector('meta[name="keywords"]');
-        metaKeywords = keywordsElement ? keywordsElement.getAttribute('content') || '' : '';
-
-    } catch (error) {
-        console.error('[Cognito Bridge] Error during content extraction:', error);
-        let errorMessage = 'Unknown extraction error';
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        } else if (typeof error === 'string') {
-            errorMessage = error;
-        }
-        return JSON.stringify({
-            error: `Extraction failed: ${errorMessage}`,
-            title: document.title || 'Error extracting title',
-            text: '', html: '', altTexts: '', tableData: '',
-            meta: { description: '', keywords: '' }
-        });
-    }
-
-    const MAX_OUTPUT_STRING_LENGTH = 10_000_000;
-    
-    let responseCandidate = {
-        title,
-        text: textContent,
-        html: htmlContent,
-        altTexts,
-        tableData,
-        meta: {
-            description: metaDescription,
-            keywords: metaKeywords
-        }
-    };
-
-    if (JSON.stringify(responseCandidate).length > MAX_OUTPUT_STRING_LENGTH) {
-        console.warn('[Cognito Bridge] Total extracted content is very large. Attempting to truncate.');
-        const availableLength = MAX_OUTPUT_STRING_LENGTH - JSON.stringify({ ...responseCandidate, text: "", html: "" }).length;
-        let remainingLength = availableLength;
-
-        if (responseCandidate.text.length > remainingLength * 0.6) { 
-            responseCandidate.text = responseCandidate.text.substring(0, Math.floor(remainingLength * 0.6)) + "... (truncated)";
-        }
-        remainingLength = availableLength - responseCandidate.text.length;
-
-        if (responseCandidate.html.length > remainingLength * 0.8) {
-             responseCandidate.html = responseCandidate.html.substring(0, Math.floor(remainingLength * 0.8)) + "... (truncated)";
-        }
-        console.warn('[Cognito Bridge] Content truncated. Final approx length:', JSON.stringify(responseCandidate).length);
-    }
-
-
-    return JSON.stringify(responseCandidate);
-}
-
-async function injectBridge() {
-  const queryOptions = { active: true, lastFocusedWindow: true };
-  const [tab] = await chrome.tabs.query(queryOptions);
-
-  if (!tab?.id || tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://') || tab.url?.startsWith('about:')) { // Added about:
-    storage.deleteItem('pagestring');
-    storage.deleteItem('pagehtml');
-    storage.deleteItem('alttexts');
-    storage.deleteItem('tabledata');
-    return;
-  }
-
-  storage.deleteItem('pagestring');
-  storage.deleteItem('pagehtml');
-  storage.deleteItem('alttexts');
-  storage.deleteItem('tabledata');
-
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: bridge
-    });
-
-    if (!results || !Array.isArray(results) || results.length === 0 || !results[0] || typeof results[0].result !== 'string') {
-        console.error('[Cognito:] Bridge function execution returned invalid or unexpected results structure:', results);
-        return;
-    }
-
-    const rawResult = results[0].result;
-    let res: any;
-    try {
-        res = JSON.parse(rawResult);
-    } catch (parseError) {
-        console.error('[Cognito:] Failed to parse JSON result from bridge:', parseError, 'Raw result string:', rawResult);
-        return;
-    }
-
-    if (res.error) {
-        console.error('[Cognito:] Bridge function reported an error:', res.error, 'Title:', res.title);
-        return;
-    }
-
-    try {
-      storage.setItem('pagestring', res?.text ?? '');
-      storage.setItem('pagehtml', res?.html ?? '');
-      storage.setItem('alttexts', res?.altTexts ?? '');
-      storage.setItem('tabledata', res?.tableData ?? '');
-    } catch (storageError) {
-        console.error('[Cognito:] Storage error after successful extraction:', storageError);
-        storage.deleteItem('pagestring');
-        storage.deleteItem('pagehtml');
-        storage.deleteItem('alttexts');
-        storage.deleteItem('tabledata');
-    }
-  } catch (execError) {
-    console.error('[Cognito:] Bridge function execution failed:', execError);
-    if (execError instanceof Error && (execError.message.includes('Cannot access contents of url "chrome://') || execError.message.includes('Cannot access a chrome extension URL') || execError.message.includes('Cannot access contents of url "about:'))) {
-        console.warn('[Cognito:] Cannot access restricted URL.');
-    }
-  }
-}
-
 const generateChatId = () => `chat_${Math.random().toString(16).slice(2)}`;
-
-const MessageTemplate = ({ children, onClick }: { children: React.ReactNode, onClick: () => void }) => (
-  (<div
-    className={cn(
-      "bg-[var(--active)] border border-[var(--text)] rounded-[16px] text-[var(--text)]",
-      "cursor-pointer flex items-center justify-center",
-      "text-md font-extrabold p-0.5 place-items-center relative text-center",
-      "w-16 flex-shrink-0",
-      "transition-colors duration-200 ease-in-out",
-      "hover:bg-[rgba(var(--text-rgb),0.1)]"
-    )}
-    onClick={onClick}
-  >
-    {children}
-  </div>)
-);
-
-const WEB_SEARCH_MODES = [
-  { id: 'Google', icon: FaGoogle, label: 'Google Search' },
-  { id: 'Duckduckgo', icon: SiDuckduckgo, label: 'DuckDuckGo Search' },
-  { id: 'Brave', icon: FaBrave, label: 'Brave Search' },
-  { id: 'Wikipedia', icon: FaWikipediaW, label: 'Wikipedia Search' },
-  { id: 'GoogleCustomSearch', icon: TbApi, label: 'Google API Search' },
-] as const;
-
-const WebSearchIconButton = ({ children, onClick, isActive, title }: { children: React.ReactNode, onClick: () => void, isActive?: boolean, title: string }) => (
-  <Tooltip>
-    <TooltipTrigger>
-      <div
-        className={cn(
-          "border rounded-lg text-[var(--text)]",
-          "cursor-pointer flex items-center justify-center",
-          "p-2 place-items-center relative",
-          "w-8 h-8 flex-shrink-0",
-          "transition-colors duration-200 ease-in-out",
-          isActive 
-            ? "bg-[var(--active)] text-[var(--text)] border-[var(--active)] hover:brightness-95" 
-            : "bg-transparent border-[var(--text)]/50 hover:bg-[rgba(var(--text-rgb),0.1)]",
-        )}
-        onClick={onClick}
-        aria-label={title}
-      >
-        {children}
-      </div>
-    </TooltipTrigger>
-    <TooltipContent side="top" className="bg-[var(--active)]/80 text-[var(--text)] border-[var(--text)]/50">
-      <p>{title}</p>
-    </TooltipContent>
-  </Tooltip>
-);
 
 const Cognito = () => {
   const [turns, setTurns] = useState<MessageTurn[]>([]);
@@ -286,10 +77,7 @@ const Cognito = () => {
 
       if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
           if (lastInjectedRef.current.id !== tab.id || lastInjectedRef.current.url !== tab.url) {
-              storage.deleteItem('pagestring');
-              storage.deleteItem('pagehtml');
-              storage.deleteItem('alttexts');
-              storage.deleteItem('tabledata');
+              await clearPageContextFromStorage();
           }
           lastInjectedRef.current = { id: tab.id, url: tab.url };
           setCurrentTabInfo({ id: tab.id, url: tab.url });
@@ -469,7 +257,7 @@ const Cognito = () => {
     setChatStatus('idle');
   };
 
-  const loadChat = (chat: ChatMessage) => {
+  const loadChat = async (chat: ChatMessage) => {
     setChatTitle(chat.title || '');
     setTurns(chat.turns);
     setChatId(chat.id);
@@ -485,10 +273,7 @@ const Cognito = () => {
     });
 
     if (chat.chatMode !== 'page') {
-      storage.deleteItem('pagestring');
-      storage.deleteItem('pagehtml');
-      storage.deleteItem('alttexts');
-      storage.deleteItem('tabledata');
+      await clearPageContextFromStorage();
       lastInjectedRef.current = { id: null, url: '' };
     }
   }
@@ -548,30 +333,21 @@ const Cognito = () => {
             setCurrentTabInfo({ id: tab.id, url: tab.url });
 
             if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
-                storage.deleteItem('pagestring');
-                storage.deleteItem('pagehtml');
-                storage.deleteItem('alttexts');
-                storage.deleteItem('tabledata');
+                await clearPageContextFromStorage();
                 lastInjectedRef.current = { id: null, url: '' };
             } else {
             }
         } else if (!cancelled) {
             lastInjectedRef.current = { id: null, url: '' };
             setCurrentTabInfo({ id: null, url: '' });
-            storage.deleteItem('pagestring');
-            storage.deleteItem('pagehtml');
-            storage.deleteItem('alttexts');
-            storage.deleteItem('tabledata');
+            await clearPageContextFromStorage();
         }
       } catch (error) {
         if (!cancelled) {
         console.error("[Cognito - Revised] Error during panel open tab check:", error);
           lastInjectedRef.current = { id: null, url: '' };
           setCurrentTabInfo({ id: null, url: '' });
-          storage.deleteItem('pagestring');
-          storage.deleteItem('pagehtml');
-          storage.deleteItem('alttexts');
-          storage.deleteItem('tabledata');
+          await clearPageContextFromStorage();
       }
     }
   }
@@ -580,10 +356,7 @@ const Cognito = () => {
 
     return () => {
       cancelled = true;
-      storage.deleteItem('pagestring');
-      storage.deleteItem('pagehtml');
-      storage.deleteItem('alttexts');
-      storage.deleteItem('tabledata');
+      clearPageContextFromStorage();
       reset();
       lastInjectedRef.current = { id: null, url: '' };
     };
@@ -665,159 +438,23 @@ const Cognito = () => {
                     onReload={onReload}
                     onEditTurn={handleEditTurn}
                   />
-            {turns.length === 0 && !config?.chatMode && (
-              (<div className="fixed bottom-20 left-8 flex flex-col gap-2 z-[5]">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label="Cycle compute level"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const currentLevel = config.computeLevel;
-                        const nextLevel = currentLevel === 'low' ? 'medium' : currentLevel === 'medium' ? 'high' : 'low';
-                        updateConfig({ computeLevel: nextLevel });
-                      }}
-                      className={cn(
-                        "hover:bg-secondary/70",
-                        config.computeLevel === 'high' ? 'text-red-600' :
-                        config.computeLevel === 'medium' ? 'text-orange-300' :
-                        'text-[var(--text)]'
-                      )}
-                    >
-                      <BiBrain />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)] max-w-80">
-                    <p>{`Compute Level: ${config.computeLevel?.toUpperCase()}. Click to change. [Warning]: beta feature and resource costly.`}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label="Add Web Search Results to LLM Context"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => { 
-                        updateConfig({ 
-                          chatMode: 'web',
-                          webMode: config.webMode || (WEB_SEARCH_MODES[0].id as Config['webMode'])
-                        }); 
-                      }}
-                      className="text-[var(--text)] hover:bg-secondary/70"
-                    >
-                      <TbWorldSearch />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    <p>Add Web Search Results to LLM Context</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label="Add Current Web Page to LLM Context"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => { updateConfig({ chatMode: 'page' }); }}
-                      className="text-[var(--text)] hover:bg-secondary/70"
-                    >
-                      <TbBrowserPlus />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    <p>Add Current Web Page to LLM Context</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>)
-                )}
-            {config?.chatMode === "page" && (
-                   (<div
-                      className={cn(
-                        "fixed bottom-16 left-1/2 -translate-x-1/2",
-                        "flex flex-row justify-center",
-                        "w-fit h-8 z-[2]",
-                        "transition-all duration-200 ease-in-out",
-                        isPageActionsHovering ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2.5",
-                        "bg-transparent px-0 py-0"
-                      )}
-                      style={{ backdropFilter: 'blur(10px)' }}
-                      onMouseEnter={() => setIsPageActionsHovering(true)}
-                      onMouseLeave={() => setIsPageActionsHovering(false)}
-                   >
-                     <div className="flex items-center space-x-6 max-w-full overflow-x-auto px-0">
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <MessageTemplate onClick={() => onSend('Provide your summary.')}>
-                              TLDR
-                            </MessageTemplate>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className=" text-[var(--text)] border-[var(--text)]/50">
-                            <p>Quick Summary</p>
-                          </TooltipContent>
-                        </Tooltip>
-                       <Tooltip>
-                          <TooltipTrigger>
-                            <MessageTemplate onClick={() => onSend('Extract all key figures, names, locations, and dates mentioned on this page and list them.')}>
-                              Facts
-                            </MessageTemplate>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className=" text-[var(--text)] border-[var(--text)]/50">
-                            <p>Numbers, events, names</p>
-                          </TooltipContent>
-                        </Tooltip>
-                       <Tooltip>
-                          <TooltipTrigger>
-                            <MessageTemplate onClick={() => onSend('Find positive developments, achievements, or opportunities mentioned on this page.')}>
-                              Yay!
-                            </MessageTemplate>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className=" text-[var(--text)] border-[var(--text)]/50">
-                            <p>Good news</p>
-                          </TooltipContent>
-                        </Tooltip>
-                       <Tooltip>
-                          <TooltipTrigger>
-                            <MessageTemplate onClick={() => onSend('Find concerning issues, risks, or criticisms mentioned on this page.')}>
-                              Oops
-                            </MessageTemplate>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className=" text-[var(--text)] border-[var(--text)]/50">
-                            <p>Bad news</p>
-                          </TooltipContent>
-                        </Tooltip>
-                     </div>
-                   </div>)
+            {turns.length === 0 && !config?.chatMode && config && (
+              <ActionButtons config={config} updateConfig={updateConfig} />
             )}
-            {config?.chatMode === "web" && (
-              <div
-                className={cn(
-                  "fixed bottom-14 left-1/2 -translate-x-1/2",
-                  "flex flex-row justify-center",
-                  "w-fit h-10 z-[2]",
-                  "transition-all duration-200 ease-in-out",
-                  isWebSearchHovering ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2.5",
-                  "bg-transparent px-0 py-0"
-                )}
-                style={{ backdropFilter: 'blur(10px)' }}
-                onMouseEnter={() => setIsWebSearchHovering(true)}
-                onMouseLeave={() => setIsWebSearchHovering(false)}
-              >
-                <div className="flex items-center space-x-4 max-w-full overflow-x-auto px-4 py-1">
-                  {WEB_SEARCH_MODES.map((mode) => (
-                    <WebSearchIconButton
-                      key={mode.id}
-                      onClick={() => {
-                        updateConfig({ webMode: mode.id as Config['webMode'], chatMode: 'web' }); 
-                      }}
-                      isActive={config.webMode === mode.id}
-                      title={mode.label}
-                    >
-                      <mode.icon size={18} />
-                    </WebSearchIconButton>
-                  ))}
-                </div>
-              </div>
+            {config?.chatMode === "page" && (
+              <PageActionButtons
+                onSend={onSend}
+                isPageActionsHovering={isPageActionsHovering}
+                setIsPageActionsHovering={setIsPageActionsHovering}
+              />
+            )}
+            {config?.chatMode === "web" && config && (
+              <WebSearchModeButtons
+                config={config}
+                updateConfig={updateConfig}
+                isWebSearchHovering={isWebSearchHovering}
+                setIsWebSearchHovering={setIsWebSearchHovering}
+              />
             )}
             </div>
           )}
