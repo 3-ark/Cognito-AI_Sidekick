@@ -266,7 +266,7 @@ export const NotePopover = () => {
                       <IoArchiveOutline size={16} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">Archive & Clear</TooltipContent>
+                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">Archive memory to notes & Clear</TooltipContent>
                 </Tooltip>
               </div>
             </div>
