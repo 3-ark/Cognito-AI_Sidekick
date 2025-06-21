@@ -257,7 +257,7 @@ const Cognito = () => {
     setChatStatus('idle');
   };
 
-  const loadChat = (chat: ChatMessage) => {
+  const loadChat = async (chat: ChatMessage) => {
     setChatTitle(chat.title || '');
     setTurns(chat.turns);
     setChatId(chat.id);
