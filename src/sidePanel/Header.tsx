@@ -469,7 +469,7 @@ export const Header: React.FC<HeaderProps> = ({
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
                         <IoPerson  className="mr-auto h-4 w-4" />
-                        Edit Profile
+                        Your Profile
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
