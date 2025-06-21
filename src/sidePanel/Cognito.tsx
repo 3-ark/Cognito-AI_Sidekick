@@ -16,7 +16,6 @@ import { Input } from './Input';
 import { Messages } from './Messages';
 import { downloadImage, downloadJson, downloadText, downloadMarkdown } from '../background/messageUtils';
 import { Settings } from './Settings';
-// import storage from '../background/storageUtil'; // No longer directly used
 import { clearPageContextFromStorage } from './utils/storageUtils';
 import { ActionButtons } from './components/ActionButtons';
 import { PageActionButtons } from './components/PageActionButtons';
