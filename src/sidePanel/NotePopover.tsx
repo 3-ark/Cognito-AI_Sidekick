@@ -169,14 +169,14 @@ export const NotePopover = () => {
                   "rounded-md not-focus-visible",
                   config.useNote ? "text-[var(--active)] hover:bg-muted/80" : "text-foreground hover:text-foreground hover:bg-[var(--text)]/10"
                 )}
-                aria-label="Toggle/Edit Note"
+                aria-label="Toggle/Edit Memory"
               >
                 <LuNotebookPen />
               </Button>
             </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent side="top" className="bg-secondary/50 text-foreground">
-            <p>Toggle/Edit Note</p>
+            <p>Toggle/Edit Memory</p>
           </TooltipContent>
         </Tooltip>
       <PopoverContent className="w-[80vw] p-4 bg-[var(--bg)] border-[var(--text)]/10 shadow-lg rounded-md" side="top" align="end" sideOffset={5}>
