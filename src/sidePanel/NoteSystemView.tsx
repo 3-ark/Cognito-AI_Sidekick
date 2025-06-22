@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef, ComponentPropsWithoutRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, ComponentPropsWithoutRef, FC } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import yaml from 'js-yaml';
 import Defuddle from 'defuddle';
+import { Virtuoso } from 'react-virtuoso';
 import ChannelNames from '../types/ChannelNames';
 import { markdownComponents, Pre as SharedPre } from '@/components/MarkdownComponents';
 
@@ -40,6 +41,174 @@ const noteSystemMarkdownComponents = {
       buttonClassName="h-7 w-7 text-[var(--text)] hover:bg-[var(--text)]/10"
     />
   ),
+};
+
+const VIRTUALIZATION_THRESHOLD_LENGTH = 50000; // Chars, approx 50KB.
+
+/**
+ * A virtualized content renderer for very large notes inside the edit dialog.
+ * It displays content as plain text line-by-line to ensure high performance,
+ * which means complex multi-line Markdown formatting will not be rendered.
+ * This component uses react-virtuoso to handle variable row heights gracefully.
+ */
+const VirtualizedContent: FC<{ content: string; textClassName?: string }> = ({ content, textClassName }) => {
+  const lines = useMemo(() => content.split('\n'), [content]);
+
+  return (
+    <Virtuoso
+      style={{ height: '100%' }}
+      data={lines}
+      className="thin-scrollbar"
+      itemContent={(index, line) => (
+        <div className={cn("whitespace-pre-wrap break-words text-sm font-mono px-4 py-0.5", textClassName)}>
+          {line || '\u00A0' /* Render a non-breaking space for empty lines to maintain height */}
+        </div>
+      )}
+    />
+  );
+};
+
+const NoteListItem: FC<{ note: Note; onEdit: (note: Note) => void; onDelete: (noteId: string) => void; }> = ({ note, onEdit, onDelete }) => {
+  const itemRef = useRef<HTMLDivElement>(null);
+  const [dynamicMaxHeight, setDynamicMaxHeight] = useState('50vh');
+  const [popoverSide, setPopoverSide] = useState<'top' | 'bottom'>('top');
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const verticalMargin = 20; // A small buffer from the edges
+
+      const spaceAbove = rect.top;
+      const spaceBelow = viewportHeight - rect.bottom;
+
+      // Prefer the side with more space to avoid the card going off-screen.
+      const preferredSide = spaceBelow > spaceAbove ? 'bottom' : 'top';
+      setPopoverSide(preferredSide);
+
+      const availableHeight = (preferredSide === 'top' ? spaceAbove : spaceBelow) - verticalMargin;
+      
+      // Allow up to 70% of viewport, but not more than available space.
+      const newMaxHeight = Math.min(availableHeight, viewportHeight * 0.7);
+      
+      // Enforce a minimum height for small spaces.
+      const finalMaxHeight = Math.max(200, newMaxHeight);
+      setDynamicMaxHeight(`${finalMaxHeight}px`);
+    }
+  };
+
+  const handleDownload = () => {
+    let mdContent = '---\n';
+    mdContent += `title: ${note.title}\n`;
+    const dateTimestamp = note.lastUpdatedAt || note.createdAt;
+    if (dateTimestamp) {
+      const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
+      mdContent += `date: ${formattedDate}\n`;
+    }
+    if (note.tags && note.tags.length > 0) {
+      mdContent += 'tags:\n';
+      note.tags.forEach(tag => {
+        mdContent += `  - ${tag.trim()}\n`;
+      });
+    }
+    if (note.url) {
+      mdContent += `url: ${note.url}\n`;
+    }
+    mdContent += '---\n\n';
+    mdContent += note.content;
+    const element = document.createElement('a');
+    element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(mdContent)}`);
+    element.setAttribute('download', `${note.title}.md`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  return (
+    <div
+      ref={itemRef}
+      className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
+    >
+      <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>
+        <div className="flex justify-between overflow-hidden items-center">
+          <HoverCardTrigger asChild>
+            <h3 className="flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline">{note.title}</h3>
+          </HoverCardTrigger>
+          <div className="flex-shrink-0">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm"><LuEllipsis /></Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
+                <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={() => onEdit(note)}><GoPencil className="mr-2 size-4" /> Edit</Button>
+                <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={handleDownload}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
+                <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={() => onDelete(note.id)}><GoTrash className="mr-2 size-4" /> Delete</Button>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
+          {note.lastUpdatedAt && <span className="mr-2">Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}</span>}
+          {note.url && <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]">Link</a>}
+          {note.tags && note.tags.length > 0 ? <span className="truncate max-w-[40%] tag-span">Tags: {note.tags.join(', ')}</span> : <p className="text-xs text-[var(--muted-foreground)]">No tags</p>}
+        </div>
+        <HoverCardContent
+          className={cn(
+            "bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw] max-w-lg",
+            "p-0 flex flex-col" // Use flexbox for the main layout, remove padding to allow content to fill edges.
+          )}
+          side={popoverSide}
+          align="start"
+          style={
+            note.content.length > VIRTUALIZATION_THRESHOLD_LENGTH
+              ? { height: dynamicMaxHeight } // Use fixed height for virtualized notes to make flexbox work
+              : { maxHeight: dynamicMaxHeight } // Use max-height for regular notes
+          }
+        >
+          {note.content.length > VIRTUALIZATION_THRESHOLD_LENGTH ? (
+            // VIRTUALIZED LAYOUT: Let the virtualizer handle its own scrolling inside a flex container.
+            <>
+              <div className="p-4 pb-2 flex-shrink-0"> {/* Header area with padding */}
+                <h4 className="text-sm font-semibold">{note.title}</h4>
+                <p className="text-xs text-[var(--muted-foreground)]">Date: {new Date(note.lastUpdatedAt).toLocaleString()}</p>
+              </div>
+              <div className="flex-1 min-h-0 w-full"> {/* The virtualized content takes up the remaining space */}
+                <VirtualizedContent content={note.content} />
+              </div>
+              {note.tags && note.tags.length > 0 && (
+                <div className="p-4 pt-2 mt-2 border-t border-[var(--border)] flex-shrink-0"> {/* Footer area with padding */}
+                  <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {note.tags.map(tag => (<span key={tag} className="text-xs bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded">{tag}</span>))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            // REGULAR MARKDOWN LAYOUT: Make the entire card content scrollable.
+            <div className="p-4 overflow-y-auto thin-scrollbar">
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">{note.title}</h4>
+                <p className="text-xs text-[var(--muted-foreground)]">Date: {new Date(note.lastUpdatedAt).toLocaleString()}</p>
+                <div className="text-sm break-words whitespace-pre-wrap">
+                  <Markdown remarkPlugins={[remarkGfm]} components={noteSystemMarkdownComponents}>{note.content}</Markdown>
+                </div>
+                {note.tags && note.tags.length > 0 && (
+                  <div className="border-t border-[var(--border)] pt-2 mt-2">
+                    <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {note.tags.map(tag => (<span key={tag} className="text-xs bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded">{tag}</span>))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </HoverCardContent>
+      </HoverCard>
+    </div>
+  );
 };
 
 const ITEMS_PER_PAGE = 12;
@@ -86,6 +255,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [noteTags, setNoteTags] = useState('');
+  const [isEditingNoteContent, setIsEditingNoteContent] = useState(false);
   
   const [pendingPageData, setPendingPageData] = useState<{title: string, content: string, url?: string} | null>(null);
 
@@ -106,6 +276,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setNoteContent(initialData?.content || '');
     setNoteTags('');
     setIsCreateModalOpen(true);
+    setIsEditingNoteContent(true); // For new notes, always start in editing mode.
   }, []);
 
   useEffect(() => {
@@ -288,17 +459,17 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 const defuddleResult = defuddleInstance.parse();
                 
                 if (defuddleResult.content) {
-                  finalHtmlToConvert = defuddleResult.content;
+                  finalHtmlToConvert = defuddleResult.content; // Use Defuddle's cleaned HTML string
                 }
                 potentialTitle = defuddleResult.title || doc.title || potentialTitle;
                 console.log(`[NoteSystemView] Defuddle processed HTML for: ${file.name}. Title: ${potentialTitle}`);
               } else {
                 console.warn(`[NoteSystemView] Defuddle library not available for ${file.name}. Using raw HTML body.`);
-                potentialTitle = doc.title || potentialTitle;
+                potentialTitle = doc.title || potentialTitle; // Still try to get title from doc
               }
             } catch (defuddleError) {
               console.error(`[NoteSystemView] Error using Defuddle for ${file.name}:`, defuddleError);
-              potentialTitle = doc.title || potentialTitle;
+              potentialTitle = doc.title || potentialTitle; // Fallback title from doc
             }
             
             rawContentFromFile = turndownService.turndown(finalHtmlToConvert);
@@ -430,7 +601,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       await fetchNotes();
       setIsCreateModalOpen(false);
       setEditingNote(null);
-      setNoteTitle(''); setNoteContent(''); setNoteTags('');
+      setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
   };
 
   const openEditModal = (note: Note) => {
@@ -440,6 +611,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setNoteContent(note.content);
     setNoteTags(newNoteTags);
     setIsCreateModalOpen(true);
+    setIsEditingNoteContent(note.content.length <= VIRTUALIZATION_THRESHOLD_LENGTH);
   };
 
   const handleDeleteNote = async (noteId: string) => {
@@ -481,132 +653,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         ) : (
           <div className="space-y-0">
             {paginatedNotes.map(note => (
-              <div
+              <NoteListItem
                 key={note.id}
-                className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
-              >
-                <HoverCard openDelay={200} closeDelay={100}>
-                  <div className="flex justify-between overflow-hidden items-center">
-                    <HoverCardTrigger asChild>
-                      <h3 className="flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline">{note.title}</h3>
-                    </HoverCardTrigger>
-                    <div className="flex-shrink-0">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <LuEllipsis />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
-                          <Button
-                            variant="ghost"                            
-                            className="w-full justify-start text-md h-8 px-2 font-normal"
-                            onClick={() => openEditModal(note)}
-                          >
-                            <GoPencil className="mr-2 size-4" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"                            
-                            className="w-full justify-start text-md h-8 px-2 font-normal"
-                            onClick={() => {
-                              let mdContent = '---\n';
-                              mdContent += `title: ${note.title}\n`;
-                              const dateTimestamp = note.lastUpdatedAt || note.createdAt;
-                              if (dateTimestamp) {
-                                const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
-                                mdContent += `date: ${formattedDate}\n`;
-                              }
-                              if (note.tags && note.tags.length > 0) {
-                                mdContent += 'tags:\n';
-                                note.tags.forEach(tag => {
-                                  mdContent += `  - ${tag.trim()}\n`;
-                                });
-                              }
-                              if (note.url) {
-                                mdContent += `url: ${note.url}\n`;
-                              }
-                              mdContent += '---\n\n';
-                              mdContent += note.content;
-                              const element = document.createElement('a');
-                              element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(mdContent)}`);
-                              element.setAttribute('download', `${note.title}.md`);
-                              element.style.display = 'none';
-                              document.body.appendChild(element);
-                              element.click();
-                              document.body.removeChild(element);
-                            }}
-                          >
-                            <GoDownload className="mr-2 size-4" />
-                            ObsidianMD
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10"
-                            onClick={() => handleDeleteNote(note.id)}
-                          >
-                            <GoTrash className="mr-2 size-4" /> Delete </Button>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  {/* Combined info line */}
-                  <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
-                    {note.lastUpdatedAt && (
-                      <span className="mr-2">
-                        Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                    {note.url && (
-                      <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]">
-                        Link
-                      </a>
-                    )}
-                    {note.tags && note.tags.length > 0 ? (
-                      <span className="truncate max-w-[40%] tag-span">
-                        Tags: {note.tags.join(', ')}
-                      </span>
-                    ) : (
-                      <p className="text-xs text-[var(--muted-foreground)]">No tags</p>
-                    )}
-                  </div>
-                  <HoverCardContent
-                    className={cn(
-                      "bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body",
-                      "w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw]",
-                      "max-w-lg",
-                      "max-h-[70vh]",
-                      "overflow-y-auto thin-scrollbar"
-                    )}
-                    side="top"
-                    align="start"
-                  >
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold">{note.title}</h4>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        Date: {new Date(note.lastUpdatedAt).toLocaleString()}
-                      </p>
-                      <div className="text-sm whitespace-pre-wrap break-words">
-                        <Markdown remarkPlugins={[remarkGfm]} components={noteSystemMarkdownComponents}>
-                          {note.content}
-                        </Markdown>
-                      </div>
-                      {note.tags && note.tags.length > 0 ? (
-                        <div className="border-t border-[var(--border)] pt-2 mt-2">
-                          <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {note.tags.map(tag => (
-                              <span key={tag} className="text-xs bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
-              </div>
+                note={note}
+                onEdit={openEditModal}
+                onDelete={handleDeleteNote}
+              />
             ))}
           </div>
         )}
@@ -637,6 +689,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           setNoteTitle('');
           setNoteContent('');
           setNoteTags('');
+          setIsEditingNoteContent(false);
         } else {
           setIsCreateModalOpen(true);
         }
@@ -666,17 +719,30 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
             />
             </div>
 
-            <div className="flex-1 overflow-y-auto thin-scrollbar min-h-0">
-            <Textarea
-              placeholder="Your note content..."
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-              autosize
-              minRows={5}
-              className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden"
-            />
-            </div>
-
+            {editingNote && !isEditingNoteContent ? (
+              <div className="flex-1 flex flex-col min-h-0 space-y-2">
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)}>Edit Content</Button>
+                </div>
+                <div className="flex-1 h-full border rounded-md border-[var(--text)]/10 bg-[var(--input-bg)]">
+                  <VirtualizedContent
+                    content={noteContent}
+                    textClassName="text-[var(--text)]"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto thin-scrollbar min-h-0">
+                <Textarea
+                  placeholder="Your note content..."
+                  value={noteContent}
+                  onChange={(e) => setNoteContent(e.target.value)}
+                  autosize
+                  minRows={5}
+                  className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden"
+                />
+              </div>
+            )}
             <div>
             <Input
               placeholder="Tags (comma-separated)"

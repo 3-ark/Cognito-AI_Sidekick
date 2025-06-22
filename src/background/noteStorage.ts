@@ -1,12 +1,15 @@
 import localforage from 'localforage';
-import { Note, NOTE_STORAGE_PREFIX } from '../types/noteTypes';
+import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
+
+export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 
 export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 /**
  * Saves a new note or updates an existing one in localforage.
+ * Embedding is saved separately.
  */
-export const saveNoteInSystem = async (noteData: Partial<Note> & { content: string }): Promise<Note> => {
+export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'createdAt' | 'lastUpdatedAt'>> & { id?: string; content: string; embedding?: number[] }): Promise<Note> => {
   const now = Date.now();
   const noteId = noteData.id || generateNoteId();
   const existingNote = noteData.id ? await localforage.getItem<Note>(noteId) : null;
@@ -22,68 +25,108 @@ export const saveNoteInSystem = async (noteData: Partial<Note> & { content: stri
   };
 
   await localforage.setItem(noteId, noteToSaveToStorage);
+
+  if (noteData.embedding && noteData.embedding.length > 0) {
+    await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
+  } else {
+    await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+  }
+
   return noteToSaveToStorage;
 };
 
 /**
- * Fetches all notes from localforage.
+ * Fetches all notes from localforage and their embeddings.
  */
-export const getAllNotesFromSystem = async (): Promise<Note[]> => {
+export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
   const keys = await localforage.keys();
   const noteKeys = keys.filter(key => key.startsWith(NOTE_STORAGE_PREFIX));
-  const processedNotes: Note[] = [];
+  const processedNotes: NoteWithEmbedding[] = [];
+
   for (const key of noteKeys) {
-    // Fetch as 'any' to handle potential malformed data, then validate
-    const rawNoteData = await localforage.getItem<any>(key);
-    if (rawNoteData) {
+    const rawNoteData = await localforage.getItem<Note>(key);
+    if (rawNoteData && rawNoteData.id) { 
       let tagsArray: string[] = [];
-      if (rawNoteData.tags) {
-        if (typeof rawNoteData.tags === 'string') {
-          // Convert comma-separated string to array
-          tagsArray = rawNoteData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
-        } else if (Array.isArray(rawNoteData.tags)) {
-          tagsArray = rawNoteData.tags.map((tag: any) => String(tag).trim()).filter((tag: string) => tag.length > 0);
-        }
+      const tags: unknown = rawNoteData.tags;
+
+      if (typeof tags === 'string') {
+        tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      } else if (Array.isArray(tags)) {
+        tagsArray = tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
       }
       
-      const validatedNote: Note = {
+      const baseNote: Note = {
         id: rawNoteData.id,
         title: rawNoteData.title,
         content: rawNoteData.content,
         createdAt: rawNoteData.createdAt,
         lastUpdatedAt: rawNoteData.lastUpdatedAt,
-        tags: tagsArray, // Use the sanitized tags array
+        tags: tagsArray,
         url: rawNoteData.url || '',
       };
-      processedNotes.push(validatedNote);
+
+      const embedding = await localforage.getItem<number[]>(`${EMBEDDING_NOTE_PREFIX}${baseNote.id}`);
+      processedNotes.push({ ...baseNote, embedding: embedding || undefined });
     }
   }
   return processedNotes.sort((a, b) => b.lastUpdatedAt - a.lastUpdatedAt);
 };
 
 /**
- * Deletes a note from localforage by its ID.
+ * Deletes a note and its embedding from localforage by its ID.
  */
 export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
-  await localforage.removeItem(noteId);
-  console.log('Note deleted from system:', noteId);
+  await localforage.removeItem(noteId); 
+  await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
+  console.log('Note and its embedding deleted from system:', noteId);
 };
 
 /**
- * Deletes all notes from localforage.
+ * Deletes all notes and their embeddings from localforage.
  */
 export const deleteAllNotesFromSystem = async (): Promise<void> => {
   const keys = await localforage.keys();
-  const noteKeys = keys.filter(key => key.startsWith(NOTE_STORAGE_PREFIX));
-  for (const key of noteKeys) {
+  const noteKeysToDelete: string[] = [];
+  const embeddingKeysToDelete: string[] = [];
+
+  for (const key of keys) {
+    if (key.startsWith(NOTE_STORAGE_PREFIX)) {
+      noteKeysToDelete.push(key);
+    } else if (key.startsWith(EMBEDDING_NOTE_PREFIX)) {
+      embeddingKeysToDelete.push(key);
+    }
+  }
+
+  for (const key of noteKeysToDelete) {
     await localforage.removeItem(key);
   }
-  console.log('All notes deleted from system.');
+  for (const key of embeddingKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  console.log('All notes and their embeddings deleted from system.');
 };
 
 /**
- * Gets a single note by ID.
+ * Gets a single note by ID, including its embedding.
  */
-export const getNoteByIdFromSystem = async (noteId: string): Promise<Note | null> => {
-    return await localforage.getItem<Note>(noteId);
+export const getNoteByIdFromSystem = async (noteId: string): Promise<NoteWithEmbedding | null> => {
+    const rawNote = await localforage.getItem<Note>(noteId); 
+    if (!rawNote) {
+      return null;
+    }
+
+    // Sanitize tags to ensure they are always a string array, handling legacy string format.
+    let tagsArray: string[] = [];
+    const tags: unknown = rawNote.tags;
+
+    if (typeof tags === 'string') {
+      tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    } else if (Array.isArray(tags)) {
+      tagsArray = tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
+    }
+
+    const note: Note = { ...rawNote, tags: tagsArray };
+
+    const embedding = await localforage.getItem<number[]>(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+    return { ...note, embedding: embedding || undefined }; 
 };

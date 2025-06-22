@@ -10,3 +10,5 @@ export interface Note {
 }
 
 export const NOTE_STORAGE_PREFIX = 'cognito_note_';
+
+export type NoteWithEmbedding = Note & { embedding?: number[] };
