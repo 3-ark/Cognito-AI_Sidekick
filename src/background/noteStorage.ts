@@ -1,5 +1,6 @@
 import localforage from 'localforage';
 import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
+import { indexNotes, indexSingleNote, removeNoteFromIndex } from './searchUtils';
 
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 
@@ -24,15 +25,22 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
     url: noteData.url || '',
   };
 
+  // Save the core Note object
   await localforage.setItem(noteId, noteToSaveToStorage);
 
+  // Separately, save the embedding if it exists in the input 'noteData'
   if (noteData.embedding && noteData.embedding.length > 0) {
     await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
   } else {
+    // If noteData.embedding is undefined, null, or an empty array,
+    // remove any existing embedding for this note to prevent orphans.
     await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
   }
 
-  return noteToSaveToStorage;
+  // After saving the note, update the search index
+  await indexSingleNote(noteToSaveToStorage);
+
+  return noteToSaveToStorage; // Return the core Note object
 };
 
 /**
@@ -44,14 +52,16 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
   const processedNotes: NoteWithEmbedding[] = [];
 
   for (const key of noteKeys) {
-    const rawNoteData = await localforage.getItem<Note>(key);
+    const rawNoteData = await localforage.getItem<Note>(key); // Expecting type Note
     if (rawNoteData && rawNoteData.id) { 
       let tagsArray: string[] = [];
+      // Handle legacy tags which might be a string, or modern tags which are an array.
       const tags: unknown = rawNoteData.tags;
 
       if (typeof tags === 'string') {
         tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
       } else if (Array.isArray(tags)) {
+        // Ensure all elements in the array are strings
         tagsArray = tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
       }
       
@@ -79,6 +89,8 @@ export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
   await localforage.removeItem(noteId); 
   await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
   console.log('Note and its embedding deleted from system:', noteId);
+  // After deleting the note, update the search index
+  await removeNoteFromIndex(noteId);
 };
 
 /**
@@ -104,6 +116,8 @@ export const deleteAllNotesFromSystem = async (): Promise<void> => {
     await localforage.removeItem(key);
   }
   console.log('All notes and their embeddings deleted from system.');
+  // After deleting all notes, re-index (which will result in an empty index)
+  await indexNotes();
 };
 
 /**

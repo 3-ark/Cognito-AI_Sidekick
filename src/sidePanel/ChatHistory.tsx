@@ -99,8 +99,10 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
     }
     const lowerCaseQuery = searchQuery.toLowerCase();
     return allMessagesFromServer.filter(message => {
-      const titleMatch = message.title?.toLowerCase().includes(lowerCaseQuery);
-      const contentMatch = message.turns.some(turn => turn.content.toLowerCase().includes(lowerCaseQuery));
+      const titleMatch = message.title ? message.title.toLowerCase().includes(lowerCaseQuery) : false;
+      const contentMatch = message.turns.some(turn => 
+        turn.content ? turn.content.toLowerCase().includes(lowerCaseQuery) : false
+      );
       return titleMatch || contentMatch;
     });
   }, [allMessagesFromServer, searchQuery]);

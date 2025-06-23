@@ -1,7 +1,11 @@
 import { getCurrentTab, injectContentScript } from 'src/background/util';
 import buildStoreWithDefaults from 'src/state/store';
 import storage from 'src/background/storageUtil';
-import ChannelNames from '../types/ChannelNames';
+import ChannelNames from '../types/ChannelNames'; // Added MessageType
+import MessageType from '../types/ChannelNames'; // Added MessageType
+import { getAllNotesFromSystem, saveNoteInSystem, deleteNoteFromSystem, deleteAllNotesFromSystem } from './noteStorage';
+import { indexNotes, searchNotes, engineInitializationPromise } from './searchUtils'; // Import engineInitializationPromise
+import { Note } from '../types/noteTypes';
 
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
 
@@ -294,6 +298,25 @@ chrome.runtime.onConnect.addListener(port => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Ensure the message structure is what you expect
+  if (!message || !message.type) {
+    // console.warn('Received message without type:', message); // This can be noisy
+    return true; // Still return true as a best practice for onMessage listeners
+  }
+
+  // SEARCH_NOTES_REQUEST handler
+  if (message.type === MessageType.SEARCH_NOTES_REQUEST) {
+    const { query, topK } = message.payload;
+    try {
+      const results = searchNotes(query, topK);
+      sendResponse({ success: true, results });
+    } catch (error: any) {
+      console.error('[BM25 Test] Error during search:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true; // Indicates asynchronous response
+  }
+
   if (message.type === 'SIDE_PANEL_READY') {
     const tabId = message.tabId;
 
@@ -306,19 +329,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (pendingPageContentPayloads.has(tabId)) {
       const payloadFromPending = pendingPageContentPayloads.get(tabId)!;
-      const messageType = payloadFromPending.title === "Error" ? "ERROR_OCCURRED" : "CREATE_NOTE_FROM_PAGE_CONTENT";
+      const messageTypeToDispatch = payloadFromPending.title === "Error" ? "ERROR_OCCURRED" : "CREATE_NOTE_FROM_PAGE_CONTENT";
       const messagePayload = payloadFromPending.title === "Error" ? payloadFromPending.content : payloadFromPending;
 
-      console.log(`[Background] Found pending payload for tab ${tabId}. Sending ${messageType} to the extension runtime.`);
+      console.log(`[Background] Found pending payload for tab ${tabId}. Sending ${messageTypeToDispatch} to the extension runtime.`);
 
       chrome.runtime.sendMessage({
-        type: messageType,
+        type: messageTypeToDispatch,
         payload: messagePayload
       }, (response) => {
         if (chrome.runtime.lastError) {
-          console.error(`[Background] Error sending ${messageType} to runtime. Side panel might not be ready. Error:`, chrome.runtime.lastError.message);
+          console.error(`[Background] Error sending ${messageTypeToDispatch} to runtime. Side panel might not be ready. Error:`, chrome.runtime.lastError.message);
         } else {
-          console.log(`[Background] Side panel acknowledged receipt of ${messageType}. Response:`, response);
+          console.log(`[Background] Side panel acknowledged receipt of ${messageTypeToDispatch}. Response:`, response);
         }
       });
 
@@ -362,3 +385,95 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 export {};
+
+// --- BM25 Search System - Added for testing ---
+async function addSampleNotes() {
+
+  const sampleNotesData: Array<Partial<Note>> = [
+    { title: 'English Note', content: 'This is a test note in English about apples and bananas.' },
+    { title: 'Chinese Note', content: '这是一篇关于水果的中文测试笔记，例如苹果和香蕉。' },
+    { title: 'Japanese Note', content: 'これは果物についての日本語のテストノートです。例えば、リンゴやバナナなど。' }, // (Japanese: This is a Japanese test note about fruits. For example, apples and bananas.)
+    { title: 'Korean Note', content: '이것은 과일에 대한 한국어 테스트 노트입니다. 예를 들어 사과와 바나나.' }, // (Korean: This is a Korean test note about fruits. For example, apples and bananas.)
+    { title: 'Russian Note', content: 'Это тестовая заметка на русском языке о фруктах, например, яблоках и бананах.' }, // (Russian: This is a test note in Russian about fruits, for example, apples and bananas.)
+    { title: 'Arabic Note', content: 'هذه ملاحظة اختبار باللغة العربية عن الفواكه، على سبيل المثال، التفاح والموز.' }, // (Arabic: This is an Arabic test note about fruits, for example, apples and bananas.)
+    { title: 'Hindi Note', content: 'यह फलों के बारे में हिंदी में एक परीक्षण नोट है, उदाहरण के लिए, सेब और केले।' },
+    { title: 'Mixed Language Note', content: 'English text with some 中文 and 日本語 characters, and also some 한국어. And a bit of русский язык. العربية أيضاً. और कुछ हिन्दी भी।' }
+  ];
+
+  const currentNotes = await getAllNotesFromSystem();
+  const notesToAdd: Array<Partial<Note>> = [];
+  let notesAddedCount = 0;
+
+  for (const sampleNote of sampleNotesData) {
+    const existingNote = currentNotes.find(n => n.title === sampleNote.title);
+    if (!existingNote) {
+      notesToAdd.push(sampleNote);
+    }
+  }
+
+  if (notesToAdd.length > 0) {
+    for (const note of notesToAdd) {
+      try {
+        await saveNoteInSystem({ content: note.content || '', title: note.title });
+        notesAddedCount++;
+      } catch (e) {
+        console.error(`[BM25 Test] Error saving sample note "${note.title}":`, e);
+      }
+    }
+    return notesAddedCount > 0; 
+  } else {
+    return false; 
+  }
+}
+
+async function initializeAppForSearchTesting() {
+  try {
+    await engineInitializationPromise; 
+    console.log('BM25 Engine initialized.'); // Kept a more subtle log
+  } catch (error) {
+    console.error('[BM25 Test] CRITICAL: BM25 Engine initialization failed. Search functionality will not work.', error);
+    return; 
+  }
+
+
+  await addSampleNotes();
+  await indexNotes(); 
+
+  // Expose test functions globally on `self` for Service Worker context
+  (self as any).bm25TestSearch = (query: string, topK?: number) => { // Renamed to avoid potential global conflicts
+    searchNotes(query, topK).then(results => {
+      console.log('[BM25 Test] Search results:', results);
+    }).catch(err => {
+      console.error('[BM25 Test] Error in bm25TestSearch:', err);
+    });
+    return "Search initiated. Check console for results.";
+  };
+  (self as any).bm25TestIndex = async () => {
+    console.log('[BM25 Test] Re-indexing all notes...');
+    await indexNotes();
+    console.log('[BM25 Test] Re-indexing complete.');
+  };
+  (self as any).bm25GetAllNotes = async () => { // Renamed
+    const notes = await getAllNotesFromSystem();
+    console.log('[BM25 Test] All notes:', notes);
+    return notes;
+  };
+  (self as any).bm25SaveTestNote = async (title: string, content: string) => { // Renamed
+    const newNote = await saveNoteInSystem({ title, content });
+    return newNote;
+  };
+  (self as any).bm25DeleteTestNote = async (id: string) => { // Renamed
+    await deleteNoteFromSystem(id);
+  };
+  (self as any).bm25DeleteAllTestNotes = async () => { // Renamed
+    console.log('[BM25 Test] Deleting all notes...');
+    await deleteAllNotesFromSystem();
+    console.log('[BM25 Test] All notes deleted. Index was updated by deleteAllNotesFromSystem.');
+  };
+
+  console.log("[BM25 Test] BM25 test functions (prefixed with 'bm25') are available on `self` in SW console.");
+  // console.log("[BM25 Test] To test search, open the extension's service worker console and run, e.g., self.bm25TestSearch('apple')"); // Modified
+}
+
+initializeAppForSearchTesting();
+// --- End BM25 Search System - Added for testing ---
