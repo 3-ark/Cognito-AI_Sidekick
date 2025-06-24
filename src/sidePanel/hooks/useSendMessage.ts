@@ -522,7 +522,6 @@ const useSendMessage = (
 
     try {
       setChatStatus('thinking'); 
-      // NOTE: computeLevel (high/medium) logic removed as per refactoring.
       // All requests now use standard streaming.
       console.log(`[${callId}] useSendMessage: Starting standard streaming.`);
       const normalizedUrl = normalizeApiEndpoint(config?.customEndpoint);
@@ -675,7 +674,6 @@ const useSendMessage = (
         };
         console.log(`[${callId}] useSendMessage: Initial LLM call (processLlmResponse) INITIATED.`);
         await processLlmResponse();
-      }
     } catch (error) {
       if (controller.signal.aborted) {
         console.log(`[${callId}] Send operation was aborted. 'onStop' handler is responsible for UI updates.`);

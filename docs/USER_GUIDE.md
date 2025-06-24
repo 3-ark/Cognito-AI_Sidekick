@@ -80,7 +80,6 @@ Welcome to the Cognito application! This guide will help you understand its feat
 *   [Context Source Settings](#context-source-settings)
     *   [Page Context Settings (for "Page Mode")](#page-context-settings-for-page-mode)
     *   [Web Search Settings (for "Web Mode")](#web-search-settings-for-web-mode)
-*   [Compute Levels](#compute-levels)
 *   [Text-to-Speech (TTS)](#text-to-speech-tts)
     *   [Enabling and Configuration](#enabling-and-configuration)
     *   [How it Works](#how-it-works)
@@ -246,34 +245,6 @@ Located in the "Page Context" or a similar section in settings:
 Found in the "Web Search" or a similar section in settings:
 *   **Search Results Character Limit:** You can define the maximum number of characters from web search results that will be provided to the AI as context in "Web Mode."
 
-## Compute Levels
-
-The application offers different "compute levels" that affect how the AI processes your requests. Higher compute levels can lead to more detailed and structured answers for complex queries but may take longer to generate.
-
-*   **Standard/Low Compute**: This is the default setting. The AI processes your query directly and provides a response.
-
-*   **Medium Compute**:
-    *   When this level is selected, the AI first breaks down your main task or question into a series of logical subtasks.
-    *   It then processes these subtasks, often in batches.
-    *   Finally, it synthesizes the results of the subtasks into a comprehensive answer.
-    *   You may see "Monitoring" messages indicating the AI is working on subtasks.
-
-*   **High Compute**:
-    *   This is the most advanced level. The AI employs a multi-stage approach:
-        1.  **Decomposition into Stages**: Your task is first broken down into main sequential stages.
-        2.  **Decomposition into Steps**: Each stage is then further broken down into specific steps.
-        3.  **Processing**: The AI processes these steps (sometimes in batches, accumulating context from previous steps within the same stage). If a stage doesn't require step-by-step breakdown, it's solved directly.
-        4.  **Synthesis**: Results from steps are synthesized into a stage result, and then all stage results are synthesized into the final answer.
-    *   This level is designed for complex queries requiring detailed planning and execution by the AI.
-    *   You will likely see "Monitoring" messages as the AI progresses through stages and steps.
-
-**Note**: The availability and behavior of compute levels might vary.
-*   **Important Considerations (Beta Feature):**
-    *   The Computation Levels feature, especially Medium and High, is considered experimental.
-    *   **Token Usage:** Higher computation levels significantly increase token consumption. High Compute can use 100-150x more tokens than Low Compute for the same query. This means more processing time and potentially higher costs if you are using paid AI services.
-    *   **Potential Instability:** As an experimental feature, you might encounter unexpected behavior or errors, especially with High compute. Report any issues to help improve Cognito.
-Use these levels judiciously, matching the complexity of your query to the appropriate computation level. Higher levels generally provide more thoroughness at the cost of increased response time and token usage.
-
 ## Text-to-Speech (TTS)
 
 The application can read AI messages aloud using your browser's built-in Text-to-Speech capabilities. You can manage TTS settings in the "Text-to-Speech" section of the settings panel.
@@ -400,12 +371,11 @@ _(This section will be populated with common issues and solutions if any are app
 *   **AI Not Responding:**
     *   Check your AI model configuration in Cognito's settings. Ensure API keys (for cloud services) are correctly entered or that your local model server (if used) is running and accessible.
     *   If using a cloud model, verify your internet connection.
-    *   Try switching to a different AI model, a different persona, or a lower computation level to see if the issue is specific to one setting.
+    *   Try switching to a different AI model, a different persona to see if the issue is specific to one setting.
 *   **Summarization or Page Analysis Issues:**
     *   Some web pages with very complex structures, dynamic content, or paywalls might be challenging for the extension to parse perfectly.
     *   Ensure the page is fully loaded before asking Cognito to summarize or analyze it.
 *   **High Token Usage or Slow Responses:**
-    *   Remember that Medium and High computation levels consume significantly more tokens and time. Use them only when necessary for complex tasks.
     *   If using a cloud service, check your usage limits and billing with the AI provider.
 
 ---

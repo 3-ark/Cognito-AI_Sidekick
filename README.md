@@ -162,7 +162,6 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 *   **Summarize a News Article:** Open a lengthy article, open the Cognito side panel, and click "Summarize Page" or type "Summarize this page."
 *   **Ask About Page Content:** While viewing a complex technical document, select a confusing paragraph and ask Cognito, "Explain this selected text in simpler terms."
-*   **Perform Deep Research:** Use a Persona like "Ein (Academic Researcher)" and a "Medium" or "High" Computation Level to ask, "What are the latest advancements in renewable energy storage and their potential impacts?" Cognito can perform web searches and synthesize information.
 *   **Connect to Local LLM:** If you have Ollama running with a model like Llama3, go to Cognito's settings, select Ollama, enter your model details (e.g., `http://localhost:11434` and model name `llama3`), and start chatting with your local AI.
 *   **Save Notes:** During a chat, if the AI provides a useful snippet or you want to remember a key piece of information, click the "Add to Note" button (or a similar function) to save it for later reference within Cognito's notes feature.
 
@@ -328,7 +327,7 @@ Contributions are welcome! If you'd like to help improve Cognito, please:
 ## 🙏 Acknowledgments
 
 *   Cognito was originally built upon and inspired by [sidellama](https://github.com/gyopak/sidellama).
-*   Inspiration and ideas from projects like Stanford's [WikiChat](https://github.com/stanford-oval/WikiChat), [highCompute.py](https://github.com/AlexBefest/highCompute.py) by AlexBefest, [StreamingKokoroJS](https://github.com/rhulha/StreamingKokoroJS), [WebAgent](https://github.com/Alibaba-NLP/WebAgent), [chatterbox](https://github.com/resemble-ai/chatterbox), [kokoro and kokoro.js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and the [piper-browser-extension](https://github.com/ken107/piper-browser-extension).
+*   Inspiration and ideas from projects like Stanford's [WikiChat](https://github.com/stanford-oval/WikiChat), [StreamingKokoroJS](https://github.com/rhulha/StreamingKokoroJS), [WebAgent](https://github.com/Alibaba-NLP/WebAgent), [chatterbox](https://github.com/resemble-ai/chatterbox), [kokoro and kokoro.js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and the [piper-browser-extension](https://github.com/ken107/piper-browser-extension).
 *   Thanks to all the developers of the open-source libraries and tools that make Cognito possible.
 
 ## 📄 License
