@@ -71,7 +71,6 @@ const defaultConfig: Config = {
   ollamaConnected: false,
   fontSize: 14,
   panelOpen: false,
-  computeLevel: 'low',
   paperTexture: false,
   tts: {
     selectedVoice: undefined,
