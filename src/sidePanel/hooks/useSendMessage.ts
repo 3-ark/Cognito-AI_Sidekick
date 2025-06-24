@@ -242,10 +242,18 @@ const useSendMessage = (
     console.log(`[${callId}] useSendMessage: onSend triggered.`);
     
     const originalMessageFromInput = overridedMessage || ""; 
-    const messageForLLM = originalMessageFromInput.replace(/@\[([^\]]+)\]/g, '').trim();
+    // Keep @[Note Name] placeholders in the main user query. Note content will be appended.
+    let messageForLLM = originalMessageFromInput.trim();
         
+    if (selectedNotesForContext && selectedNotesForContext.length > 0) {
+      const notesDetails = selectedNotesForContext.map(note => {
+        return `\n\n---\nUser-provided note: "${note.title}"\nContent:\n${note.content}\n---`;
+      }).join('');
+      messageForLLM += notesDetails;
+    }
+
     console.log(`[${callId}] Original message from input: "${originalMessageFromInput}"`);
-    console.log(`[${callId}] Message for LLM (cleaned): "${messageForLLM}"`);
+    console.log(`[${callId}] Message for LLM: "${messageForLLM}"`);
 
     if (!config) {
       console.log(`[${callId}] useSendMessage: Bailing out: Missing config.`);
@@ -474,14 +482,9 @@ const useSendMessage = (
       ? `Refer to this note for context: ${config.noteContent}`
       : '';
 
-    let notesContextContent = "";
     if (selectedNotesForContext && selectedNotesForContext.length > 0) {
-      notesContextContent = selectedNotesForContext.map(note => {
-        return "```" + note.title + "\n" + note.content + "\n```";
-      }).join("\n\n");
-      console.log(`[${callId}] Constructed notesContextContent (from prop) length: ${notesContextContent.length}`);
+      console.log(`[${callId}] Notes detected for inclusion in user message (count: ${selectedNotesForContext.length})`);
     } else {
-      console.log(`[${callId}] No notes provided via selectedNotesForContext prop, notesContextContent is empty.`);
     }
     
     let userContextStatement = '';
@@ -501,20 +504,7 @@ const useSendMessage = (
     if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
     if (noteContextString) systemPromptParts.push(noteContextString);
-    if (notesContextContent) {
-      let noteIntro = "The user has provided the following note(s) for context. Please consider them when formulating your response:";
-      if (selectedNotesForContext && selectedNotesForContext.length > 0) {
-          const noteTitles = selectedNotesForContext.map(n => `"${n.title}"`).join(', ');
-          if (selectedNotesForContext.length === 1) {
-              noteIntro = `The user has provided a note titled ${noteTitles} for context. Please consider it when formulating your response:`;
-          } else {
-              noteIntro = `The user has provided notes titled ${noteTitles} for context. Please consider them when formulating your response:`;
-          }
-      }
-      systemPromptParts.push(noteIntro + "\n\n" + notesContextContent);
-
-      systemPromptParts.push("If the user's query is general and could relate to the content of these provided notes, please acknowledge their relevance or use information from them in your response.");
-    }
+    // The notes from selectedNotesForContext are now directly injected into the user's message (messageForLLM),
     if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
@@ -531,7 +521,7 @@ const useSendMessage = (
 
     const systemContent = systemPromptParts.join('\n\n').trim();
 
-    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx (single): ${!!noteContextString}, NotesCtx (multi): ${!!notesContextContent}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`);
+    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx (single): ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`);
 
     try {
       setChatStatus('thinking'); 
