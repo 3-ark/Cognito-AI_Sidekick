@@ -5,7 +5,6 @@ import { scrapeUrlContent } from '../utils/scrapers';
 import storage from 'src/background/storageUtil';
 import type { Config, Model } from 'src/types/config';
 import { normalizeApiEndpoint } from 'src/background/util';
-import { handleHighCompute, handleMediumCompute } from '../utils/computeHandlers';
 import { ChatMode, ChatStatus } from '../../types/config';
 import { useTools } from './useTools';
 import type { LLMToolCall } from './useTools';
@@ -523,34 +522,11 @@ const useSendMessage = (
 
     try {
       setChatStatus('thinking'); 
-      if (config?.computeLevel === 'high' && currentModel) {
-        console.log(`[${callId}] useSendMessage: Starting HIGH compute level.`);
-        await handleHighCompute(
-          messageToUse,
-          currentTurns,
-          config,
-          currentModel,
-          authHeader,
-          (update, isFinished) => updateAssistantTurn(callId, update, Boolean(isFinished)),
-          controller.signal
-        );
-        console.log(`[${callId}] useSendMessage: HIGH compute level finished.`);
-      } else if (config?.computeLevel === 'medium' && currentModel) {
-        console.log(`[${callId}] useSendMessage: Starting MEDIUM compute level.`);
-        await handleMediumCompute(
-          messageToUse,
-          currentTurns,
-          config,
-          currentModel,
-          authHeader,
-          (update, isFinished) => updateAssistantTurn(callId, update, Boolean(isFinished)),
-          controller.signal
-        );
-        console.log(`[${callId}] useSendMessage: MEDIUM compute level finished.`);
-      } else {
-        console.log(`[${callId}] useSendMessage: Starting standard streaming.`);
-        const normalizedUrl = normalizeApiEndpoint(config?.customEndpoint);
-        const configBody = { stream: true };
+      // NOTE: computeLevel (high/medium) logic removed as per refactoring.
+      // All requests now use standard streaming.
+      console.log(`[${callId}] useSendMessage: Starting standard streaming.`);
+      const normalizedUrl = normalizeApiEndpoint(config?.customEndpoint);
+      const configBody = { stream: true };
         const urlMap: Record<string, string> = {
           groq: 'https://api.groq.com/openai/v1/chat/completions',
           ollama: `${config?.ollamaUrl || ''}/api/chat`,

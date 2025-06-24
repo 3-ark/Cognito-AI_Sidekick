@@ -112,7 +112,6 @@ export interface Config {
     warning?: string;
     name?: string;
   };
-  computeLevel: 'low' | 'medium' | 'high' | string;
   paperTexture?: boolean;
   panelOpen: boolean;
   tts?: TtsSettings;

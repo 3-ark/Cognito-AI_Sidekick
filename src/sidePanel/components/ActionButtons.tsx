@@ -28,31 +28,6 @@ export const ActionButtons = ({ config, updateConfig }: ActionButtonsProps) => {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            aria-label="Cycle compute level"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              const currentLevel = config.computeLevel;
-              const nextLevel = currentLevel === 'low' ? 'medium' : currentLevel === 'medium' ? 'high' : 'low';
-              updateConfig({ computeLevel: nextLevel });
-            }}
-            className={cn(
-              "hover:bg-secondary/70",
-              config.computeLevel === 'high' ? 'text-red-600' :
-              config.computeLevel === 'medium' ? 'text-orange-300' :
-              'text-[var(--text)]'
-            )}
-          >
-            <BiBrain />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)] max-w-80">
-          <p>{`Compute Level: ${config.computeLevel?.toUpperCase()}. Click to change. [Warning]: beta feature and resource costly.`}</p>
-        </TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
             aria-label="Add Web Search Results to LLM Context"
             variant="ghost"
             size="icon"

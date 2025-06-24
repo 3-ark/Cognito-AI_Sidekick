@@ -227,7 +227,7 @@ const Cognito = () => {
     setPageContent('');
     setWebContent('');
     setLoading(false);
-    updateConfig({ chatMode: undefined, computeLevel: 'low' });
+    updateConfig({ chatMode: undefined });
     setChatStatus('idle');    
     setMessage('');
     setChatTitle('');
