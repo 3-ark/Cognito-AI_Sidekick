@@ -501,7 +501,20 @@ const useSendMessage = (
     if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
     if (noteContextString) systemPromptParts.push(noteContextString);
-    if (notesContextContent) systemPromptParts.push(notesContextContent);
+    if (notesContextContent) {
+      let noteIntro = "The user has provided the following note(s) for context. Please consider them when formulating your response:";
+      if (selectedNotesForContext && selectedNotesForContext.length > 0) {
+          const noteTitles = selectedNotesForContext.map(n => `"${n.title}"`).join(', ');
+          if (selectedNotesForContext.length === 1) {
+              noteIntro = `The user has provided a note titled ${noteTitles} for context. Please consider it when formulating your response:`;
+          } else {
+              noteIntro = `The user has provided notes titled ${noteTitles} for context. Please consider them when formulating your response:`;
+          }
+      }
+      systemPromptParts.push(noteIntro + "\n\n" + notesContextContent);
+
+      systemPromptParts.push("If the user's query is general and could relate to the content of these provided notes, please acknowledge their relevance or use information from them in your response.");
+    }
     if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
