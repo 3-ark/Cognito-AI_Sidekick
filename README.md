@@ -170,7 +170,6 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 *   **Connecting to AI Models:** Access the settings panel to configure connections to various supported LLMs (OpenAI, Gemini, Ollama, Groq, OpenRouter, Custom). You'll typically need API keys for cloud services or endpoint URLs for local models.
 *   **Choosing Personas:** Select from available personas (Ein: Academic researcher, Warren: Business analyst, Jet: Friendly assistant, Agatha: Creative thinker, Jan: Strategist, Sherlock: Detective, Spike: All-around assistant) to tailor the AI's tone and expertise, or create your own.
-*   **Adjusting Computation Levels:** Experiment with Low (direct query for simple questions), Medium (single-level task decomposition for moderately complex queries), and High (two-level task decomposition for highly complex tasks) computation levels. Be mindful of increased token usage (High Compute can use 100-150x more tokens) and processing time with higher levels. This feature is in beta.
 *   **TTS Settings:** Configure text-to-speech options, including browser-based TTS or integration with external services like Piper (via compatible extensions).
 *   **Theme Customization:** Personalize the appearance of the side panel.
 
