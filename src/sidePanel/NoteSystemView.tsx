@@ -99,8 +99,9 @@ const NoteListItem: FC<NoteListItemProps> = ({
   const itemRef = useRef<HTMLDivElement>(null);
   const [dynamicMaxHeight, setDynamicMaxHeight] = useState('50vh');
   const [popoverSide, setPopoverSide] = useState<'top' | 'bottom'>('top');
+  const [isActionPopoverOpen, setIsActionPopoverOpen] = useState(false);
 
-  const handleOpenChange = (open: boolean) => {
+  const handleHoverCardOpenChange = (open: boolean) => {
     if (open && itemRef.current) {
       const rect = itemRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -125,7 +126,6 @@ const NoteListItem: FC<NoteListItemProps> = ({
   };
 
   const handleDownload = () => {
-    // which is compatible with 'Note | NoteWithEmbedding' in generateObsidianMDContent.
     const mdContent = generateObsidianMDContent(note); 
     
     // Sanitize title for use as a filename - this could also be part of the shared util or a separate one
@@ -150,7 +150,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
       )}
       onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
     >
-      <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>
+      <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleHoverCardOpenChange}>
         <div className="flex justify-between overflow-hidden items-center">
           {isSelectionModeActive && (
             <div className="flex-shrink-0 pr-2">
@@ -170,14 +170,16 @@ const NoteListItem: FC<NoteListItemProps> = ({
           </HoverCardTrigger>
           {!isSelectionModeActive && ( // Only show ellipsis menu if not in selection mode
             <div className="flex-shrink-0">
-              <Popover>
+              <Popover open={isActionPopoverOpen} onOpenChange={setIsActionPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm"><LuEllipsis /></Button>
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsActionPopoverOpen(true); }}>
+                    <LuEllipsis />
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); onEdit(note); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); handleDownload(); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
+                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); onEdit(note); setIsActionPopoverOpen(false); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
+                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); handleDownload(); setIsActionPopoverOpen(false); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
+                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onDelete(note.id); setIsActionPopoverOpen(false); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
                 </PopoverContent>
               </Popover>
             </div>
