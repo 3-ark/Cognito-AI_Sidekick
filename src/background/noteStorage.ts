@@ -222,10 +222,9 @@ export const deleteNotesFromSystem = async (noteIds: string[]): Promise<void> =>
     await deleteNoteFromSystem(noteId); // This already handles removing from index
   }
   console.log(`${noteIds.length} notes deleted from system.`);
-  // Note: deleteNoteFromSystem already calls removeNoteFromIndex for each note.
-  // If a bulk update to the index is more performant, this could be changed later.
 };
 
+import { generateObsidianMDContent } from '../sidePanel/utils/noteUtils';
 /**
  * Exports multiple notes to Obsidian MD format and triggers download for each.
  */
@@ -247,30 +246,7 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
         continue;
       }
 
-      // Helper to escape double quotes for YAML strings
-      const escapeDoubleQuotes = (str: string): string => str.replace(/"/g, '\\"');
-
-      let mdContent = '---\n';
-      mdContent += `title: "${escapeDoubleQuotes(note.title)}"\n`; // Quote title
-      const dateTimestamp = note.lastUpdatedAt || note.createdAt;
-      if (dateTimestamp) {
-        const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
-        mdContent += `date: ${formattedDate}\n`;
-      }
-      if (note.tags && note.tags.length > 0) {
-        mdContent += 'tags:\n';
-        note.tags.forEach(tag => {
-          // Tags themselves usually don't need quoting unless they contain special YAML characters.
-          // Simple strings are fine. If a tag could contain a colon, quotes, etc., it would need it.
-          // For now, assuming tags are simple.
-          mdContent += `  - ${tag.trim()}\n`;
-        });
-      }
-      if (note.url && note.url.trim() !== '') {
-        mdContent += `source: "${escapeDoubleQuotes(note.url)}"\n`; // Changed key to 'source' and quote URL
-      }
-      mdContent += '---\n\n';
-      mdContent += note.content;
+      const mdContent = generateObsidianMDContent(note);
 
       // Sanitize title for use as a filename
       const sanitizedTitle = note.title.replace(/[<>:"/\\|?*]+/g, '_') || 'Untitled Note';

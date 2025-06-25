@@ -14,11 +14,12 @@ import { Note } from '../types/noteTypes';
 import { 
   getAllNotesFromSystem, 
   saveNoteInSystem, 
-  deleteNoteFromSystem, 
+  deleteNoteFromSystem,
   deleteAllNotesFromSystem,
   exportNotesToObsidianMD,
   deleteNotesFromSystem
 } from '../background/noteStorage';
+import { generateObsidianMDContent } from './utils/noteUtils';
 import { cn } from '@/src/background/util';
 import { useConfig } from './ConfigContext';
 import Markdown from 'react-markdown';
@@ -124,27 +125,16 @@ const NoteListItem: FC<NoteListItemProps> = ({
   };
 
   const handleDownload = () => {
-    let mdContent = '---\n';
-    mdContent += `title: ${note.title}\n`;
-    const dateTimestamp = note.lastUpdatedAt || note.createdAt;
-    if (dateTimestamp) {
-      const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
-      mdContent += `date: ${formattedDate}\n`;
-    }
-    if (note.tags && note.tags.length > 0) {
-      mdContent += 'tags:\n';
-      note.tags.forEach(tag => {
-        mdContent += `  - ${tag.trim()}\n`;
-      });
-    }
-    if (note.url) {
-      mdContent += `url: ${note.url}\n`;
-    }
-    mdContent += '---\n\n';
-    mdContent += note.content;
+    // which is compatible with 'Note | NoteWithEmbedding' in generateObsidianMDContent.
+    const mdContent = generateObsidianMDContent(note); 
+    
+    // Sanitize title for use as a filename - this could also be part of the shared util or a separate one
+    const sanitizedTitle = note.title.replace(/[<>:"/\\|?*]+/g, '_') || 'Untitled Note';
+    const filename = `${sanitizedTitle}.md`;
+
     const element = document.createElement('a');
     element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(mdContent)}`);
-    element.setAttribute('download', `${note.title}.md`);
+    element.setAttribute('download', filename);
     element.style.display = 'none';
     document.body.appendChild(element);
     element.click();
