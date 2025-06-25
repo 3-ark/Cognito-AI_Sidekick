@@ -14,8 +14,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { IoFingerPrint, IoPerson, IoImageOutline, IoTextOutline } from "react-icons/io5";
+import { IoFingerPrint, IoPerson, IoImageOutline, IoTextOutline, IoCheckmarkCircleOutline } from "react-icons/io5"; // Added IoCheckmarkCircleOutline
 import { GoPlus } from "react-icons/go";
+import { LuEllipsis } from "react-icons/lu"; // Import LuEllipsis
 import { BsFiletypeMd } from "react-icons/bs";
 
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
@@ -207,6 +208,7 @@ interface HeaderProps {
   chatStatus: ChatStatus;
   onAddNewNoteRequest?: () => void;
   onImportNoteRequest?: () => void;
+  onSelectNotesRequest?: () => void; // New prop for selecting notes
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -227,6 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
   chatStatus,
   onAddNewNoteRequest,
   onImportNoteRequest,
+  onSelectNotesRequest, // Destructure new prop
 }) => {
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
@@ -562,7 +565,7 @@ export const Header: React.FC<HeaderProps> = ({
                         size="sm"
                         className="text-[var(--text)] rounded-md"
                       >
-                        <GoPlus size="18px" />
+                        <LuEllipsis size="18px" />
                       </Button>
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
@@ -603,6 +606,20 @@ export const Header: React.FC<HeaderProps> = ({
                       >
                         <FiUpload className="mr-auto h-4 w-4" />
                         Import Note
+                      </DropdownMenuPrimitive.Item>
+                    )}
+                    {onSelectNotesRequest && (
+                      <DropdownMenuPrimitive.Item
+                        className={cn(
+                          dropdownItemClasses,
+                          "gap-2",
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                        )}
+                        onSelect={onSelectNotesRequest}
+                      >
+                        {/* Placeholder for an appropriate icon, e.g., a checkmark or list icon */}
+                        <IoCheckmarkCircleOutline className="mr-auto h-4 w-4" />
+                        Select Notes
                       </DropdownMenuPrimitive.Item>
                     )}
                   </DropdownMenuPrimitive.Content>

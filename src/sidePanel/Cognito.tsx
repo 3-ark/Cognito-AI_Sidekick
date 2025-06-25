@@ -49,6 +49,7 @@ const Cognito = () => {
   const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
   const [triggerNoteCreation, setTriggerNoteCreation] = useState(false);
   const [triggerImportNoteFlow, setTriggerImportNoteFlow] = useState(false);
+  const [triggerSelectNotesFlow, setTriggerSelectNotesFlow] = useState(false); // New state for select notes flow
   const [selectedNotesForContext, setSelectedNotesForContext] = useState<Note[]>([]);
 
   const toastIdRef = useRef<string | null>(null);
@@ -203,6 +204,15 @@ const Cognito = () => {
 
   const handleImportTriggered = () => {
     setTriggerImportNoteFlow(false);
+  };
+
+  const handleSelectNotesRequest = () => {
+    setNoteSystemMode(true);
+    setTriggerSelectNotesFlow(true); // Trigger the select notes flow
+  };
+
+  const handleSelectNotesFlowTriggered = () => {
+    setTriggerSelectNotesFlow(false); // Reset the trigger
   };
 
   const { chatTitle, setChatTitle } = useChatTitle(isLoading, turns, message);
@@ -402,6 +412,7 @@ const Cognito = () => {
               setTriggerNoteCreation(true);
             }}
             onImportNoteRequest={handleImportNoteRequest}
+            onSelectNotesRequest={handleSelectNotesRequest} // Pass the handler
             setNoteSystemMode={setNoteSystemMode}
             chatMode={(config?.chatMode as ChatMode) || 'chat'}
             chatStatus={chatStatus}
@@ -425,6 +436,8 @@ const Cognito = () => {
               onModalOpened={handleNoteModalOpened}
               triggerImportNoteFlow={triggerImportNoteFlow}
               onImportTriggered={handleImportTriggered}
+              triggerSelectNotesFlow={triggerSelectNotesFlow} // Pass down the new prop
+              onSelectNotesFlowTriggered={handleSelectNotesFlowTriggered} // Pass down the handler
             />
           )}
 
