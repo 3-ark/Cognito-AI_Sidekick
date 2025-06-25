@@ -38,8 +38,8 @@ interface NoteSystemViewProps {
   onModalOpened: () => void;
   triggerImportNoteFlow: boolean;
   onImportTriggered: () => void;
-  triggerSelectNotesFlow?: boolean; // Optional: Might not always be passed initially
-  onSelectNotesFlowTriggered?: () => void; // Optional
+  triggerSelectNotesFlow?: boolean;
+  onSelectNotesFlowTriggered?: () => void;
 }
 
 const noteSystemMarkdownComponents = {
@@ -158,6 +158,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
                 checked={isSelected}
                 onCheckedChange={() => onToggleSelect(note.id)}
                 aria-label={`Select note ${note.title}`}
+                onClick={e => e.stopPropagation()}
                 className="border-[var(--text)]/50 data-[state=checked]:bg-[var(--active)] data-[state=checked]:border-[var(--active)]"
               />
             </div>
@@ -168,7 +169,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
               isSelectionModeActive && "cursor-default hover:no-underline" // No underline when in selection mode
             )}>{note.title}</h3>
           </HoverCardTrigger>
-          {!isSelectionModeActive && ( // Only show ellipsis menu if not in selection mode
+          {!isSelectionModeActive && (
             <div className="flex-shrink-0">
               <Popover open={isActionPopoverOpen} onOpenChange={setIsActionPopoverOpen}>
                 <PopoverTrigger asChild>
@@ -199,14 +200,13 @@ const NoteListItem: FC<NoteListItemProps> = ({
           align="start"
           style={
             note.content.length > VIRTUALIZATION_THRESHOLD_LENGTH
-              ? { height: dynamicMaxHeight } // Use fixed height for virtualized notes to make flexbox work
-              : { maxHeight: dynamicMaxHeight } // Use max-height for regular notes
+              ? { height: dynamicMaxHeight }
+              : { maxHeight: dynamicMaxHeight }
           }
         >
           {note.content.length > VIRTUALIZATION_THRESHOLD_LENGTH ? (
-            // VIRTUALIZED LAYOUT: Let the virtualizer handle its own scrolling inside a flex container.
             <>
-              <div className="p-4 pb-2 flex-shrink-0"> {/* Header area with padding */}
+              <div className="p-4 pb-2 flex-shrink-0">
                 <h4 className="text-sm font-semibold">{note.title}</h4>
                 <p className="text-xs text-[var(--muted-foreground)]">Date: {new Date(note.lastUpdatedAt).toLocaleString()}</p>
               </div>
