@@ -267,7 +267,7 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
         });
       }
       if (note.url && note.url.trim() !== '') {
-        mdContent += `url: "${escapeDoubleQuotes(note.url)}"\n`; // Quote URL
+        mdContent += `source: "${escapeDoubleQuotes(note.url)}"\n`; // Changed key to 'source' and quote URL
       }
       mdContent += '---\n\n';
       mdContent += note.content;

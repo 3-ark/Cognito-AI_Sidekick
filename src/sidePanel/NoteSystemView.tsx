@@ -705,13 +705,22 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                   noteTagsToSave = [frontmatter.tags.trim()].filter(tag => tag);
                 }
                 if (noteTagsToSave.length === 0) noteTagsToSave = ['imported'];
-                if (typeof frontmatter.url === 'string' && frontmatter.url.trim()) {
+                if (typeof frontmatter.source === 'string' && frontmatter.source.trim()) {
+                  noteUrlToSave = frontmatter.source.trim();
+                } else if (typeof frontmatter.url === 'string' && frontmatter.url.trim()) {
+                  // Fallback to 'url' if 'source' is not found
                   noteUrlToSave = frontmatter.url.trim();
                 }
                 noteContentToSave = mainContent.trim();
               }
             } catch (yamlError) {
-              console.warn(`Failed to parse YAML frontmatter for ${file.name}:`, yamlError);
+              let errorMessage = `Failed to parse YAML frontmatter for ${file.name}.`;
+              if (yamlError instanceof Error) {
+                errorMessage += ` Details: ${yamlError.message}`;
+              } else {
+                errorMessage += ` Details: ${String(yamlError)}`;
+              }
+              console.warn(errorMessage, yamlError); // Log the full error object too for more context
             }
           }
         }
