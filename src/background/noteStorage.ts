@@ -144,3 +144,109 @@ export const getNoteByIdFromSystem = async (noteId: string): Promise<NoteWithEmb
     const embedding = await localforage.getItem<number[]>(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
     return { ...note, embedding: embedding || undefined }; 
 };
+
+/**
+ * Deletes multiple notes and their embeddings from localforage by their IDs.
+ */
+export const deleteNotesFromSystem = async (noteIds: string[]): Promise<void> => {
+  if (!noteIds || noteIds.length === 0) {
+    console.log('No note IDs provided for deletion.');
+    return;
+  }
+  for (const noteId of noteIds) {
+    await deleteNoteFromSystem(noteId); // This already handles removing from index
+  }
+  console.log(`${noteIds.length} notes deleted from system.`);
+  // Note: deleteNoteFromSystem already calls removeNoteFromIndex for each note.
+  // If a bulk update to the index is more performant, this could be changed later.
+};
+
+/**
+ * Exports multiple notes to Obsidian MD format and triggers download for each.
+ */
+export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ successCount: number, errorCount: number }> => {
+  if (!noteIds || noteIds.length === 0) {
+    console.log('No note IDs provided for export.');
+    return { successCount: 0, errorCount: 0 };
+  }
+
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (const noteId of noteIds) {
+    try {
+      const note = await getNoteByIdFromSystem(noteId);
+      if (!note) {
+        console.warn(`Note with ID ${noteId} not found for export.`);
+        errorCount++;
+        continue;
+      }
+
+      let mdContent = '---\n';
+      mdContent += `title: ${note.title}\n`;
+      const dateTimestamp = note.lastUpdatedAt || note.createdAt;
+      if (dateTimestamp) {
+        const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
+        mdContent += `date: ${formattedDate}\n`;
+      }
+      if (note.tags && note.tags.length > 0) {
+        mdContent += 'tags:\n';
+        note.tags.forEach(tag => {
+          mdContent += `  - ${tag.trim()}\n`;
+        });
+      }
+      if (note.url) {
+        mdContent += `url: ${note.url}\n`;
+      }
+      mdContent += '---\n\n';
+      mdContent += note.content;
+
+      // Sanitize title for use as a filename
+      const sanitizedTitle = note.title.replace(/[<>:"/\\|?*]+/g, '_') || 'Untitled Note';
+      const filename = `${sanitizedTitle}.md`;
+
+      // This part is tricky for background scripts.
+      // Chrome extensions background scripts cannot directly create and click download links
+      // in the same way content scripts or UI components can.
+      // We need to use the chrome.downloads API.
+      const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      await new Promise<void>((resolve, reject) => {
+        chrome.downloads.download({
+          url: url,
+          filename: filename,
+          saveAs: false // Set to true if you want the user to be prompted for each file location
+        }, (downloadId) => {
+          if (chrome.runtime.lastError) {
+            console.error(`Error downloading note ${note.title}:`, chrome.runtime.lastError.message);
+            URL.revokeObjectURL(url); // Clean up blob URL
+            errorCount++;
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (downloadId === undefined) {
+            // This case can happen if the download is initiated too quickly after a previous one,
+            // or if there's some other issue.
+            console.error(`Download failed for note ${note.title}: downloadId is undefined.`);
+            URL.revokeObjectURL(url);
+            errorCount++;
+            reject(new Error('Download failed: downloadId is undefined.'));
+          } else {
+            successCount++;
+            // It's good practice to revoke the object URL after some time,
+            // but not immediately, as the download might still be in progress.
+            // For simplicity here, we'll revoke it after a short delay.
+            // A more robust solution might involve tracking download completion.
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            resolve();
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error(`Failed to process or download note ${noteId}:`, error);
+      errorCount++;
+    }
+  }
+  console.log(`Export finished. Success: ${successCount}, Errors: ${errorCount}`);
+  return { successCount, errorCount };
+};
