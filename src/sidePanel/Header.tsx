@@ -229,6 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
   onAddNewNoteRequest,
   onImportNoteRequest,
   onSelectNotesRequest, // Destructure new prop
+  onSelectNotesRequest, // Destructure new prop
 }) => {
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
@@ -564,7 +565,7 @@ export const Header: React.FC<HeaderProps> = ({
                         size="sm"
                         className="text-[var(--text)] rounded-md"
                       >
-                        <LuEllipsis size="18px" /> 
+                        <LuEllipsis size="18px" />
                       </Button>
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
@@ -617,7 +618,7 @@ export const Header: React.FC<HeaderProps> = ({
                         onSelect={onSelectNotesRequest}
                       >
                         {/* Placeholder for an appropriate icon, e.g., a checkmark or list icon */}
-                        <IoCheckmarkCircleOutline className="mr-auto h-4 w-4" /> 
+                        <IoCheckmarkCircleOutline className="mr-auto h-4 w-4" />
                         Select Notes
                       </DropdownMenuPrimitive.Item>
                     )}
