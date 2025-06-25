@@ -4,13 +4,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { GoTrash, GoPencil, GoSearch, GoDownload } from "react-icons/go";
+import { GoTrash, GoPencil, GoSearch, GoDownload, GoCheck } from "react-icons/go"; // Added GoCheck
 import { LuEllipsis } from "react-icons/lu";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { toast } from 'react-hot-toast';
 import { Note } from '../types/noteTypes';
-import { getAllNotesFromSystem, saveNoteInSystem, deleteNoteFromSystem, deleteAllNotesFromSystem } from '../background/noteStorage';
+import { 
+  getAllNotesFromSystem, 
+  saveNoteInSystem, 
+  deleteNoteFromSystem, 
+  deleteAllNotesFromSystem,
+  exportNotesToObsidianMD, // Added import
+  deleteNotesFromSystem // Added import
+} from '../background/noteStorage';
 import { cn } from '@/src/background/util';
 import { useConfig } from './ConfigContext';
 import Markdown from 'react-markdown';
@@ -29,6 +37,8 @@ interface NoteSystemViewProps {
   onModalOpened: () => void;
   triggerImportNoteFlow: boolean;
   onImportTriggered: () => void;
+  triggerSelectNotesFlow?: boolean; // Optional: Might not always be passed initially
+  onSelectNotesFlowTriggered?: () => void; // Optional
 }
 
 const noteSystemMarkdownComponents = {
@@ -68,7 +78,23 @@ const VirtualizedContent: FC<{ content: string; textClassName?: string }> = ({ c
   );
 };
 
-const NoteListItem: FC<{ note: Note; onEdit: (note: Note) => void; onDelete: (noteId: string) => void; }> = ({ note, onEdit, onDelete }) => {
+interface NoteListItemProps {
+  note: Note;
+  onEdit: (note: Note) => void;
+  onDelete: (noteId: string) => void;
+  isSelected: boolean;
+  onToggleSelect: (noteId: string) => void;
+  isSelectionModeActive: boolean;
+}
+
+const NoteListItem: FC<NoteListItemProps> = ({ 
+  note, 
+  onEdit, 
+  onDelete, 
+  isSelected, 
+  onToggleSelect,
+  isSelectionModeActive 
+}) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [dynamicMaxHeight, setDynamicMaxHeight] = useState('50vh');
   const [popoverSide, setPopoverSide] = useState<'top' | 'bottom'>('top');
@@ -128,29 +154,48 @@ const NoteListItem: FC<{ note: Note; onEdit: (note: Note) => void; onDelete: (no
   return (
     <div
       ref={itemRef}
-      className="px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full"
+      className={cn(
+        "px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full",
+        isSelected && "bg-[var(--active)]/10" // Highlight if selected
+      )}
+      onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
     >
       <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>
-        <div className="flex justify-between overflow-hidden items-center">
+        <div className="flex justify-between overflow-hidden items-center py-2">
+          {isSelectionModeActive && (
+            <div className="flex-shrink-0 pr-2">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(note.id)}
+                aria-label={`Select note ${note.title}`}
+                className="border-[var(--text)]/50 data-[state=checked]:bg-[var(--active)] data-[state=checked]:border-[var(--active)]"
+              />
+            </div>
+          )}
           <HoverCardTrigger asChild>
-            <h3 className="flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline">{note.title}</h3>
+            <h3 className={cn(
+              "flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline",
+              isSelectionModeActive && "cursor-default hover:no-underline" // No underline when in selection mode
+            )}>{note.title}</h3>
           </HoverCardTrigger>
-          <div className="flex-shrink-0">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm"><LuEllipsis /></Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
-                <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={() => onEdit(note)}><GoPencil className="mr-2 size-4" /> Edit</Button>
-                <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={handleDownload}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
-                <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={() => onDelete(note.id)}><GoTrash className="mr-2 size-4" /> Delete</Button>
-              </PopoverContent>
-            </Popover>
-          </div>
+          {!isSelectionModeActive && ( // Only show ellipsis menu if not in selection mode
+            <div className="flex-shrink-0">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm"><LuEllipsis /></Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
+                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); onEdit(note); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
+                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); handleDownload(); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
+                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
-        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
+        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1 pb-1">
           {note.lastUpdatedAt && <span className="mr-2">Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}</span>}
-          {note.url && <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]">Link</a>}
+          {note.url && <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]" onClick={(e) => e.stopPropagation()}>Link</a>}
           {note.tags && note.tags.length > 0 ? <span className="truncate max-w-[40%] tag-span">Tags: {note.tags.join(', ')}</span> : <p className="text-xs text-[var(--muted-foreground)]">No tags</p>}
         </div>
         <HoverCardContent
@@ -240,14 +285,18 @@ try {
   console.error("[NoteSystemView] Error setting pdf.js worker source:", e);
 }
 
-export const NoteSystemView: React.FC<NoteSystemViewProps> = ({ 
-  triggerOpenCreateModal, 
+export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
+  triggerOpenCreateModal,
   onModalOpened,
   triggerImportNoteFlow,
   onImportTriggered,
+  triggerSelectNotesFlow,
+  onSelectNotesFlowTriggered,
 }) => {
   const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -396,6 +445,121 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       onImportTriggered();
     }
   }, [triggerImportNoteFlow, onImportTriggered]);
+
+  useEffect(() => {
+    if (triggerSelectNotesFlow) {
+      setIsSelectionModeActive(true);
+      setSelectedNoteIds([]); // Clear previous selections
+      if (onSelectNotesFlowTriggered) {
+        onSelectNotesFlowTriggered();
+      }
+    }
+  }, [triggerSelectNotesFlow, onSelectNotesFlowTriggered]);
+
+  const handleToggleSelectNote = (noteId: string) => {
+    setSelectedNoteIds(prevSelectedIds =>
+      prevSelectedIds.includes(noteId)
+        ? prevSelectedIds.filter(id => id !== noteId)
+        : [...prevSelectedIds, noteId]
+    );
+  };
+
+  const handleCancelSelectionMode = () => {
+    setIsSelectionModeActive(false);
+    setSelectedNoteIds([]);
+  };
+
+  const handleExportSelectedNotes = async () => {
+    if (selectedNoteIds.length === 0) {
+      toast.error("No notes selected to export.");
+      return;
+    }
+    const toastId = toast.loading(`Exporting ${selectedNoteIds.length} note(s)...`);
+    try {
+      const result = await exportNotesToObsidianMD(selectedNoteIds);
+      if (result.successCount > 0) {
+        toast.success(`${result.successCount} note(s) exported successfully.`, { id: toastId });
+      }
+      if (result.errorCount > 0) {
+        toast.error(`${result.errorCount} note(s) failed to export. Check console for details.`, {
+          id: result.successCount === 0 ? toastId : undefined, // Use new toast if some succeeded
+          duration: 5000,
+        });
+      }
+      if (result.successCount === 0 && result.errorCount === 0) {
+        toast.dismiss(toastId); // Should not happen if selectedNoteIds is not empty
+      }
+    } catch (error) {
+      console.error("Error exporting notes:", error);
+      toast.error("An unexpected error occurred during export.", { id: toastId });
+    } finally {
+      handleCancelSelectionMode();
+    }
+  };
+
+  const handleDeleteSelectedNotes = async () => {
+    if (selectedNoteIds.length === 0) {
+      toast.error("No notes selected to delete.");
+      return;
+    }
+
+    toast.custom(
+      (t) => (
+        <div
+          className={cn(
+            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
+            "p-4 rounded-lg shadow-xl max-w-sm w-full",
+            "flex flex-col space-y-3"
+          )}
+        >
+          <h4 className="text-lg font-semibold text-[var(--text)]">Confirm Deletion</h4>
+          <p className="text-sm text-[var(--text)] opacity-90">
+            Are you sure you want to delete {selectedNoteIds.length} selected note(s)? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "bg-transparent text-[var(--text)] border-[var(--text)]",
+                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]"
+              )}
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className={cn(
+                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]"
+              )}
+              onClick={async () => {
+                toast.dismiss(t.id); // Dismiss confirmation toast
+                const deleteToastId = toast.loading(`Deleting ${selectedNoteIds.length} note(s)...`);
+                try {
+                  await deleteNotesFromSystem(selectedNoteIds);
+                  toast.success(`${selectedNoteIds.length} note(s) deleted successfully.`, { id: deleteToastId });
+                  await fetchNotes(); // Refresh the notes list
+                } catch (error) {
+                  console.error("Error deleting notes:", error);
+                  toast.error("Failed to delete notes.", { id: deleteToastId });
+                } finally {
+                  handleCancelSelectionMode();
+                }
+              }}
+            >
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity, 
+        position: 'top-center',
+      }
+    );
+  };
 
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files ? Array.from(event.target.files) : [];
@@ -658,13 +822,31 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 note={note}
                 onEdit={openEditModal}
                 onDelete={handleDeleteNote}
+                isSelected={selectedNoteIds.includes(note.id)}
+                onToggleSelect={handleToggleSelectNote}
+                isSelectionModeActive={isSelectionModeActive}
               />
             ))}
           </div>
         )}
       </ScrollArea>
 
-      {totalPages > 1 && (
+      {isSelectionModeActive && selectedNoteIds.length > 0 && (
+        <div className="sticky bottom-0 z-10 p-2 bg-[var(--bg)] border-t border-[var(--text)]/10 shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-[var(--text)]">
+              {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
+            </span>
+            <div className="space-x-2">
+              <Button variant="outline" size="sm" onClick={handleExportSelectedNotes}>Export</Button>
+              <Button variant="destructive" size="sm" onClick={handleDeleteSelectedNotes}>Delete</Button>
+              <Button variant="ghost" size="sm" onClick={handleCancelSelectionMode}>Done</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isSelectionModeActive && totalPages > 1 && (
         <div className="flex justify-center items-center h-10 space-x-2 p-2 font-['Space_Mono',_monospace]">
           <Button
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
