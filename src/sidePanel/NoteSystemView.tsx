@@ -305,6 +305,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   const [noteContent, setNoteContent] = useState('');
   const [noteTags, setNoteTags] = useState('');
   const [isEditingNoteContent, setIsEditingNoteContent] = useState(false);
+  const [isDialogSaving, setIsDialogSaving] = useState(false); // Loading state for dialog save
+  const [isProcessingSelectionAction, setIsProcessingSelectionAction] = useState(false); // Loading state for selection delete/export
   
   const [pendingPageData, setPendingPageData] = useState<{title: string, content: string, url?: string} | null>(null);
 
@@ -415,13 +417,24 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           url: dataToSave.url,
         };
 
+        const toastId = toast.loading("Adding page to notes...");
         try {
-          await saveNoteInSystem(noteToSave);
-          toast.success("Page added to notes!");
-          await fetchNotes();
+          const result = await saveNoteInSystem(noteToSave);
+          if (result.success) {
+            toast.success("Page added to notes!", { id: toastId });
+            if (result.warning) {
+              toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+            }
+          } else {
+            toast.error(result.error || "Failed to add page to notes.", { id: toastId });
+            if (result.warning) {
+              toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+            }
+          }
+          await fetchNotes(); // Refresh notes regardless of exact outcome, to show partial success
         } catch (error) {
           console.error("[NoteSystemView] Error auto-saving note:", error);
-          toast.error("Failed to auto-save note.");
+          toast.error(`Failed to auto-save note: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
         }
       }
     };
@@ -502,6 +515,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       toast.error("No notes selected to delete.");
       return;
     }
+    if (isProcessingSelectionAction) return; // Prevent multiple clicks
 
     toast.custom(
       (t) => (
@@ -536,15 +550,37 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               )}
               onClick={async () => {
                 toast.dismiss(t.id); // Dismiss confirmation toast
+                setIsProcessingSelectionAction(true);
                 const deleteToastId = toast.loading(`Deleting ${selectedNoteIds.length} note(s)...`);
+                let successCount = 0;
+                let errorCount = 0;
+                const warnings: string[] = [];
+
+                // deleteNotesFromSystem was not modified to return detailed results per note,
+                // so we'll iterate here to get per-note feedback if needed, or rely on its console logs.
+                // For now, let's assume deleteNotesFromSystem handles its own logging well enough
+                // and we'll use a generic success/error for the batch.
+                // A more granular approach would be to call deleteNoteFromSystem for each and aggregate results.
                 try {
+                  // Assuming deleteNotesFromSystem is a void promise or throws an error for any failure.
+                  // To get detailed results, we'd need to change it or call deleteNoteFromSystem in a loop.
+                  // For simplicity with the current structure of deleteNotesFromSystem:
                   await deleteNotesFromSystem(selectedNoteIds);
-                  toast.success(`${selectedNoteIds.length} note(s) deleted successfully.`, { id: deleteToastId });
-                  await fetchNotes(); // Refresh the notes list
+                  successCount = selectedNoteIds.length; // Assume all succeeded if no error thrown
+                  toast.success(`${successCount} note(s) deleted.`, { id: deleteToastId });
+                  await fetchNotes();
                 } catch (error) {
-                  console.error("Error deleting notes:", error);
-                  toast.error("Failed to delete notes.", { id: deleteToastId });
+                  console.error("Error deleting selected notes:", error);
+                  // This catch might not be hit if deleteNotesFromSystem internally handles errors
+                  // and doesn't rethrow for individual failures.
+                  // The current deleteNotesFromSystem calls deleteNoteFromSystem which now returns DeleteNoteResult.
+                  // We should ideally refactor deleteNotesFromSystem to aggregate these results.
+                  // For now, this is a simplification.
+                  toast.error(`Failed to delete some or all notes. Error: ${error instanceof Error ? error.message : String(error)}`, { id: deleteToastId });
+                  // Attempt to refresh notes anyway, as some might have been deleted.
+                  await fetchNotes();
                 } finally {
+                  setIsProcessingSelectionAction(false);
                   handleCancelSelectionMode();
                 }
               }}
@@ -746,26 +782,47 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNotes.length / ITEMS_PER_PAGE)), [filteredNotes]);
 
   const handleSaveNote = async () => {
-    if (!noteContent.trim()) {
-      toast.error("Note content cannot be empty.");
+    if (!noteContent.trim() && !noteTitle.trim()) { // Require at least title or content
+      toast.error("Note title or content cannot be empty.");
       return;
     }
-    const parsedTags = noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    if (isDialogSaving) return; // Prevent multiple clicks
 
-    const noteToSave: Partial<Note> & { content: string } = {
+    setIsDialogSaving(true);
+    const toastId = toast.loading(editingNote ? "Updating note..." : "Creating note...");
+
+    const parsedTags = noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    const noteToSaveFromDialog: Partial<Note> & { content: string } = {
       id: editingNote?.id,
-      title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
-      content: noteContent,
+      title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      content: noteContent, // content can be empty if title is present
       tags: parsedTags,
       url: editingNote?.url,
-
     };
-      await saveNoteInSystem(noteToSave);
-      toast.success(editingNote ? "Note updated!" : "Note created!");
-      await fetchNotes();
-      setIsCreateModalOpen(false);
-      setEditingNote(null);
-      setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
+
+    try {
+      const result = await saveNoteInSystem(noteToSaveFromDialog);
+      if (result.success) {
+        toast.success(editingNote ? "Note updated!" : "Note created!", { id: toastId });
+        if (result.warning) {
+          toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+        }
+        await fetchNotes();
+        setIsCreateModalOpen(false);
+        setEditingNote(null);
+        setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
+      } else {
+        toast.error(result.error || (editingNote ? "Failed to update note." : "Failed to create note."), { id: toastId });
+        if (result.warning) {
+          toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+        }
+      }
+    } catch (error) { // Catch unexpected errors
+      console.error("Error saving note from dialog:", error);
+      toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
+    } finally {
+      setIsDialogSaving(false);
+    }
   };
 
   const openEditModal = (note: Note) => {
@@ -779,9 +836,27 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    await deleteNoteFromSystem(noteId);
-    toast.success("Note deleted!");
-    fetchNotes();
+    // No specific loading state for individual delete button in item, relies on toast
+    const toastId = toast.loading("Deleting note...");
+    try {
+      const result = await deleteNoteFromSystem(noteId);
+      if (result.success) {
+        toast.success("Note deleted!", { id: toastId });
+        if (result.warning) {
+          toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+        }
+      } else {
+        toast.error(result.error || "Failed to delete note.", { id: toastId });
+        if (result.warning) {
+          toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+        }
+      }
+    } catch (error) { // Catch unexpected errors
+      console.error("Error deleting note:", error);
+      toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
+    } finally {
+      await fetchNotes(); // Refresh notes regardless of outcome
+    }
   };
 
   return (
@@ -838,9 +913,15 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
             </span>
             <div className="space-x-2">
-              <Button variant="outline" size="sm" onClick={handleExportSelectedNotes}>Export</Button>
-              <Button variant="destructive" size="sm" onClick={handleDeleteSelectedNotes}>Delete</Button>
-              <Button variant="ghost" size="sm" onClick={handleCancelSelectionMode}>Done</Button>
+               <Button variant="outline" size="sm" onClick={handleExportSelectedNotes} disabled={isProcessingSelectionAction}>
+                 {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Export"}
+               </Button>
+               <Button variant="destructive" size="sm" onClick={handleDeleteSelectedNotes} disabled={isProcessingSelectionAction}>
+                 {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Delete"}
+               </Button>
+               <Button variant="ghost" size="sm" onClick={handleCancelSelectionMode} disabled={isProcessingSelectionAction}>
+                 Done
+               </Button>
             </div>
           </div>
         </div>
@@ -937,9 +1018,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setEditingNote(null); }}>Cancel</Button>
-            <Button onClick={handleSaveNote} className="bg-[var(--active)] text-[var(--active-foreground)] hover:bg-[var(--active)]/90">
-              {editingNote ? 'Save Changes' : 'Create Note'}
+            <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setEditingNote(null); }} disabled={isDialogSaving}>Cancel</Button>
+            <Button onClick={handleSaveNote} className="bg-[var(--active)] text-[var(--active-foreground)] hover:bg-[var(--active)]/90" disabled={isDialogSaving}>
+              {isDialogSaving ? (editingNote ? 'Saving...' : 'Creating...') : (editingNote ? 'Save Changes' : 'Create Note')}
             </Button>
           </DialogFooter>
         </DialogContent>
