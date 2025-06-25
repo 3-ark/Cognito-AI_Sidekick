@@ -106,7 +106,7 @@ export const NotePopover = () => {
         if (result.success) {
           toast.success('Memory archived to Note System!', { id: toastId });
           if (result.warning) {
-            toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+            toast(result.warning, { duration: 5000, icon: '⚠️' });
           }
           // Clear content and drafts on successful save
           setEditableNote('');
@@ -121,7 +121,7 @@ export const NotePopover = () => {
         } else {
           toast.error(result.error || 'Failed to archive memory to Note System.', { id: toastId });
           if (result.warning) { // Should ideally not happen if success is false, but good for robustness
-            toast(result.warning, { duration: 5000, icon: '⚠️' }); // Replaced toast.warn
+            toast(result.warning, { duration: 5000, icon: '⚠️' });
           }
         }
       } catch (error) { // Catch unexpected errors during the process
