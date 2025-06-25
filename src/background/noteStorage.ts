@@ -247,8 +247,11 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
         continue;
       }
 
+      // Helper to escape double quotes for YAML strings
+      const escapeDoubleQuotes = (str: string): string => str.replace(/"/g, '\\"');
+
       let mdContent = '---\n';
-      mdContent += `title: ${note.title}\n`;
+      mdContent += `title: "${escapeDoubleQuotes(note.title)}"\n`; // Quote title
       const dateTimestamp = note.lastUpdatedAt || note.createdAt;
       if (dateTimestamp) {
         const formattedDate = new Date(dateTimestamp).toISOString().split('T')[0];
@@ -257,11 +260,14 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
       if (note.tags && note.tags.length > 0) {
         mdContent += 'tags:\n';
         note.tags.forEach(tag => {
+          // Tags themselves usually don't need quoting unless they contain special YAML characters.
+          // Simple strings are fine. If a tag could contain a colon, quotes, etc., it would need it.
+          // For now, assuming tags are simple.
           mdContent += `  - ${tag.trim()}\n`;
         });
       }
-      if (note.url) {
-        mdContent += `url: ${note.url}\n`;
+      if (note.url && note.url.trim() !== '') {
+        mdContent += `url: "${escapeDoubleQuotes(note.url)}"\n`; // Quote URL
       }
       mdContent += '---\n\n';
       mdContent += note.content;
