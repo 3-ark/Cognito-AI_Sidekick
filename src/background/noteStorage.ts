@@ -1,5 +1,5 @@
 import localforage from 'localforage';
-import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
+import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding, SaveNoteResult, DeleteNoteResult } from '../types/noteTypes';
 import { indexNotes, indexSingleNote, removeNoteFromIndex } from './searchUtils';
 
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
@@ -10,10 +10,21 @@ export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}
  * Saves a new note or updates an existing one in localforage.
  * Embedding is saved separately.
  */
-export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'createdAt' | 'lastUpdatedAt'>> & { id?: string; content: string; embedding?: number[] }): Promise<Note> => {
+export const saveNoteInSystem = async (
+  noteData: Partial<Omit<Note, 'id' | 'createdAt' | 'lastUpdatedAt'>> & { id?: string; content: string; embedding?: number[] }
+): Promise<SaveNoteResult> => {
   const now = Date.now();
   const noteId = noteData.id || generateNoteId();
-  const existingNote = noteData.id ? await localforage.getItem<Note>(noteId) : null;
+  let existingNote: Note | null = null;
+
+  try {
+    if (noteData.id) {
+      existingNote = await localforage.getItem<Note>(noteId);
+    }
+  } catch (error) {
+    console.error(`Error fetching existing note ${noteId} from localforage:`, error);
+    // Non-critical, proceed as if note doesn't exist or rely on further ops to fail
+  }
 
   const noteToSaveToStorage: Note = {
     id: noteId,
@@ -25,22 +36,41 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
     url: noteData.url || '',
   };
 
-  // Save the core Note object
-  await localforage.setItem(noteId, noteToSaveToStorage);
-
-  // Separately, save the embedding if it exists in the input 'noteData'
-  if (noteData.embedding && noteData.embedding.length > 0) {
-    await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
-  } else {
-    // If noteData.embedding is undefined, null, or an empty array,
-    // remove any existing embedding for this note to prevent orphans.
-    await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+  try {
+    // Save the core Note object
+    await localforage.setItem(noteId, noteToSaveToStorage);
+  } catch (error) {
+    console.error(`Critical error saving note ${noteId} to localforage:`, error);
+    return { success: false, error: `Failed to save note data: ${error instanceof Error ? error.message : String(error)}`, note: noteToSaveToStorage };
   }
 
-  // After saving the note, update the search index
-  await indexSingleNote(noteToSaveToStorage);
+  const warnings: string[] = [];
 
-  return noteToSaveToStorage; // Return the core Note object
+  // Handle embedding
+  try {
+    if (noteData.embedding && noteData.embedding.length > 0) {
+      await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
+    } else {
+      await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+    }
+  } catch (error) {
+    console.warn(`Error saving/removing embedding for note ${noteId}:`, error);
+    warnings.push(`Failed to save/remove embedding: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // Update search index
+  try {
+    await indexSingleNote(noteToSaveToStorage);
+  } catch (error) {
+    console.warn(`Error indexing note ${noteId}:`, error);
+    warnings.push(`Failed to update search index: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  if (warnings.length > 0) {
+    return { success: true, note: noteToSaveToStorage, warning: warnings.join('; ') };
+  }
+
+  return { success: true, note: noteToSaveToStorage };
 };
 
 /**
@@ -84,11 +114,48 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
 /**
  * Deletes a note and its embedding from localforage by its ID.
  */
-export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
-  await localforage.removeItem(noteId); 
-  await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
-  console.log('Note and its embedding deleted from system:', noteId);
-  await removeNoteFromIndex(noteId);
+export const deleteNoteFromSystem = async (noteId: string): Promise<DeleteNoteResult> => {
+  const warnings: string[] = [];
+  let mainDeletionError: string | null = null;
+
+  try {
+    await localforage.removeItem(noteId);
+  } catch (error) {
+    console.error(`Error deleting main note data for ${noteId} from localforage:`, error);
+    mainDeletionError = `Failed to delete note data: ${error instanceof Error ? error.message : String(error)}`;
+    // Continue to attempt to delete embedding and index entry if main note deletion fails,
+    // as they might be orphaned otherwise.
+  }
+
+  try {
+    await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+  } catch (error) {
+    console.warn(`Error deleting embedding for note ${noteId} from localforage:`, error);
+    // This is a non-critical warning if the main note data deletion also failed,
+    // but a warning if main note data was (or is assumed) deleted.
+    warnings.push(`Failed to delete embedding: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  if (mainDeletionError) {
+    // If critical deletion failed, report that as the primary error, but include other warnings.
+    return { success: false, error: mainDeletionError, warning: warnings.join('; ') || undefined };
+  }
+
+  try {
+    await removeNoteFromIndex(noteId);
+  } catch (error) {
+    console.warn(`Error removing note ${noteId} from search index:`, error);
+    warnings.push(`Failed to remove note from search index: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  if (warnings.length > 0) {
+    // Successfully deleted main note data, but some secondary operations failed.
+    console.log(`Note ${noteId} deleted from system with warnings: ${warnings.join('; ')}`);
+    return { success: true, warning: warnings.join('; ') };
+  }
+
+  console.log(`Note ${noteId} and its embedding deleted successfully from system and index.`);
+  return { success: true };
 };
 
 /**

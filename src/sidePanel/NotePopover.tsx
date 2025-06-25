@@ -21,6 +21,7 @@ export const NotePopover = () => {
   const [isSpeakingNote, setIsSpeakingNote] = useState(false);
   const [popoverTags, setPopoverTags] = useState('');
   const [popoverTitle, setPopoverTitle] = useState('');
+  const [isSaving, setIsSaving] = useState(false); // Loading state for save operation
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -78,32 +79,61 @@ export const NotePopover = () => {
   }, [isOpen, editableNote, popoverTitle, popoverTags, config.noteContent, config.popoverTitleDraft, config.popoverTagsDraft, updateConfig]);
 
   const handleSaveNoteToFile = async () => {
+    if (!editableNote.trim() && !popoverTitle.trim() && !popoverTags.trim()) {
+      toast.error('Cannot save an empty note.');
+      return;
+    }
+
+    // This message seems related to a different functionality (downloading a file perhaps)
+    // and not directly to saving to the internal note system.
+    // It's kept for now but might need clarification if it's causing confusion.
     chrome.runtime.sendMessage({
       type: 'SAVE_NOTE_TO_FILE',
       payload: { content: editableNote },
     });
-    toast.success('Note saved to file!');
-    if (editableNote.trim()) {
+    // Removed optimistic toast: toast.success('Note saved to file!');
+
+    if (editableNote.trim() || popoverTitle.trim() || popoverTags.trim()) {
+      setIsSaving(true);
+      const toastId = toast.loading('Archiving memory to Note System...');
       try {
         const timestamp = new Date().toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         const finalPopoverTitle = popoverTitle.trim() || `Note from Popover - ${timestamp}`;
         const parsedTags = popoverTags.trim() === '' ? [] : popoverTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-        await saveNoteInSystem({ title: finalPopoverTitle, content: editableNote, tags: parsedTags });
-        toast.success('Snapshot saved to Note System!');
-        setEditableNote('');
-        setPopoverTitle('');
-        setPopoverTags('');
-        updateConfig({
-          noteContent: '',
-          popoverTitleDraft: '',
-          popoverTagsDraft: '',
-        });
-      } catch (error) {
-        console.error("Error saving note to system from popover:", error);
-        toast.error('Failed to save note to system.');
+
+        const result = await saveNoteInSystem({ title: finalPopoverTitle, content: editableNote, tags: parsedTags });
+
+        if (result.success) {
+          toast.success('Memory archived to Note System!', { id: toastId });
+          if (result.warning) {
+            toast(result.warning, { duration: 5000, icon: '⚠️' });
+          }
+          // Clear content and drafts on successful save
+          setEditableNote('');
+          setPopoverTitle('');
+          setPopoverTags('');
+          updateConfig({
+            noteContent: '',
+            popoverTitleDraft: '',
+            popoverTagsDraft: '',
+          });
+          setIsOpen(false); // Close popover on successful save
+        } else {
+          toast.error(result.error || 'Failed to archive memory to Note System.', { id: toastId });
+          if (result.warning) { // Should ideally not happen if success is false, but good for robustness
+            toast(result.warning, { duration: 5000, icon: '⚠️' });
+          }
+        }
+      } catch (error) { // Catch unexpected errors during the process
+        console.error("Error archiving memory to system from popover:", error);
+        toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
+      } finally {
+        setIsSaving(false);
       }
+    } else {
+      // If only SAVE_NOTE_TO_FILE was relevant and there's no content for system save
+      setIsOpen(false);
     }
-    setIsOpen(false);
   };
 
   const handleClearNote = () => {
@@ -258,15 +288,17 @@ export const NotePopover = () => {
                     <Button
                       variant="ghost"
                       onClick={handleSaveNoteToFile}
-                      disabled={isArchiveDisabled}
+                      disabled={isArchiveDisabled || isSaving}
                       className={cn(
                         "text-xs px-2 py-1 h-auto w-10" // Adjusted to ensure icon is visible
                       )}
                     >
-                      <IoArchiveOutline size={16} />
+                      {isSaving ? "..." : <IoArchiveOutline size={16} />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">Archive memory to notes & Clear</TooltipContent>
+                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">
+                    {isSaving ? "Archiving..." : "Archive memory to notes & Clear"}
+                  </TooltipContent>
                 </Tooltip>
               </div>
             </div>
