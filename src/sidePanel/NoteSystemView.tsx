@@ -423,12 +423,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           if (result.success) {
             toast.success("Page added to notes!", { id: toastId });
             if (result.warning) {
-              toast.warn(result.warning, { duration: 5000 });
+              toast(result.warning, { duration: 5000, icon: '⚠️' });
             }
           } else {
             toast.error(result.error || "Failed to add page to notes.", { id: toastId });
             if (result.warning) {
-              toast.warn(result.warning, { duration: 5000 });
+              toast(result.warning, { duration: 5000, icon: '⚠️' });
             }
           }
           await fetchNotes(); // Refresh notes regardless of exact outcome, to show partial success
@@ -805,7 +805,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       if (result.success) {
         toast.success(editingNote ? "Note updated!" : "Note created!", { id: toastId });
         if (result.warning) {
-          toast.warn(result.warning, { duration: 5000 });
+          toast(result.warning, { duration: 5000, icon: '⚠️' });
         }
         await fetchNotes();
         setIsCreateModalOpen(false);
@@ -814,7 +814,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       } else {
         toast.error(result.error || (editingNote ? "Failed to update note." : "Failed to create note."), { id: toastId });
         if (result.warning) {
-          toast.warn(result.warning, { duration: 5000 });
+          toast(result.warning, { duration: 5000, icon: '⚠️' });
         }
       }
     } catch (error) { // Catch unexpected errors
@@ -843,12 +843,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       if (result.success) {
         toast.success("Note deleted!", { id: toastId });
         if (result.warning) {
-          toast.warn(result.warning, { duration: 5000 });
+          toast(result.warning, { duration: 5000, icon: '⚠️' });
         }
       } else {
         toast.error(result.error || "Failed to delete note.", { id: toastId });
         if (result.warning) {
-          toast.warn(result.warning, { duration: 5000 });
+          toast(result.warning, { duration: 5000, icon: '⚠️' });
         }
       }
     } catch (error) { // Catch unexpected errors
