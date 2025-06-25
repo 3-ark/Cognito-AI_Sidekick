@@ -495,7 +495,7 @@ const Cognito = () => {
             bottom: '60px',
           }}
           toastOptions={{
-            duration: 2000,
+            duration: 500,
             position: "bottom-center",
             style: {
               background: 'var(--bg)',
@@ -505,7 +505,7 @@ const Cognito = () => {
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             },
             success: {
-              duration: 2000,
+              duration: 500,
               style: {
                 background: 'var(--bg)',
                 color: 'var(--text)',

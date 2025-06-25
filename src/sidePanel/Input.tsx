@@ -59,7 +59,7 @@ export const Input: FC<InputProps> = ({
   }, [message, config?.chatMode]);
 
   let placeholderText = "Chat (or @ for notes)";
-  if (config?.chatMode === 'web') {
+    if (config?.chatMode === 'web') {
     placeholderText = 'Enter your query...';
   } else if (config?.chatMode === 'page') {
     placeholderText = 'Ask about this page...';
@@ -72,7 +72,7 @@ export const Input: FC<InputProps> = ({
     if (!SpeechRecognition) {
         toast.error(
           'Speech recognition is not supported in this browser.',
-          { duration: 3000 } 
+          { duration: 2000 } 
         );
         return;
     }
@@ -111,7 +111,7 @@ export const Input: FC<InputProps> = ({
         }
         toast.error(
           `Speech Error: ${description}`,
-          { duration: 3000 }
+          { duration: 2000 }
         );
         setIsListening(false);
         recognitionRef.current = null;
@@ -135,7 +135,7 @@ export const Input: FC<InputProps> = ({
       }
       toast.error(
         `Microphone Error: ${description}`,
-        { duration: 3000 }
+        { duration: 2000 }
       );
       setIsListening(false);
     }

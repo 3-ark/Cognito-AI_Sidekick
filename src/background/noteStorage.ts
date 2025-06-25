@@ -236,7 +236,7 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
             // but not immediately, as the download might still be in progress.
             // For simplicity here, we'll revoke it after a short delay.
             // A more robust solution might involve tracking download completion.
-            setTimeout(() => URL.revokeObjectURL(url), 10000); 
+            setTimeout(() => URL.revokeObjectURL(url), 5000); 
             resolve();
           }
         });

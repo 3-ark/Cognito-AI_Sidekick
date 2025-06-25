@@ -234,6 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const currentPersona = config?.persona || 'default';
   const currentPersonaAvatar = config?.personaAvatars?.[currentPersona] || DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
+
   const visibleTitle = chatTitle && !settingsMode && !historyMode && !noteSystemMode;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const handleSheetOpenChange = (open: boolean) => {setIsSheetOpen(open);}
@@ -563,7 +564,7 @@ export const Header: React.FC<HeaderProps> = ({
                         size="sm"
                         className="text-[var(--text)] rounded-md"
                       >
-                        <LuEllipsis size="18px" />
+                        <LuEllipsis size="18px" /> 
                       </Button>
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
@@ -615,8 +616,7 @@ export const Header: React.FC<HeaderProps> = ({
                         )}
                         onSelect={onSelectNotesRequest}
                       >
-                        {/* Placeholder for an appropriate icon, e.g., a checkmark or list icon */}
-                        <IoCheckmarkCircleOutline className="mr-auto h-4 w-4" />
+                        <IoCheckmarkCircleOutline className="mr-auto h-4 w-4" /> 
                         Select Notes
                       </DropdownMenuPrimitive.Item>
                     )}

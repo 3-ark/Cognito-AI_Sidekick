@@ -4,20 +4,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { GoTrash, GoPencil, GoSearch, GoDownload, GoCheck } from "react-icons/go"; // Added GoCheck
+import { GoTrash, GoPencil, GoSearch, GoDownload } from "react-icons/go";
 import { LuEllipsis } from "react-icons/lu";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
+import { Checkbox } from "@/components/ui/checkbox";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { toast } from 'react-hot-toast';
 import { Note } from '../types/noteTypes';
-import {
-  getAllNotesFromSystem,
-  saveNoteInSystem,
-  deleteNoteFromSystem,
+import { 
+  getAllNotesFromSystem, 
+  saveNoteInSystem, 
+  deleteNoteFromSystem, 
   deleteAllNotesFromSystem,
-  exportNotesToObsidianMD, // Added import
-  deleteNotesFromSystem // Added import
+  exportNotesToObsidianMD,
+  deleteNotesFromSystem
 } from '../background/noteStorage';
 import { cn } from '@/src/background/util';
 import { useConfig } from './ConfigContext';
@@ -177,10 +177,6 @@ const NoteListItem: FC<NoteListItemProps> = ({
               "flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline",
               isSelectionModeActive && "cursor-default hover:no-underline" // No underline when in selection mode
             )}>{note.title}</h3>
-            <h3 className={cn(
-              "flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline",
-              isSelectionModeActive && "cursor-default hover:no-underline" // No underline when in selection mode
-            )}>{note.title}</h3>
           </HoverCardTrigger>
           {!isSelectionModeActive && ( // Only show ellipsis menu if not in selection mode
             <div className="flex-shrink-0">
@@ -196,7 +192,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
               </Popover>
             </div>
           )}
-          </div>
+        </div>
         <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
           {note.lastUpdatedAt && <span className="mr-2">Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}</span>}
           {note.url && <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]" onClick={(e) => e.stopPropagation()}>Link</a>}
@@ -260,7 +256,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
   );
 };
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 10;
 
 const turndownService = new TurndownService({
   headingStyle: 'atx',
