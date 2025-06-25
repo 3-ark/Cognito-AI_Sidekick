@@ -229,13 +229,11 @@ export const Header: React.FC<HeaderProps> = ({
   onAddNewNoteRequest,
   onImportNoteRequest,
   onSelectNotesRequest, // Destructure new prop
-  onSelectNotesRequest, // Destructure new prop
 }) => {
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const currentPersona = config?.persona || 'default';
   const currentPersonaAvatar = config?.personaAvatars?.[currentPersona] || DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
-
   const visibleTitle = chatTitle && !settingsMode && !historyMode && !noteSystemMode;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const handleSheetOpenChange = (open: boolean) => {setIsSheetOpen(open);}

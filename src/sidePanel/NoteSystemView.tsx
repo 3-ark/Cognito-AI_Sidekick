@@ -39,8 +39,6 @@ interface NoteSystemViewProps {
   onImportTriggered: () => void;
   triggerSelectNotesFlow?: boolean; // Optional: Might not always be passed initially
   onSelectNotesFlowTriggered?: () => void; // Optional
-  triggerSelectNotesFlow?: boolean; // Optional: Might not always be passed initially
-  onSelectNotesFlowTriggered?: () => void; // Optional
 }
 
 const noteSystemMarkdownComponents = {
@@ -161,25 +159,9 @@ const NoteListItem: FC<NoteListItemProps> = ({
         isSelected && "bg-[var(--active)]/10" // Highlight if selected
       )}
       onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
-      className={cn(
-        "px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full",
-        isSelected && "bg-[var(--active)]/10" // Highlight if selected
-      )}
-      onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
     >
       <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleOpenChange}>
         <div className="flex justify-between overflow-hidden items-center">
-          {isSelectionModeActive && (
-            <div className="flex-shrink-0 pr-2">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onToggleSelect(note.id)}
-                aria-label={`Select note ${note.title}`}
-                className="border-[var(--text)]/50 data-[state=checked]:bg-[var(--active)] data-[state=checked]:border-[var(--active)]"
-              />
-            </div>
-          )}
-        <div className="flex justify-between overflow-hidden items-center py-2">
           {isSelectionModeActive && (
             <div className="flex-shrink-0 pr-2">
               <Checkbox
@@ -214,22 +196,8 @@ const NoteListItem: FC<NoteListItemProps> = ({
               </Popover>
             </div>
           )}
-          {!isSelectionModeActive && ( // Only show ellipsis menu if not in selection mode
-            <div className="flex-shrink-0">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm"><LuEllipsis /></Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); onEdit(note); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); handleDownload(); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1 pb-1">
+          </div>
+        <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
           {note.lastUpdatedAt && <span className="mr-2">Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}</span>}
           {note.url && <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]" onClick={(e) => e.stopPropagation()}>Link</a>}
           {note.tags && note.tags.length > 0 ? <span className="truncate max-w-[40%] tag-span">Tags: {note.tags.join(', ')}</span> : <p className="text-xs text-[var(--muted-foreground)]">No tags</p>}
