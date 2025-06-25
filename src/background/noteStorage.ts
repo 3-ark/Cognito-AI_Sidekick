@@ -55,7 +55,6 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
     const rawNoteData = await localforage.getItem<Note>(key); // Expecting type Note
     if (rawNoteData && rawNoteData.id) { 
       let tagsArray: string[] = [];
-      // Handle legacy tags which might be a string, or modern tags which are an array.
       const tags: unknown = rawNoteData.tags;
 
       if (typeof tags === 'string') {
@@ -89,7 +88,6 @@ export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
   await localforage.removeItem(noteId); 
   await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
   console.log('Note and its embedding deleted from system:', noteId);
-  // After deleting the note, update the search index
   await removeNoteFromIndex(noteId);
 };
 

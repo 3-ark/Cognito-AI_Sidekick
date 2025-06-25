@@ -320,7 +320,11 @@ Contributions are welcome! If you'd like to help improve Cognito, please:
 2.  Create a new branch for your feature or bug fix: `git checkout -b feature/your-feature-name` or `bugfix/issue-number`.
 3.  Make your changes.
 4.  Ensure your code lints (e.g., `npm run lint` if a lint script is configured) and builds correctly (`npm start`).
-5.  Submit a pull request with a clear description of your changes.
+5.  Push your branch to the remote repository. The `-u` flag links it for future pushes.
+    ```bash
+    git push -u origin feature/your-feature-name
+    ```
+6.  Submit a pull request with a clear description of your changes.
 
 *(Consider adding details on coding style, development setup, or linking to a dedicated CONTRIBUTING.md file if one is created in the future.)*
 
