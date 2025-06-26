@@ -1,5 +1,4 @@
 // Basic type declaration for 'wink-bm25-text-search' to satisfy TypeScript
-// and resolve TS7016 error. This can be expanded later for better type safety if needed.
 
 declare module 'wink-bm25-text-search' {
   // The module exports a factory function that returns the engine instance.
@@ -13,7 +12,8 @@ declare module 'wink-bm25-text-search' {
     consolidate(fp?: number): boolean;
     search(text: string, limit?: number, filter?: (fieldValues: any, params: any) => boolean, params?: any): Array<[string | number, number]>;
     reset(): boolean;
-    // Add other methods if needed: exportJSON, importJSON, getDocs, getTokens, getConfig, etc.
+    exportJSON(): string;
+    importJSON(json: string): boolean;
     learn(doc: { [key: string]: string }, id: string | number): number; // Alias for addDoc
     predict(text: string, limit?: number, filter?: (fieldValues: any, params: any) => boolean, params?: any): Array<[string | number, number]>; // Alias for search
     // The following are also available based on the source, but might not be directly used by our current implementation
@@ -23,8 +23,6 @@ declare module 'wink-bm25-text-search' {
     // getIDF(): any;
     // getTotalCorpusLength(): number;
     // getTotalDocs(): number;
-    // exportJSON(): string;
-    // importJSON(json: string): boolean;
   }
 
   function winkBM25Factory(): BM25Engine;
