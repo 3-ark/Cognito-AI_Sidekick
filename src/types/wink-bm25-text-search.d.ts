@@ -1,22 +1,21 @@
-// Basic type declaration for 'wink-bm25-text-search' to satisfy TypeScript
+// Type declaration for 'wink-bm25-text-search'
 
 declare module 'wink-bm25-text-search' {
-  // The module exports a factory function that returns the engine instance.
-  // The engine instance has various methods like defineConfig, addDoc, search etc.
-  // For now, we'll type the factory and its return as 'any' for simplicity.
-
-  interface BM25Engine {
+  // Define the shape of the object returned by the factory
+  // This includes all methods that are actually used by our SearchService.
+  interface WinkBM25FactoryReturn {
     defineConfig(config: any): boolean;
-    definePrepTasks(tasks: Array<(text: string) => string[]>): number; // Assuming tasks take string and return string array
+    definePrepTasks(tasks: Array<(text: string) => string[]>): number;
     addDoc(doc: { [key: string]: string }, id: string | number): number;
     consolidate(fp?: number): boolean;
     search(text: string, limit?: number, filter?: (fieldValues: any, params: any) => boolean, params?: any): Array<[string | number, number]>;
     reset(): boolean;
     exportJSON(): string;
     importJSON(json: string): boolean;
+    // Aliases used in the library source
     learn(doc: { [key: string]: string }, id: string | number): number; // Alias for addDoc
     predict(text: string, limit?: number, filter?: (fieldValues: any, params: any) => boolean, params?: any): Array<[string | number, number]>; // Alias for search
-    // The following are also available based on the source, but might not be directly used by our current implementation
+    // Add other methods like getDocs, getTokens etc. if they become necessary for full typing
     // getDocs(): any;
     // getTokens(): any;
     // getConfig(): any;
@@ -25,7 +24,7 @@ declare module 'wink-bm25-text-search' {
     // getTotalDocs(): number;
   }
 
-  function winkBM25Factory(): BM25Engine;
-
+  // Declare the factory function itself as the default export
+  function winkBM25Factory(): WinkBM25FactoryReturn;
   export default winkBM25Factory;
 }
