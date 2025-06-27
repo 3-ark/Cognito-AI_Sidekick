@@ -1,5 +1,3 @@
-// src/sidePanel/hooks/toolDefinitions.ts
-
 interface ToolParameterProperty {
   type: string;
   description: string;

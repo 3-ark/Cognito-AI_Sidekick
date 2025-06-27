@@ -1,6 +1,6 @@
 import localforage from 'localforage';
-import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding, SaveNoteResult, DeleteNoteResult } from '../types/noteTypes';
-import { indexNotes, indexSingleNote, removeNoteFromIndex } from './searchUtils';
+import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
+// import { indexNotes, indexSingleNote, removeNoteFromIndex } from './searchUtils'; // REMOVED
 
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 
@@ -10,21 +10,10 @@ export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}
  * Saves a new note or updates an existing one in localforage.
  * Embedding is saved separately.
  */
-export const saveNoteInSystem = async (
-  noteData: Partial<Omit<Note, 'id' | 'createdAt' | 'lastUpdatedAt'>> & { id?: string; content: string; embedding?: number[] }
-): Promise<SaveNoteResult> => {
+export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'createdAt' | 'lastUpdatedAt'>> & { id?: string; content: string; embedding?: number[] }): Promise<Note> => {
   const now = Date.now();
   const noteId = noteData.id || generateNoteId();
-  let existingNote: Note | null = null;
-
-  try {
-    if (noteData.id) {
-      existingNote = await localforage.getItem<Note>(noteId);
-    }
-  } catch (error) {
-    console.error(`Error fetching existing note ${noteId} from localforage:`, error);
-    // Non-critical, proceed as if note doesn't exist or rely on further ops to fail
-  }
+  const existingNote = noteData.id ? await localforage.getItem<Note>(noteId) : null;
 
   const noteToSaveToStorage: Note = {
     id: noteId,
@@ -36,41 +25,22 @@ export const saveNoteInSystem = async (
     url: noteData.url || '',
   };
 
-  try {
-    // Save the core Note object
-    await localforage.setItem(noteId, noteToSaveToStorage);
-  } catch (error) {
-    console.error(`Critical error saving note ${noteId} to localforage:`, error);
-    return { success: false, error: `Failed to save note data: ${error instanceof Error ? error.message : String(error)}`, note: noteToSaveToStorage };
+  // Save the core Note object
+  await localforage.setItem(noteId, noteToSaveToStorage);
+
+  // Separately, save the embedding if it exists in the input 'noteData'
+  if (noteData.embedding && noteData.embedding.length > 0) {
+    await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
+  } else {
+    // If noteData.embedding is undefined, null, or an empty array,
+    // remove any existing embedding for this note to prevent orphans.
+    await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
   }
 
-  const warnings: string[] = [];
+  // After saving the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
+  // await indexSingleNote(noteToSaveToStorage);
 
-  // Handle embedding
-  try {
-    if (noteData.embedding && noteData.embedding.length > 0) {
-      await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
-    } else {
-      await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
-    }
-  } catch (error) {
-    console.warn(`Error saving/removing embedding for note ${noteId}:`, error);
-    warnings.push(`Failed to save/remove embedding: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  // Update search index
-  try {
-    await indexSingleNote(noteToSaveToStorage);
-  } catch (error) {
-    console.warn(`Error indexing note ${noteId}:`, error);
-    warnings.push(`Failed to update search index: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  if (warnings.length > 0) {
-    return { success: true, note: noteToSaveToStorage, warning: warnings.join('; ') };
-  }
-
-  return { success: true, note: noteToSaveToStorage };
+  return noteToSaveToStorage; // Return the core Note object
 };
 
 /**
@@ -85,6 +55,7 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
     const rawNoteData = await localforage.getItem<Note>(key); // Expecting type Note
     if (rawNoteData && rawNoteData.id) { 
       let tagsArray: string[] = [];
+      // Handle legacy tags which might be a string, or modern tags which are an array.
       const tags: unknown = rawNoteData.tags;
 
       if (typeof tags === 'string') {
@@ -114,48 +85,12 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
 /**
  * Deletes a note and its embedding from localforage by its ID.
  */
-export const deleteNoteFromSystem = async (noteId: string): Promise<DeleteNoteResult> => {
-  const warnings: string[] = [];
-  let mainDeletionError: string | null = null;
-
-  try {
-    await localforage.removeItem(noteId);
-  } catch (error) {
-    console.error(`Error deleting main note data for ${noteId} from localforage:`, error);
-    mainDeletionError = `Failed to delete note data: ${error instanceof Error ? error.message : String(error)}`;
-    // Continue to attempt to delete embedding and index entry if main note deletion fails,
-    // as they might be orphaned otherwise.
-  }
-
-  try {
-    await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
-  } catch (error) {
-    console.warn(`Error deleting embedding for note ${noteId} from localforage:`, error);
-    // This is a non-critical warning if the main note data deletion also failed,
-    // but a warning if main note data was (or is assumed) deleted.
-    warnings.push(`Failed to delete embedding: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  if (mainDeletionError) {
-    // If critical deletion failed, report that as the primary error, but include other warnings.
-    return { success: false, error: mainDeletionError, warning: warnings.join('; ') || undefined };
-  }
-
-  try {
-    await removeNoteFromIndex(noteId);
-  } catch (error) {
-    console.warn(`Error removing note ${noteId} from search index:`, error);
-    warnings.push(`Failed to remove note from search index: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  if (warnings.length > 0) {
-    // Successfully deleted main note data, but some secondary operations failed.
-    console.log(`Note ${noteId} deleted from system with warnings: ${warnings.join('; ')}`);
-    return { success: true, warning: warnings.join('; ') };
-  }
-
-  console.log(`Note ${noteId} and its embedding deleted successfully from system and index.`);
-  return { success: true };
+export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
+  await localforage.removeItem(noteId); 
+  await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
+  console.log('Note and its embedding deleted from system:', noteId);
+  // After deleting the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
+  // await removeNoteFromIndex(noteId);
 };
 
 /**
@@ -181,8 +116,8 @@ export const deleteAllNotesFromSystem = async (): Promise<void> => {
     await localforage.removeItem(key);
   }
   console.log('All notes and their embeddings deleted from system.');
-  // After deleting all notes, re-index (which will result in an empty index)
-  await indexNotes();
+  // After deleting all notes, re-index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
+  // await indexNotes(); // or a more specific clearNotesFromIndex() if available
 };
 
 /**
@@ -222,9 +157,10 @@ export const deleteNotesFromSystem = async (noteIds: string[]): Promise<void> =>
     await deleteNoteFromSystem(noteId); // This already handles removing from index
   }
   console.log(`${noteIds.length} notes deleted from system.`);
+  // Note: deleteNoteFromSystem already calls removeNoteFromIndex for each note.
+  // If a bulk update to the index is more performant, this could be changed later.
 };
 
-import { generateObsidianMDContent } from '../sidePanel/utils/noteUtils';
 /**
  * Exports multiple notes to Obsidian MD format and triggers download for each.
  */
@@ -246,7 +182,32 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
         continue;
       }
 
-      const mdContent = generateObsidianMDContent(note);
+      let mdContent = '---\n';
+      // 1. Add title
+      mdContent += `title: "${note.title.replace(/"/g, '\\\\"')}"\n`;
+
+      // 2. Add source (if note.url exists)
+      if (note.url) {
+        mdContent += `source: "${note.url.replace(/"/g, '\\\\"')}"\n`;
+      }
+
+      // 3. Add tags (if note.tags exist and are not empty)
+      if (note.tags && note.tags.length > 0) {
+        mdContent += 'tags:\n';
+        note.tags.forEach(tag => {
+          const trimmedTag = tag.trim();
+          // Conditionally double-quote and escape tags if they contain ':' or '"'
+          if (trimmedTag.includes(':') || trimmedTag.includes('"')) {
+            mdContent += `  - "${trimmedTag.replace(/"/g, '\\\\"')}"\n`;
+          } else {
+            mdContent += `  - ${trimmedTag}\n`;
+          }
+        });
+      }
+      // Ensure no date field is added.
+      // Ensure no url field (with key 'url') is added.
+      mdContent += '---\n\n';
+      mdContent += note.content;
 
       // Sanitize title for use as a filename
       const sanitizedTitle = note.title.replace(/[<>:"/\\|?*]+/g, '_') || 'Untitled Note';
@@ -268,16 +229,17 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
           if (chrome.runtime.lastError) {
             console.error(`Error downloading note ${note.title}:`, chrome.runtime.lastError.message);
             URL.revokeObjectURL(url); // Clean up blob URL
-            errorCount++;
+            // errorCount will be incremented by the outer catch block
             reject(new Error(chrome.runtime.lastError.message));
           } else if (downloadId === undefined) {
             // This case can happen if the download is initiated too quickly after a previous one,
             // or if there's some other issue.
             console.error(`Download failed for note ${note.title}: downloadId is undefined.`);
             URL.revokeObjectURL(url);
-            errorCount++;
+            // errorCount will be incremented by the outer catch block
             reject(new Error('Download failed: downloadId is undefined.'));
           } else {
+            // Only increment successCount if downloadId is valid and no error
             successCount++;
             // It's good practice to revoke the object URL after some time,
             // but not immediately, as the download might still be in progress.

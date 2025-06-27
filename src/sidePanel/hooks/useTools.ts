@@ -1,4 +1,3 @@
-// src/sidePanel/hooks/useTools.ts
 import { useCallback } from 'react';
 import { useConfig } from '../ConfigContext';
 import { toolDefinitions, ToolDefinition } from './toolDefinitions';

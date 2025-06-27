@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useRef } from 'react';
-import { MessageTurn } from '../ChatHistory';
+import { MessageTurn } from '../../background/chatHistoryStorage';
 import { fetchDataAsStream, webSearch, processQueryWithAI } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
 import storage from 'src/background/storageUtil';
@@ -504,7 +504,6 @@ const useSendMessage = (
     if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
     if (noteContextString) systemPromptParts.push(noteContextString);
-    // The notes from selectedNotesForContext are now directly injected into the user's message (messageForLLM),
     if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);

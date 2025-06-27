@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { normalizeApiEndpoint } from 'src/background/util';
 import { useConfig } from '../ConfigContext';
 import { fetchDataAsStream } from '../network';
-import { MessageTurn } from '../ChatHistory';
+import { MessageTurn } from '../../background/chatHistoryStorage';
 
 interface ApiMessage {
   role: 'user' | 'assistant' | 'system' | 'tool';

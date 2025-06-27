@@ -18,7 +18,7 @@ import remarkSupersub from 'remark-supersub';
 
 import { useConfig } from './ConfigContext';
 import { markdownComponents, Pre } from '@/components/MarkdownComponents';
-import type { MessageTurn } from './ChatHistory';
+import type { MessageTurn } from '../background/chatHistoryStorage';
 
 const ThinkingBlock = ({ content }: { content: string }) => {
   const [isOpen, setIsOpen] = useState(false);

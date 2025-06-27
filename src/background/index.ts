@@ -1,11 +1,35 @@
 import { getCurrentTab, injectContentScript } from 'src/background/util';
 import buildStoreWithDefaults from 'src/state/store';
 import storage from 'src/background/storageUtil';
-import ChannelNames from '../types/ChannelNames'; // Added MessageType
-import MessageType from '../types/ChannelNames'; // Added MessageType
-import { getAllNotesFromSystem, saveNoteInSystem, deleteNoteFromSystem, deleteAllNotesFromSystem } from './noteStorage';
-import { indexNotes, searchNotes, engineInitializationPromise } from './searchUtils'; // Import engineInitializationPromise
-import { Note } from '../types/noteTypes';
+import ChannelNames from '../types/ChannelNames'; 
+import MessageType from '../types/ChannelNames'; 
+import { 
+    getAllNotesFromSystem, 
+    saveNoteInSystem, 
+    deleteNoteFromSystem, 
+    deleteAllNotesFromSystem, 
+    getNoteByIdFromSystem 
+} from './noteStorage';
+import { 
+    search, 
+    engineInitializationPromise, 
+    HydratedSearchResultItem, 
+    indexSingleNote, 
+    removeNoteFromIndex, 
+    indexNotes, // This is indexAllFullRebuild
+    indexSingleChatMessage,
+    removeChatMessageFromIndex,
+    indexChatMessages // Specific re-indexer for chats
+} from './searchUtils';
+import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
+import { 
+    getChatMessageById, 
+    CHAT_STORAGE_PREFIX, 
+    saveChatMessage, 
+    deleteChatMessage, 
+    deleteAllChatMessages,
+    getAllChatMessages as storageGetAllChats // Alias to avoid conflict if any
+} from './chatHistoryStorage'; 
 
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
 
@@ -307,14 +331,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // SEARCH_NOTES_REQUEST handler
   if (message.type === MessageType.SEARCH_NOTES_REQUEST) {
     const { query, topK } = message.payload;
-    try {
-      const results = searchNotes(query, topK);
-      sendResponse({ success: true, results });
-    } catch (error: any) {
-      console.error('[BM25 Test] Error during search:', error);
-      sendResponse({ success: false, error: error.message });
-    }
-    return true; // Indicates asynchronous response
+    (async () => {
+      try {
+        await engineInitializationPromise; // Ensure engine is ready
+        const rawResults = await search(query, topK);
+        const hydratedResults: HydratedSearchResultItem[] = [];
+
+        for (const [id, score] of rawResults) {
+          if (id.startsWith(NOTE_STORAGE_PREFIX)) {
+            const note = await getNoteByIdFromSystem(id);
+            if (note) {
+              hydratedResults.push({
+                id: note.id,
+                type: 'note',
+                title: note.title || 'Untitled Note',
+                score: score,
+                content: note.content || '',
+                note: note,
+              });
+            }
+          } else if (id.startsWith(CHAT_STORAGE_PREFIX)) {
+            const chat = await getChatMessageById(id);
+            if (chat) {
+              hydratedResults.push({
+                id: chat.id,
+                type: 'chat',
+                title: chat.title || `Chat from ${new Date(chat.last_updated).toLocaleDateString()}`,
+                score: score,
+                content: chat.turns.map(t => t.content).join('\n'), // Concatenate turns for snippet/content
+                chat: chat,
+              });
+            }
+          } else {
+            console.warn(`[Search Handler] Unknown item type for ID: ${id}`);
+          }
+        }
+        sendResponse({ success: true, results: hydratedResults });
+      } catch (error: any) {
+        console.error('[Search Handler] Error during search:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true; // Indicates asynchronous response, as we are using async/await inside
   }
 
   if (message.type === 'SIDE_PANEL_READY') {
@@ -323,7 +381,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!tabId) {
       console.error('[Background] SIDE_PANEL_READY received, but tabId is missing in the message payload.');
       sendResponse({ status: "error", message: "Missing tabId" });
-      return false;
+      return false; // Return false as we are not handling this message asynchronously if tabId is missing
     }
     console.log(`[Background] SIDE_PANEL_READY received for tab ${tabId}.`);
 
@@ -352,7 +410,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log(`[Background] SIDE_PANEL_READY received for tab ${tabId}, but no pending payload was found. This is normal if the user opened the panel manually.`);
       sendResponse({ status: "Ready signal received, no pending action." });
     }
-    return true;
+    return true; // Indicates that sendResponse will be called asynchronously
   }
 
   if (message.type === 'SAVE_NOTE_TO_FILE' && message.payload) {
@@ -379,9 +437,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else {
         sendResponse({ success: false, error: 'No content provided for saving note.'});
     }
-    return true;
+    return true; // Indicates that sendResponse will be called asynchronously
   }
-  return true;
+  // It's important to return true from the event listener if you want to send a response asynchronously.
+  // If multiple handlers could potentially handle a message, ensure only one calls sendResponse or structure carefully.
+  // If no specific handler matches and you don't intend to send a response, you can omit returning true.
+  // However, to be safe and avoid "The message port closed before a response was received" errors,
+  // it's often recommended to return true if any path might call sendResponse asynchronously.
+  return true; 
 });
 
+// TEMPORARY DEBUGGING - REMOVE LATER
+import { search as debugSearchUtil } from './searchUtils';
+(globalThis as any).performBgSearch = async (query: string) => {
+  console.log(`[DEBUG] Performing background search for: "${query}"`);
+  await engineInitializationPromise; // Make sure engine is ready
+  const rawResults = await debugSearchUtil(query, 10);
+  console.log('[DEBUG] Raw Results:', rawResults);
+  // Optional: Add hydration here if you want to see full objects
+  const hydrated = [];
+  for (const [id, score] of rawResults) {
+    if (id.startsWith('cognito_note_')) { // Use your actual NOTE_STORAGE_PREFIX
+      const note = await getNoteByIdFromSystem(id);
+      if (note) hydrated.push({type: 'note', score, ...note});
+    }
+    // Add chat hydration if you want here too
+  }
+  console.log('[DEBUG] Hydrated Results:', hydrated);
+  return hydrated;
+};
+// Exporting functions for external use
 export {};

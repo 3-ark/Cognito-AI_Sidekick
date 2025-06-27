@@ -1,6 +1,6 @@
 import { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import { FiCopy, FiRepeat, FiPlay, FiPause, FiSquare } from 'react-icons/fi';
-import { MessageTurn } from './ChatHistory';
+import { MessageTurn } from '../background/chatHistoryStorage';
 import { EditableMessage } from './Message'; 
 import {
   speakMessage,

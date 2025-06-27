@@ -3,42 +3,19 @@ import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GoTrash, GoSearch } from "react-icons/go";
-import localforage from 'localforage';
+// import localforage from 'localforage'; // No longer directly used for chat history operations
 import { Input } from '@/components/ui/input';
+import {
+  ChatMessageWithEmbedding,
+  getAllChatMessages,
+  deleteChatMessage,
+  deleteAllChatMessages,
+} from '../background/chatHistoryStorage'; // Path to the new storage service
 
 const dateToString = (date: number | Date): string => new Date(date).toLocaleDateString('sv-SE');
 
-export interface MessageTurn {
-  role: 'user' | 'assistant' | 'tool' ;
-  status: 'complete' | 'streaming' | 'error' | 'cancelled' | 'awaiting_tool_results';
-  content: string;
-  webDisplayContent?: string;
-  tool_call_id?: string;
-  timestamp: number;
-  name?: string;
-  tool_calls?: {
-    id: string;
-    type: 'function';
-    function: {
-      name: string;
-      arguments: string;
-    };
-}[];
-}
-
-export type ChatMessage = {
-  id: string;
-  last_updated: number;
-  title?: string;
-  model?: string;
-  turns: MessageTurn[];
-  chatMode?: string;
-  noteContentUsed?: string;
-  useNoteActive?: boolean;
-  webMode?: string;
-};
-
-export type ChatMessageWithEmbedding = ChatMessage & { embedding?: number[] };
+// MessageTurn and ChatMessage interfaces are now imported or defined in chatHistoryStorage.ts
+// We only need ChatMessageWithEmbedding here for props and state.
 
 type ChatHistoryProps = {
   loadChat: (chat: ChatMessageWithEmbedding) => void;
@@ -53,7 +30,7 @@ declare global {
 }
 
 export const ITEMS_PER_PAGE = 12;
-export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_';
+// export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Moved to chatHistoryStorage.ts
 
 export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryProps) => {
   const [allMessagesFromServer, setAllMessagesFromServer] = useState<ChatMessageWithEmbedding[]>([]);
@@ -63,6 +40,8 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
   const [removeId, setRemoveId] = useState<string | null>(null);
 
   const processAndSetMessages = useCallback((messages: ChatMessageWithEmbedding[]) => {
+    // The new getAllChatMessages already sorts them, but an explicit sort here doesn't hurt
+    // and ensures consistency if the service changes.
     const sortedMessages = messages.sort((a, b) => b.last_updated - a.last_updated);
     setAllMessagesFromServer(sortedMessages);
   }, []);
@@ -70,26 +49,18 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const keys = await localforage.keys();
-        const chatKeys = keys.filter(key => key.startsWith('chat_'));
-        if (chatKeys.length === 0) {
+        const messages = await getAllChatMessages();
+        if (messages.length === 0) {
           setAllMessagesFromServer([]);
           setCurrentPage(1);
           return;
         }
-        
-        const messagesWithEmbeddings: ChatMessageWithEmbedding[] = [];
-        for (const key of chatKeys) {
-          const chatItem = await localforage.getItem<ChatMessage>(key);
-          if (chatItem && typeof chatItem === 'object' && 'id' in chatItem && 'last_updated' in chatItem && 'turns' in chatItem) {
-            const embedding = await localforage.getItem<number[]>(`${EMBEDDING_CHAT_PREFIX}${chatItem.id}`);
-            messagesWithEmbeddings.push({ ...chatItem, embedding: embedding || undefined });
-          }
-        }
-        
-        processAndSetMessages(messagesWithEmbeddings);
+        processAndSetMessages(messages);
         setCurrentPage(1);
-      } catch (error) { console.error("Error fetching messages:", error); setAllMessagesFromServer([]); }
+      } catch (error) {
+        console.error("Error fetching messages using service:", error);
+        setAllMessagesFromServer([]);
+      }
     };
     fetchMessages();
   }, [processAndSetMessages]);
@@ -99,10 +70,8 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
     }
     const lowerCaseQuery = searchQuery.toLowerCase();
     return allMessagesFromServer.filter(message => {
-      const titleMatch = message.title ? message.title.toLowerCase().includes(lowerCaseQuery) : false;
-      const contentMatch = message.turns.some(turn => 
-        turn.content ? turn.content.toLowerCase().includes(lowerCaseQuery) : false
-      );
+      const titleMatch = message.title?.toLowerCase().includes(lowerCaseQuery);
+      const contentMatch = message.turns.some(turn => turn.content.toLowerCase().includes(lowerCaseQuery));
       return titleMatch || contentMatch;
     });
   }, [allMessagesFromServer, searchQuery]);
@@ -133,26 +102,16 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
     return Array.from(new Set(messagesWithDates.map(m => m.date)));
   }, [messagesWithDates]);
 
-  const deleteMessage = useCallback(async (id: string) => {
+  const deleteMessage = useCallback(async (chatId: string) => {
     try {
-      await localforage.removeItem(id);
-      await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${id}`); // Also remove embedding
+      await deleteChatMessage(chatId); // Use the new service function
 
       // Re-fetch and re-process all messages to update the state
-      const keys = await localforage.keys();
-      const chatKeys = keys.filter(key => key.startsWith('chat_'));
-      const messagesWithEmbeddings: ChatMessageWithEmbedding[] = [];
-      for (const key of chatKeys) {
-        const chatItem = await localforage.getItem<ChatMessage>(key);
-        if (chatItem && typeof chatItem === 'object' && 'id' in chatItem && 'last_updated' in chatItem && 'turns' in chatItem) {
-          const embedding = await localforage.getItem<number[]>(`${EMBEDDING_CHAT_PREFIX}${chatItem.id}`);
-          messagesWithEmbeddings.push({ ...chatItem, embedding: embedding || undefined });
-        }
-      }
-      processAndSetMessages(messagesWithEmbeddings);
+      const updatedMessages = await getAllChatMessages();
+      processAndSetMessages(updatedMessages);
 
-      // Recalculate filtered messages based on the new 'allMessagesFromServer' which is now ChatMessageWithEmbedding[]
-      const newFilteredAfterDelete = messagesWithEmbeddings.filter(message => {
+      // Recalculate filtered messages based on the new 'allMessagesFromServer'
+      const newFilteredAfterDelete = updatedMessages.filter(message => {
         if (!searchQuery) return true;
         const lowerCaseQuery = searchQuery.toLowerCase();
         const titleMatch = message.title?.toLowerCase().includes(lowerCaseQuery);
@@ -172,21 +131,15 @@ export const ChatHistory = ({ loadChat, onDeleteAll, className }: ChatHistoryPro
         newCurrentPage = newCurrentPage - 1;
       }
       setCurrentPage(newCurrentPage);
-    } catch (e) { console.error("Error deleting message:", e); }
+    } catch (e) { console.error("Error deleting message via service:", e); }
   }, [processAndSetMessages, currentPage, searchQuery]);
 
   const deleteAll = useCallback(async () => {
     try {
-      const keys = await localforage.keys();
-      const chatKeys = keys.filter(key => key.startsWith('chat_'));
-      const chatEmbeddingKeys = keys.filter(key => key.startsWith(EMBEDDING_CHAT_PREFIX));
-      
-      const itemsToRemove = [...chatKeys, ...chatEmbeddingKeys];
-      await Promise.all(itemsToRemove.map(k => localforage.removeItem(k)));
-      
-      setAllMessagesFromServer([]);
-      if (onDeleteAll) onDeleteAll(); // This callback might need to be aware of the new structure if it does its own cleanup
-    } catch (e) { console.error("Error deleting all messages:", e); }
+      await deleteAllChatMessages(); // Use the new service function
+      setAllMessagesFromServer([]); // Clear local state
+      if (onDeleteAll) onDeleteAll(); 
+    } catch (e) { console.error("Error deleting all messages via service:", e); }
   }, [onDeleteAll]);
 
   useEffect(() => {

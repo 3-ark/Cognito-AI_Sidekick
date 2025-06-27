@@ -1,5 +1,5 @@
 import { toPng } from 'html-to-image';
-import { MessageTurn } from '../sidePanel/ChatHistory';
+import { MessageTurn } from '../background/chatHistoryStorage';
 import storage from './storageUtil';
 import { Config } from '../types/config';
 

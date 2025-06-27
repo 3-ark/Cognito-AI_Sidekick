@@ -1,11 +1,7 @@
-// src/sidePanel/hooks/toolExecutors.ts
-
 import { toast } from 'react-hot-toast';
 import { saveNoteInSystem } from 'src/background/noteStorage';
 import { scrapeUrlContent } from '../utils/scrapers';
 import { Config } from '../../types/config'; // Corrected path for Config
-import { saveNoteInSystem } from 'src/background/noteStorage';
-import { toast } from 'react-hot-toast';
 
 // Define UpdateConfig locally as its definition is simple and tied to how useConfig provides it
 export type UpdateConfig = (newConfig: Partial<Config>) => void;
