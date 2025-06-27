@@ -463,6 +463,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates asynchronous response
   }
 
+  // SAVE_CHAT_REQUEST handler
+  if (message.type === 'SAVE_CHAT_REQUEST' && message.payload) {
+    (async () => {
+      try {
+        const chatToSave = message.payload;
+        if (!chatToSave.turns || chatToSave.turns.length === 0) {
+          // Optional: Decide if empty chats should be saved/indexed or if this is an error
+          console.warn('[Background] Attempted to save a chat with no turns. Skipping save/index.', chatToSave.id);
+          sendResponse({ success: false, error: "Cannot save chat with no turns.", chat: null });
+          return;
+        }
+        const savedChat = await saveChatMessage(chatToSave);
+        await indexSingleChatMessage(savedChat);
+        sendResponse({ success: true, chat: savedChat });
+      } catch (error: any) {
+        console.error('[Background] Error saving or indexing chat:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true; // Indicates asynchronous response
+  }
+
   return true; 
 });
 

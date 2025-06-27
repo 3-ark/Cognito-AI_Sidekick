@@ -323,8 +323,17 @@ const Cognito = () => {
         noteContentUsed: config?.useNote ? config.noteContent : undefined,
         // embedding property is optional; saveChatMessage handles if it's undefined.
       };
-      saveChatMessage(chatToSave).catch(err => {
-        console.error(`[Cognito] Error saving chat ${chatId} using service:`, err);
+      // Send message to background to save and index the chat
+      chrome.runtime.sendMessage({ type: 'SAVE_CHAT_REQUEST', payload: chatToSave }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(`[Cognito] Error sending SAVE_CHAT_REQUEST for chat ${chatId}:`, chrome.runtime.lastError.message);
+          // Optionally, handle UI feedback for save failure here
+        } else if (response && !response.success) {
+          console.error(`[Cognito] Background failed to save/index chat ${chatId}:`, response.error);
+          // Optionally, handle UI feedback for save failure here
+        } else {
+          // console.log(`[Cognito] Chat ${chatId} save request sent and acknowledged.`);
+        }
       });
     }
   }, [chatId, turns, chatTitle, config?.selectedModel, config?.chatMode, config?.webMode, config?.useNote, config?.noteContent, historyMode, settingsMode, noteSystemMode]); // Added noteSystemMode to dependencies
