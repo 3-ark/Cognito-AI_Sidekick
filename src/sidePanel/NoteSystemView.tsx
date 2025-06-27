@@ -17,7 +17,8 @@ import {
   deleteNoteFromSystem,
   deleteAllNotesFromSystem,
   exportNotesToObsidianMD,
-  deleteNotesFromSystem
+  deleteNotesFromSystem,
+  // saveNoteInSystem, // We will now use messaging for this
 } from '../background/noteStorage';
 import { generateObsidianMDContent } from './utils/noteUtils';
 import { cn } from '@/src/background/util';
@@ -372,22 +373,31 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     port.onMessage.addListener((message) => {
         if (message.type === 'ADD_SELECTION_TO_NOTE') {
             console.log('[NoteSystemView] Handling ADD_SELECTION_TO_NOTE via port');
-            const newContent = noteContent ? `${noteContent}\n\n${message.payload}` : message.payload;
-            if (isCreateModalOpen) {
-                setNoteContent(newContent);
-            } else {
-                openCreateModal({ content: newContent, title: `Note with Selection` });
-            }
+            setNoteContent(currentNoteContent => {
+              const newContent = currentNoteContent ? `${currentNoteContent}\n\n${message.payload}` : message.payload;
+              if (isCreateModalOpen) {
+                  return newContent;
+              } else {
+                  // If modal is not open, we need to open it and set its content.
+                  // This part of the logic might need to be re-evaluated if `openCreateModal`
+                  // doesn't immediately reflect `newContent`.
+                  // For now, assuming `openCreateModal` will correctly initialize with passed content.
+                  openCreateModal({ content: newContent, title: `Note with Selection` });
+                  // When the modal was not open, openCreateModal handles setting the
+                  // content for the new modal instance. We don't need to also set it here.
+                  return currentNoteContent; 
+              }
+            });
             toast.success("Selection added to note draft.");
         }
     });
 
     return () => {
-      console.log('[NoteSystemView] Cleaning up listeners.');
+      console.log('[NoteSystemView] Cleaning up listeners for main setup.'); // Clarified log
       chrome.runtime.onMessage.removeListener(messageListener);
       port.disconnect();
     };
-  }, [isCreateModalOpen, noteContent, openCreateModal]);
+  }, [isCreateModalOpen, openCreateModal]); // Removed noteContent from dependencies
 
   useEffect(() => {
     const autoSaveNote = async () => {
@@ -412,16 +422,10 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         const toastId = toast.loading("Adding page to notes...");
         try {
           const result = await saveNoteInSystem(noteToSave);
-          if (result.success) {
+          if (result) {
             toast.success("Page added to notes!", { id: toastId });
-            if (result.warning) {
-              toast(result.warning, { duration: 5000, icon: '⚠️' });
-            }
           } else {
-            toast.error(result.error || "Failed to add page to notes.", { id: toastId });
-            if (result.warning) {
-              toast(result.warning, { duration: 5000, icon: '⚠️' });
-            }
+            toast.error("Failed to add page to notes.", { id: toastId });
           }
           await fetchNotes(); // Refresh notes regardless of exact outcome, to show partial success
         } catch (error) {
@@ -730,9 +734,26 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           url: noteUrlToSave,
         };
 
-        await saveNoteInSystem(newNote);
-        toast.success(`Note imported: ${file.name}`);
-        importSuccessCount++;
+        // Send message to background to save and index
+        const response = await new Promise<any>((resolve) => {
+          chrome.runtime.sendMessage({ type: 'SAVE_NOTE_REQUEST', payload: newNote }, (res) => {
+            if (chrome.runtime.lastError) {
+              console.error(`Error importing note ${file.name} during sendMessage:`, chrome.runtime.lastError.message);
+              resolve({ success: false, error: `Failed to communicate with background: ${chrome.runtime.lastError.message}` });
+            } else {
+              resolve(res);
+            }
+          });
+        });
+
+        if (response && response.success) {
+          toast.success(`Note imported: ${file.name}`);
+          importSuccessCount++;
+        } else {
+          console.error(`Error importing note ${file.name}:`, response?.error);
+          toast.error(response?.error || `Failed to import ${file.name}.`);
+          importErrorCount++;
+        }
 
       } catch (error) {
         console.error(`Error importing note ${file.name}:`, error);
@@ -793,35 +814,43 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     const toastId = toast.loading(editingNote ? "Updating note..." : "Creating note...");
 
     const parsedTags = noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    const noteToSaveFromDialog: Partial<Note> & { content: string } = {
+    const notePayload: Partial<Note> & { content: string } = { // Changed variable name for clarity
       id: editingNote?.id,
       title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
-      content: noteContent, // content can be empty if title is present
+      content: noteContent,
       tags: parsedTags,
       url: editingNote?.url,
     };
 
     try {
-      const result = await saveNoteInSystem(noteToSaveFromDialog);
-      if (result.success) {
-        toast.success(editingNote ? "Note updated!" : "Note created!", { id: toastId });
-        if (result.warning) {
-          toast(result.warning, { duration: 5000, icon: '⚠️' });
+      chrome.runtime.sendMessage({ type: 'SAVE_NOTE_REQUEST', payload: notePayload }, async (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("Error sending SAVE_NOTE_REQUEST:", chrome.runtime.lastError.message);
+          toast.error(`Failed to send save request: ${chrome.runtime.lastError.message}`, { id: toastId });
+          setIsDialogSaving(false);
+          return;
         }
-        await fetchNotes();
-        setIsCreateModalOpen(false);
-        setEditingNote(null);
-        setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
-      } else {
-        toast.error(result.error || (editingNote ? "Failed to update note." : "Failed to create note."), { id: toastId });
-        if (result.warning) {
-          toast(result.warning, { duration: 5000, icon: '⚠️' });
+
+        if (response && response.success) {
+          toast.success(editingNote ? "Note updated!" : "Note created!", { id: toastId });
+          if (response.warning) {
+            toast(response.warning, { duration: 5000, icon: '⚠️' });
+          }
+          await fetchNotes();
+          setIsCreateModalOpen(false);
+          setEditingNote(null);
+          setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
+        } else {
+          toast.error(response?.error || (editingNote ? "Failed to update note." : "Failed to create note."), { id: toastId });
+          if (response?.warning) {
+            toast(response.warning, { duration: 5000, icon: '⚠️' });
+          }
         }
-      }
-    } catch (error) { // Catch unexpected errors
-      console.error("Error saving note from dialog:", error);
+        setIsDialogSaving(false);
+      });
+    } catch (error) { // Catch unexpected errors during message sending itself (less likely)
+      console.error("Error in handleSaveNote during sendMessage:", error);
       toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
-    } finally {
       setIsDialogSaving(false);
     }
   };
@@ -840,18 +869,8 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     // No specific loading state for individual delete button in item, relies on toast
     const toastId = toast.loading("Deleting note...");
     try {
-      const result = await deleteNoteFromSystem(noteId);
-      if (result.success) {
-        toast.success("Note deleted!", { id: toastId });
-        if (result.warning) {
-          toast(result.warning, { duration: 5000, icon: '⚠️' });
-        }
-      } else {
-        toast.error(result.error || "Failed to delete note.", { id: toastId });
-        if (result.warning) {
-          toast(result.warning, { duration: 5000, icon: '⚠️' });
-        }
-      }
+      await deleteNoteFromSystem(noteId);
+      toast.success("Note deleted!", { id: toastId });
     } catch (error) { // Catch unexpected errors
       console.error("Error deleting note:", error);
       toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });

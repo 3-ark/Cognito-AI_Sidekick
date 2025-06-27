@@ -439,11 +439,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true; // Indicates that sendResponse will be called asynchronously
   }
-  // It's important to return true from the event listener if you want to send a response asynchronously.
-  // If multiple handlers could potentially handle a message, ensure only one calls sendResponse or structure carefully.
-  // If no specific handler matches and you don't intend to send a response, you can omit returning true.
-  // However, to be safe and avoid "The message port closed before a response was received" errors,
-  // it's often recommended to return true if any path might call sendResponse asynchronously.
+
+  // SAVE_NOTE_REQUEST handler
+  if (message.type === 'SAVE_NOTE_REQUEST' && message.payload) {
+    (async () => {
+      try {
+        const noteToSave = message.payload;
+        // Ensure content is present, as saveNoteInSystem expects it.
+        // Title is made optional by saveNoteInSystem if content exists.
+        if (typeof noteToSave.content !== 'string') {
+            throw new Error("Note content is missing or not a string.");
+        }
+        const savedNote = await saveNoteInSystem(noteToSave);
+        await indexSingleNote(savedNote); 
+        sendResponse({ success: true, note: savedNote, warning: null }); // Added warning: null for consistency
+      } catch (error: any) {
+        console.error('[Background] Error saving or indexing note:', error);
+        // Check if it's a custom error object with a 'warning' property, otherwise default
+        const warningMessage = typeof error === 'object' && error !== null && 'warning' in error ? error.warning as string : null;
+        sendResponse({ success: false, error: error.message, warning: warningMessage });
+      }
+    })();
+    return true; // Indicates asynchronous response
+  }
+
   return true; 
 });
 
