@@ -9,7 +9,7 @@ export interface Note {
   // Future enhancements: isArchived?: boolean;
 }
 
-export const NOTE_STORAGE_PREFIX = 'cognito_note_';
+export const NOTE_STORAGE_PREFIX = 'note_';
 
 export type NoteWithEmbedding = Note & { embedding?: number[] };
 

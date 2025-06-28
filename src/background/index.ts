@@ -416,7 +416,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SAVE_NOTE_TO_FILE' && message.payload) {
     const { content } = message.payload;
     if (content) {
-      const filename = `cognito_note_${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
+      const filename = `note_${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
       const dataUrl = `data:text/markdown;charset=utf-8,${encodeURIComponent(content)}`;
       chrome.downloads.download({
         url: dataUrl,
@@ -490,20 +490,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // TEMPORARY DEBUGGING - REMOVE LATER
 import { search as debugSearchUtil } from './searchUtils';
+// Ensure CHAT_STORAGE_PREFIX and getChatMessageById are available in this scope
 (globalThis as any).performBgSearch = async (query: string) => {
   console.log(`[DEBUG] Performing background search for: "${query}"`);
   await engineInitializationPromise; // Make sure engine is ready
   const rawResults = await debugSearchUtil(query, 10);
   console.log('[DEBUG] Raw Results:', rawResults);
-  // Optional: Add hydration here if you want to see full objects
   const hydrated = [];
-  for (const [id, score] of rawResults) {
-    if (id.startsWith('cognito_note_')) { // Use your actual NOTE_STORAGE_PREFIX
-      const note = await getNoteByIdFromSystem(id);
-      if (note) hydrated.push({type: 'note', score, ...note});
-    }
-    // Add chat hydration if you want here too
+for (const [id, score] of rawResults) {
+  if (id.startsWith(NOTE_STORAGE_PREFIX)) {
+    const note = await getNoteByIdFromSystem(id);
+    if (note) hydrated.push({
+      ...note, // Spread first
+      type: 'note',
+      score,
+      title: note.title,    // These will override any from the spread
+      content: note.content
+    });
   }
+  else if (id.startsWith(CHAT_STORAGE_PREFIX)) {
+    const chat = await getChatMessageById(id);
+    if (chat) {
+      hydrated.push({
+        ...chat, // Spread first
+        type: 'chat',
+        score,
+        id: chat.id,
+        title: chat.title || `Chat from ${new Date(chat.last_updated).toLocaleDateString()}`,
+        content: chat.turns.map(t => t.content).join('\n')
+      });
+    }
+  }
+}    // END CHANGE
   console.log('[DEBUG] Hydrated Results:', hydrated);
   return hydrated;
 };
