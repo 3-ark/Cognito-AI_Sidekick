@@ -336,7 +336,7 @@ export const Input: FC<InputProps> = ({
               variant="ghost"
               size="sm"
                 className={cn(
-                  "p-2 mr-1 rounded-md",
+                  "p-2 rounded-md",
                   "not-focus",
                   isListening ? "text-red-500 hover:text-red-300 hover:bg-destructive/10" : "text-foreground hover:text-foreground hover:bg-[var(--text)]/10",
                 )}
@@ -363,7 +363,7 @@ export const Input: FC<InputProps> = ({
               variant="ghost"
               size="sm"
               className={cn(
-                "p-2 ml-1 rounded-md",
+                "p-2 rounded-md",
                 !isLoading && "hover:bg-[var(--text)]/10"
               )}
               onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleSendClick();}}
