@@ -58,7 +58,7 @@ export const Input: FC<InputProps> = ({
     ref.current?.focus();
   }, [message, config?.chatMode]);
 
-  let placeholderText = "Chat (or @ for notes)";
+  let placeholderText = "Chat (@ for notes)";
     if (config?.chatMode === 'web') {
     placeholderText = 'Enter your query...';
   } else if (config?.chatMode === 'page') {
