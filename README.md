@@ -2,7 +2,7 @@
 # Cognito: AI-Powered Web Notes Assistant 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub version](https://img.shields.io/github/v/release/3-ark/Cognito)](https://github.com/3-ark/Cognito/releases/latest)
+[![GitHub version](https://img.shields.io/github/v/release/3-ark/Cognito)](https://github.com/3-ark/Cognito-AI_Sidekick/releases/latest)
 
 **Cognito A lightweight yet powerful Chrome extension and assistant system that combines LLM tools, web search, a smart note-taking workflow, and interact naturally with web content. - designed for effortless research, contextual memory, and semantic search (coming soon).**
 
@@ -92,7 +92,7 @@ Each persona defines an LLM **policy** and **tool behavior**. For example:
 *   Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/pphjdjdoclkedgiaahmiahladgcpohca?utm_source=item-share-cb).
 
 #### Option 2: From Release (Manual Install)
-1.  Download the latest file from the [Releases page](https://github.com/3-ark/Cognito/releases).
+1.  Download the latest file from the [Releases page](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 2.  Extract the downloaded ZIP file to a permanent folder on your computer.
 3.  Open Chrome and navigate to `chrome://extensions`.
 4.  Enable **Developer mode** using the toggle in the top-right corner.
@@ -102,7 +102,7 @@ Each persona defines an LLM **policy** and **tool behavior**. For example:
 #### Option 3: From Source (For Developers)
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/3-ark/Cognito.git
+    git clone https://github.com/3-ark/Cognito-AI_Sidekick.git
     cd Cognito
     ```
 2.  Install dependencies:

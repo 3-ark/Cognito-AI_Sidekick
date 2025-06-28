@@ -16,7 +16,7 @@ There are two main ways to install Cognito:
 
 ### A. Installing the Latest Release (Recommended for Most Users)
 
-1.  **Download:** Get the latest release package (usually a `.zip` file) from the [official Cognito releases page](https://github.com/3-ark/Cognito/releases).
+1.  **Download:** Get the latest release package (usually a `.zip` file) from the [official Cognito releases page](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 2.  **Extract:** Unzip the downloaded file into a dedicated folder on your computer.
 3.  **Enable Developer Mode in Chrome:**
     *   Open Chrome and navigate to `chrome://extensions`.
@@ -30,7 +30,7 @@ There are two main ways to install Cognito:
 
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/3-ark/Cognito.git
+    git clone https://github.com/3-ark/Cognito-AI_Sidekick.git
     ```
 2.  **Navigate to Directory:**
     ```bash
