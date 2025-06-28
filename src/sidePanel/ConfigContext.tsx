@@ -83,6 +83,14 @@ const defaultConfig: Config = {
   popoverTitleDraft: '',
   tools: [],
   popoverTagsDraft: '',
+  rag: {
+    bm25: {
+      k1: 1.2,
+      b: 0.75,
+    },
+    topK: 3,
+    chunkSize: 512,
+  },
 };
 
 export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
