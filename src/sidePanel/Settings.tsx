@@ -7,6 +7,7 @@ import { Persona } from './Persona';
 import { Themes } from './Themes';
 import { TtsSettings } from './TtsSettings';
 import { WebSearch } from './WebSearch';
+import { RagSettings } from './RagSettings';
 import { Button } from '@/components/ui/button';
 import { cn } from 'src/background/util';
 import { useState } from 'react';
@@ -73,6 +74,7 @@ export const Settings = () => {
         <TtsSettings />
         <PageContext />
         <WebSearch />
+        <RagSettings />
         <div className="pointer-events-none h-12" /> {/* prevent the missing bottom boarder */}
       </Accordion>
     </div>
