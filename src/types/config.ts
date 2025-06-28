@@ -120,6 +120,14 @@ export interface Config {
   popoverTitleDraft?: string;
   popoverTagsDraft?: string;
   tools?: Tools;
+  rag?: {
+    bm25?: {
+      k1?: number;
+      b?: number;
+    };
+    topK?: number;
+    chunkSize?: number;
+  };
 }
 
 export interface ConfigContextType {
