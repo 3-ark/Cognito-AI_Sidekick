@@ -213,7 +213,7 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 * [X] Build or plug in a BM25 scorer (your own or `MiniSearch`)
 * [X] Tokenize `note system` content (can use your tokenizer or wink-nlp)
-* [ ] Score/query notes using BM25 at search time
+* [X] Score/query notes using BM25 at search time
 
 ### ✅ 3. **Semantic Embedding + Cosine Similarity**
 
