@@ -525,5 +525,5 @@ for (const [id, score] of rawResults) {
   console.log('[DEBUG] Hydrated Results:', hydrated);
   return hydrated;
 };
-// Exporting functions for external use
+// e.g. use 'await performBgSearch("Einstein")' in service worker console to test your search functionality
 export {};
