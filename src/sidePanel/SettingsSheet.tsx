@@ -198,7 +198,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                </Tooltip>
              </div>
              <SheetTitle className="text-center font-['Bruno_Ace_SC'] tracking-tight -mt-10 cognito-title-container">
-               <a href="https://github.com/3-ark/Cognito-AI_Sidekick/docs/User_Guide.md" target="_blank" rel="noopener noreferrer"
+               <a href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer"
                   className={cn(
                     "text-xl font-semibold text-[var(--text)] bg-[var(--active)] inline-block px-3 py-1 rounded-md no-underline",
                     "cognito-title-blade-glow"
@@ -408,7 +408,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                  </div>
               </div>
               <div className={cn("mt-auto text-center text-[var(--text)] opacity-70 shrink-0 text-xs font-mono pb-4")}>
-                  Made with ❤️ by @3-Arc
+                  Made with ❤️ by @3-Ark
               </div>
            </div>
         </SheetContent>
