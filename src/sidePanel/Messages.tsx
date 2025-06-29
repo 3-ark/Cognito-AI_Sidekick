@@ -159,81 +159,92 @@ export const Messages: React.FC<MessagesProps> = ({
       }}
     >
       {turns.map(
-        (turn, i) => turn && (
-          (<div
-            key={turn.timestamp || `turn_${i}`}
-            className={cn(
-              "flex items-start w-full mt-1 mb-1 px-2 relative",
-              turn.role === 'user' ? 'justify-start' : turn.role === 'assistant' ? 'justify-end' : 'justify-center'
-            )}
-            onMouseEnter={() => setHoveredIndex(i)}
-            onMouseLeave={() => setHoveredIndex(-1)}
-          >
-            {turn.role === 'assistant' && (
-              <div
-                className={cn(
-                  "flex flex-col items-center self-end space-y-0 mr-0 pb-3 transition-opacity duration-100",
-                  hoveredIndex === i ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                )}
-              >
-                {editingIndex !== i && (
-                  <Button aria-label="Copy" variant="message-action" size="xs" onClick={() => copyMessage(turn.content)} title="Copy message">
-                    <FiCopy className="text-[var(--text)]" />
-                  </Button>
-                )}
-                {speakingIndex === i && (
-                  <>
-                    <Button 
-                      aria-label={ttsIsPaused ? "Resume" : "Pause"} 
-                      variant="message-action" 
-                      size="xs" 
-                      onClick={ttsIsPaused ? handleResume : handlePause} 
-                      title={ttsIsPaused ? "Resume speech" : "Pause speech"}
-                    >
-                      {ttsIsPaused ? <FiPlay className="text-[var(--text)]" /> : <FiPause className="text-[var(--text)]" />}
-                    </Button>
-                    <Button aria-label="Stop" variant="message-action" size="xs" onClick={handleStop} title="Stop speech">
-                      <FiSquare className="text-[var(--text)]" />
-                    </Button>
-                  </>
-                )}
-                {speakingIndex !== i && (
-                  <Button aria-label="Speak" variant="message-action" size="xs" onClick={() => handlePlay(i, turn.content)} title="Speak message">
-                    <FiPlay className="text-[var(--text)]" />
-                  </Button>
-                )}
-                {i === turns.length - 1 && (
-                  <Button aria-label="Reload" variant="message-action" size="xs" onClick={onReload} title="Reload last prompt">
-                    <FiRepeat className="text-[var(--text)]" />
-                  </Button>
-                )}
-              </div>
-            )}
-            <EditableMessage
-              turn={turn}
-              index={i}
-              isEditing={editingIndex === i}
-              editText={editText}
-              onStartEdit={startEdit}
-              onSetEditText={setEditText}
-              onSaveEdit={saveEdit}
-              onCancelEdit={cancelEdit} />
-            {turn.role === 'user' && (
-              (<div
-                 className={cn(
-                    "flex flex-col items-center self-end space-y-0 ml-0 pb-1 transition-opacity duration-100",
+        (turn, i) => {
+          // Hide ALL assistant messages that contain a tool call
+          if (
+            turn.role === 'assistant' &&
+            turn.tool_calls &&
+            turn.tool_calls.length > 0
+          ) {
+            return null;
+          }
+
+          return (
+            <div
+              key={turn.timestamp || `turn_${i}`}
+              className={cn(
+                "flex items-start w-full mt-1 mb-1 px-2 relative",
+                turn.role === 'user' ? 'justify-start' : turn.role === 'assistant' ? 'justify-end' : 'justify-center'
+              )}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(-1)}
+            >
+              {turn.role === 'assistant' && (
+                <div
+                  className={cn(
+                    "flex flex-col items-center self-end space-y-0 mr-0 pb-3 transition-opacity duration-100",
                     hoveredIndex === i ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
                   )}
-              >
-                {editingIndex !== i && (
-                  <Button aria-label="Copy" variant="message-action" size="sm" onClick={() => copyMessage(turn.content)} title="Copy message">
-                    <FiCopy className="text-[var(--text)]" />
-                  </Button>
-                )}
-              </div>)
-            )}
-          </div>)
-        )
+                >
+                  {editingIndex !== i && (
+                    <Button aria-label="Copy" variant="message-action" size="xs" onClick={() => copyMessage(turn.content)} title="Copy message">
+                      <FiCopy className="text-[var(--text)]" />
+                    </Button>
+                  )}
+                  {speakingIndex === i && (
+                    <>
+                      <Button 
+                        aria-label={ttsIsPaused ? "Resume" : "Pause"} 
+                        variant="message-action" 
+                        size="xs" 
+                        onClick={ttsIsPaused ? handleResume : handlePause} 
+                        title={ttsIsPaused ? "Resume speech" : "Pause speech"}
+                      >
+                        {ttsIsPaused ? <FiPlay className="text-[var(--text)]" /> : <FiPause className="text-[var(--text)]" />}
+                      </Button>
+                      <Button aria-label="Stop" variant="message-action" size="xs" onClick={handleStop} title="Stop speech">
+                        <FiSquare className="text-[var(--text)]" />
+                      </Button>
+                    </>
+                  )}
+                  {speakingIndex !== i && (
+                    <Button aria-label="Speak" variant="message-action" size="xs" onClick={() => handlePlay(i, turn.content)} title="Speak message">
+                      <FiPlay className="text-[var(--text)]" />
+                    </Button>
+                  )}
+                  {i === turns.length - 1 && (
+                    <Button aria-label="Reload" variant="message-action" size="xs" onClick={onReload} title="Reload last prompt">
+                      <FiRepeat className="text-[var(--text)]" />
+                    </Button>
+                  )}
+                </div>
+              )}
+              <EditableMessage
+                turn={turn}
+                index={i}
+                isEditing={editingIndex === i}
+                editText={editText}
+                onStartEdit={startEdit}
+                onSetEditText={setEditText}
+                onSaveEdit={saveEdit}
+                onCancelEdit={cancelEdit} />
+              {turn.role === 'user' && (
+                (<div
+                   className={cn(
+                      "flex flex-col items-center self-end space-y-0 ml-0 pb-1 transition-opacity duration-100",
+                      hoveredIndex === i ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                    )}
+                >
+                  {editingIndex !== i && (
+                    <Button aria-label="Copy" variant="message-action" size="sm" onClick={() => copyMessage(turn.content)} title="Copy message">
+                      <FiCopy className="text-[var(--text)]" />
+                    </Button>
+                  )}
+                </div>)
+              )}
+            </div>
+          );
+        }
       )}
       <div ref={messagesEndRef} style={{ height: '1px' }} />
     </div>

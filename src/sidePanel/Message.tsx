@@ -62,51 +62,6 @@ const ThinkingBlock = ({ content }: { content: string }) => {
   );
 };
 
-const ToolCallBlock = ({ toolCalls }: { toolCalls: MessageTurn['tool_calls'] }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (!toolCalls || toolCalls.length === 0) {
-    return null;
-  }
-
-  const formatArguments = (argsString: string) => {
-    try {
-      return JSON.stringify(JSON.parse(argsString), null, 2);
-    } catch (e) {
-      return argsString;
-    }
-  };
-
-  return (
-    <div className="mt-2 mb-1">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="outline"
-            size="xs"
-            className="mb-1 w-auto px-2.5 border-foreground/30 text-foreground/70 hover:text-accent-foreground text-xs font-normal"
-          >
-            {isOpen ? 'Hide Tool Call Details' : `Show Tool Call Details (${toolCalls.length})`}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="p-2 mt-1 rounded-md border border-dashed bg-muted border-gray-400/50 dark:border-gray-600/50 text-muted-foreground text-xs">
-            {toolCalls.map((toolCall, index) => (
-              <div key={toolCall.id || `tool_call_${index}`} className="mb-2 last:mb-0">
-                <p className="font-semibold text-foreground">Tool: {toolCall.function.name}</p>
-                <p className="mt-0.5 mb-0.5 font-medium">Arguments:</p>
-                <pre className="whitespace-pre-wrap bg-black/5 dark:bg-white/5 p-1.5 rounded text-xs text-foreground/90 overflow-x-auto">
-                  <code>{formatArguments(toolCall.function.arguments)}</code>
-                </pre>
-              </div>
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  );
-};
-
 const messageMarkdownComponents = {
   ...markdownComponents,
   pre: (props: React.ComponentPropsWithoutRef<typeof Pre>) => <Pre {...props} buttonVariant="copy-button" />,
@@ -194,7 +149,7 @@ export const EditableMessage: FC<MessageProps> = ({
           ]
       )}
       onDoubleClick={() => {
-        if (!isEditing) {
+        if (!isEditing && turn.role !== 'tool') {
           onStartEdit(index, turn.content);
         }
       }}
@@ -266,9 +221,7 @@ export const EditableMessage: FC<MessageProps> = ({
               })}
             </>
           )}
-          {showToolCallBlock && (
-            <ToolCallBlock toolCalls={turn.tool_calls} />
-          )}
+          {/* ToolCallBlock hidden from UI */}
         </div>
       )}
     </div>
