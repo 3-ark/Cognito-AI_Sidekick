@@ -30,6 +30,7 @@ import {
     deleteAllChatMessages,
     getAllChatMessages as storageGetAllChats // Alias to avoid conflict if any
 } from './chatHistoryStorage'; 
+import { getBM25SearchResults } from './retrieverUtils'; // Added for BM25 search
 
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
 
@@ -458,6 +459,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Check if it's a custom error object with a 'warning' property, otherwise default
         const warningMessage = typeof error === 'object' && error !== null && 'warning' in error ? error.warning as string : null;
         sendResponse({ success: false, error: error.message, warning: warningMessage });
+      }
+    })();
+    return true; // Indicates asynchronous response
+  }
+
+  // GET_BM25_SEARCH_RESULTS handler
+  if (message.type === 'GET_BM25_SEARCH_RESULTS' && message.payload) {
+    const { query, topK } = message.payload;
+    (async () => {
+      try {
+        const results = await getBM25SearchResults(query, topK);
+        sendResponse({ success: true, results });
+      } catch (error: any) {
+        console.error('[Background] Error getting BM25 search results:', error);
+        sendResponse({ success: false, error: error.message });
       }
     })();
     return true; // Indicates asynchronous response

@@ -40,6 +40,7 @@ import { Note } from '../types/noteTypes';
 const Cognito = () => {
   const [turns, setTurns] = useState<StorageMessageTurn[]>([]); 
   const [message, setMessage] = useState('');
+  const [retrieverQuery, setRetrieverQuery] = useState('');
   const [chatId, setChatId] = useState(storageGenerateChatId()); 
   const [webContent, setWebContent] = useState('');
   const [pageContent, setPageContent] = useState('');
@@ -232,8 +233,10 @@ const Cognito = () => {
     webContent,
     config,
     selectedNotesForContext,
+    retrieverQuery, // Pass retrieverQuery
     setTurns,
     setMessage,
+    setRetrieverQuery, // Pass setRetrieverQuery
     setWebContent,
     setPageContent,
     setLoading,
@@ -249,12 +252,13 @@ const Cognito = () => {
     updateConfig({ chatMode: undefined });
     setChatStatus('idle');    
     setMessage('');
+    setRetrieverQuery(''); // Clear retriever query on reset
     setChatTitle('');
     setChatId(storageGenerateChatId());
     setHistoryMode(false);
     setSettingsMode(false); 
     setNoteSystemMode(false);
-    setSelectedNotesForContext([]); // Clear selected notes on reset
+    setSelectedNotesForContext([]);
     if (containerRef.current) {
         containerRef.current.scrollTop = 0;
     }
@@ -495,9 +499,14 @@ const Cognito = () => {
               isLoading={isLoading}
               message={message}
               setMessage={setMessage}
+              retrieverQuery={retrieverQuery}
+              setRetrieverQuery={setRetrieverQuery}
               onSend={async () => {
+                // onSend in useSendMessage now handles retrieverQuery
+                // It will also clear retrieverQuery internally via setRetrieverQuery
                 await onSend(message); 
-                setSelectedNotesForContext([]); 
+                // setSelectedNotesForContext([]); // Keep this if notes should be cleared after any send
+                                                // Or move it inside onSend if it depends on notes being used
               }}
               onStopRequest={onStop}
               selectedNotesForContext={selectedNotesForContext}

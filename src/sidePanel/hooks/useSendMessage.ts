@@ -122,11 +122,13 @@ const useSendMessage = (
   isLoading: boolean,
   originalMessage: string,
   currentTurns: MessageTurn[],
-  _webContent: string, 
+  _webContent: string,
   config: Config | null | undefined,
   selectedNotesForContext: Note[],
+  retrieverQuery: string,
   setTurns: Dispatch<SetStateAction<MessageTurn[]>>,
   setMessage: Dispatch<SetStateAction<string>>,
+  setRetrieverQuery: Dispatch<SetStateAction<string>>, // Added setRetrieverQuery
   setWebContent: Dispatch<SetStateAction<string>>,
   setPageContent: Dispatch<SetStateAction<string>>,
   setLoading: Dispatch<SetStateAction<boolean>>,
@@ -239,11 +241,44 @@ const useSendMessage = (
 
   const onSend = async (overridedMessage?: string) => {
     const callId = Date.now();
-    console.log(`[${callId}] useSendMessage: onSend triggered.`);
-    
-    const originalMessageFromInput = overridedMessage || ""; 
-    // Keep @[Note Name] placeholders in the main user query. Note content will be appended.
+    console.log(`[${callId}] useSendMessage: onSend triggered. Retriever query: "${retrieverQuery}"`);
+
+    const originalMessageFromInput = overridedMessage || "";
     let messageForLLM = originalMessageFromInput.trim();
+    let retrieverResultsContext = "";
+
+    if (retrieverQuery && retrieverQuery.trim() !== "") {
+      setChatStatus('searching'); // Indicate that we are fetching retriever results
+      try {
+        console.log(`[${callId}] useSendMessage: Performing BM25 search for query: "${retrieverQuery}"`);
+        const results = await new Promise<string>((resolve, reject) => {
+          chrome.runtime.sendMessage(
+            { type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery, topK: config?.rag?.topK } }, // will use hybrid search if RAG is added in the future
+            (response) => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else if (response.error) {
+                reject(new Error(response.error));
+              } else {
+                resolve(response.results);
+              }
+            }
+          );
+        });
+        retrieverResultsContext = results;
+        console.log(`[${callId}] useSendMessage: BM25 search results received. Length: ${retrieverResultsContext.length}`);
+      } catch (error: any) {
+        console.error(`[${callId}] useSendMessage: Error fetching BM25 search results:`, error);
+        messageForLLM = `(Error fetching search results: ${error.message})\n${messageForLLM}`;
+      }
+      // Clear the retriever query from UI after processing, regardless of success or failure
+      setRetrieverQuery('');
+      setChatStatus('thinking'); // Back to thinking after search
+    }
+
+    if (retrieverResultsContext) {
+      messageForLLM = `${retrieverResultsContext}\n\n---\n\n${messageForLLM}`;
+    }
         
     if (selectedNotesForContext && selectedNotesForContext.length > 0) {
       const notesDetails = selectedNotesForContext.map(note => {
@@ -260,9 +295,12 @@ const useSendMessage = (
       setLoading(false);
       return;
     }
-    if (!originalMessageFromInput.trim() && (!selectedNotesForContext || selectedNotesForContext.length === 0)) {
-      console.log(`[${callId}] useSendMessage: Bailing out: Empty message and no notes selected for context.`);
+    // Ensure there's either a message or a (now processed) retriever query that might have produced context
+    if (!messageForLLM.trim() && (!selectedNotesForContext || selectedNotesForContext.length === 0) && !retrieverResultsContext) {
+      console.log(`[${callId}] useSendMessage: Bailing out: Empty message, no notes, and no retriever results.`);
       setLoading(false);
+      // If retrieverQuery was present but yielded no results, it's already cleared.
+      // setMessage('') is called later, so no need to clear it here if it was already empty.
       return;
     }
 
@@ -319,7 +357,7 @@ const useSendMessage = (
     };
     setTurns(prevTurns => [...prevTurns, userTurn]);
     setMessage('');
-    console.log(`[${callId}] useSendMessage: User turn added to state.`);
+    console.log(`[${callId}] useSendMessage: User turn added to state. Original input: "${originalMessageFromInput}"`);
 
     const assistantTurnPlaceholder: MessageTurn = {
         role: 'assistant',

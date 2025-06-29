@@ -399,19 +399,41 @@ class SearchService {
   }
 
 
-  // formatResultsForLLM might need to be adapted or made more generic if it's to be used for chats too.
-  // For now, it remains note-specific.
   public formatResultsForLLM(results: HydratedSearchResultItem[]): string {
-    const noteResults = results.filter(r => r.type === 'note' && r.note);
-    if (!noteResults || noteResults.length === 0) {
-      return "No relevant notes found to provide context.";
+    if (!results || results.length === 0) {
+      return "No relevant search results found to provide context.";
     }
 
-    let promptOutput = "Use the following notes to answer. Cite by [Note Title] or (id: note_id) where appropriate:\n\n";
-    noteResults.forEach((result) => {
-      promptOutput += `### [${result.title}] (id: ${result.id})\n`;
-      promptOutput += `${result.content || 'Content not available.'}\n\n`;
+    let promptOutput = "Use the following search results to answer. Cite by [Title] or (id: item_id) where appropriate:\n\n";
+    let itemsAdded = 0;
+
+    results.forEach((result) => {
+      const title = result.title || (result.type === 'chat' && result.chat?.last_updated ? `Chat on ${new Date(result.chat.last_updated).toLocaleDateString()}` : 'Untitled Item');
+      const id = result.id;
+      let content = result.content || 'Content not available.';
+
+      if (result.type === 'note') {
+        promptOutput += `### [Note: ${title}] (id: ${id})\n`;
+        promptOutput += `${content}\n\n`;
+        itemsAdded++;
+      } else if (result.type === 'chat') {
+        promptOutput += `### [Chat: ${title}] (id: ${id})\n`;
+        // For chats, result.content is already the concatenated turns.
+        // Basic truncation for chat content.
+        const maxChatContentLength = 1000; 
+        if (content.length > maxChatContentLength) {
+          content = content.substring(0, maxChatContentLength) + "... (truncated)";
+        }
+        promptOutput += `${content}\n\n`;
+        itemsAdded++;
+      }
     });
+
+    if (itemsAdded === 0) {
+      // This means no items were actually appended (e.g., results had items of unknown/unhandled type)
+      return "No processable search results found to provide context.";
+    }
+
     return promptOutput.trim();
   }
 }
@@ -455,7 +477,7 @@ export const search = searchServiceInstance.searchItems.bind(searchServiceInstan
 // The hydrateSearchResults is more of an internal concept or for the background script to use.
 // formatResultsForLLM remains note-specific based on current implementation.
 export const formatResultsForLLM = searchServiceInstance.formatResultsForLLM.bind(searchServiceInstance);
-
+export const hydrateSearchResults = searchServiceInstance.hydrateSearchResults.bind(searchServiceInstance);
 // Deprecating old searchNotes if 'search' is the new standard
 // export const searchNotes = searchServiceInstance.searchNotes.bind(searchServiceInstance);
 // If external modules still use searchNotes with its specific HydratedSearchResultItem<Note> structure,

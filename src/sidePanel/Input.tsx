@@ -2,8 +2,8 @@ import type { FC } from 'react';
 import { AddToChat } from './AddToChat';
 import type { SpeechRecognition as SpeechRecognitionInstance, SpeechRecognitionEvent as SpeechRecognitionEventInstance, SpeechRecognitionErrorEvent as SpeechRecognitionErrorEventInstance } from '../types/speech';
 import { useEffect, useRef, useState, useCallback, Dispatch, SetStateAction, MouseEvent } from 'react';
-import { FaRegStopCircle } from 'react-icons/fa';
-import { BsMic, BsSend, BsStopCircle } from "react-icons/bs";
+import { FaRegStopCircle, FaSearch } from 'react-icons/fa';
+import { BsMic, BsSend, BsStopCircle, BsXLg } from "react-icons/bs";
 import { Note } from '../types/noteTypes';
 import { getAllNotesFromSystem } from '../background/noteStorage';
 import NoteSelectionMenu from './NoteSelectionMenu';
@@ -23,18 +23,22 @@ import { NotePopover } from './NotePopover';
 interface InputProps {
     isLoading: boolean;
     message: string;
-    setMessage: Dispatch<SetStateAction<string>>; 
+    setMessage: Dispatch<SetStateAction<string>>;
+    retrieverQuery: string;
+    setRetrieverQuery: Dispatch<SetStateAction<string>>;
     onSend: () => void;
     onStopRequest: () => void;
     selectedNotesForContext: Note[];
     setSelectedNotesForContext: Dispatch<SetStateAction<Note[]>>;
 }
 
-export const Input: FC<InputProps> = ({ 
-    isLoading, 
-    message, 
-    setMessage, 
-    onSend, 
+export const Input: FC<InputProps> = ({
+    isLoading,
+    message,
+    setMessage,
+    retrieverQuery,
+    setRetrieverQuery,
+    onSend,
     onStopRequest,
     selectedNotesForContext,
     setSelectedNotesForContext
@@ -55,15 +59,21 @@ export const Input: FC<InputProps> = ({
   }, [setMessage]);
 
   useEffect(() => {
-    ref.current?.focus();
-  }, [message, config?.chatMode]);
+    // Only focus if not actively defining a retriever query,
+    // or if the main message area is intended for focus.
+    if (!retrieverQuery) {
+      ref.current?.focus();
+    }
+  }, [message, config?.chatMode, retrieverQuery]);
 
-  let placeholderText = "Chat (@ for notes)";
+  let placeholderText = "Chat (@ for notes, /r for RAG)"; // Updated placeholder
     if (config?.chatMode === 'web') {
-    placeholderText = 'Enter your query...';
+    placeholderText = 'Enter your query (/r for RAG)...';
   } else if (config?.chatMode === 'page') {
-    placeholderText = 'Ask about this page...';
+    placeholderText = 'Ask about this page (/r for RAG)...';
   }
+  // The blue badge is the primary indicator for an active retriever query.
+  // Dynamic placeholder for active query might be too much / redundant.
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
@@ -89,7 +99,12 @@ export const Input: FC<InputProps> = ({
         const transcript = Array.from(event.results)
           .map(result => result[0].transcript)
           .join('');
-        setMessageRef.current((prev: string) => prev + transcript);
+        // Decide whether to append to message or retrieverQuery
+        if (retrieverQuery && !message) { // If retriever mode is active and main message is empty
+          setRetrieverQuery(prev => prev + transcript);
+        } else {
+          setMessageRef.current((prev: string) => prev + transcript);
+        }
       };
 
       recognition.onend = (_event: Event) => {
@@ -139,7 +154,7 @@ export const Input: FC<InputProps> = ({
       );
       setIsListening(false);
     }
-  }, []);
+  }, [retrieverQuery, message]); // Added retrieverQuery and message dependencies
 
   useEffect(() => {
     return () => {
@@ -157,7 +172,8 @@ export const Input: FC<InputProps> = ({
     if (isLoading) {
       onStopRequest();
     } else {
-      if (message.trim()) {
+      // Send if there's a message OR an active retriever query
+      if (message.trim() || retrieverQuery.trim()) {
         onSend();
       }
     }
@@ -188,6 +204,18 @@ export const Input: FC<InputProps> = ({
   const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (isLoading) return;
 
+    if (event.key === 'Backspace' && message === "" && retrieverQuery) {
+        // If backspace on empty input and retriever query is active,
+        // clear the last char of retriever query or clear it all if desired.
+        // For simplicity, let's just clear the whole retriever query with the X button.
+        // This backspace can be for the main input if user deletes "/r "
+        // If they backspace the "/r " prefix, handleInputChange will deal with it.
+        // If message is empty and they hit backspace, and retrieverQuery is active,
+        // it implies they might want to cancel retriever mode.
+        setRetrieverQuery("");
+        return; 
+    }
+
     if (showNoteSelection) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
@@ -205,7 +233,7 @@ export const Input: FC<InputProps> = ({
       } else if (event.key === 'Escape') {
         setShowNoteSelection(false);
       }
-    } else if (event.key === 'Enter' && message.trim() && !event.altKey && !event.metaKey && !event.shiftKey) {
+    } else if (event.key === 'Enter' && (message.trim() || retrieverQuery.trim()) && !event.altKey && !event.metaKey && !event.shiftKey) {
       event.preventDefault();
       event.stopPropagation();
       onSend();
@@ -213,78 +241,97 @@ export const Input: FC<InputProps> = ({
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const currentMessage = event.target.value;
-    setMessage(currentMessage);
+    const currentInput = event.target.value;
+    setMessage(currentInput); // Update message state, which is bound to the textarea
 
-    const activeTitlesInInput: string[] = [];
-    const linkRegex = /@\[([^\]]+)\]/g;
-    let titleMatch;
-    while ((titleMatch = linkRegex.exec(currentMessage)) !== null) {
-      activeTitlesInInput.push(titleMatch[1]);
-    }
+    const retrieverPrefix = "/r ";
+    if (currentInput.toLowerCase().startsWith(retrieverPrefix)) {
+      const query = currentInput.substring(retrieverPrefix.length);
+      setRetrieverQuery(query); // Set for badge and for useSendMessage to know /r is active
+      setShowNoteSelection(false); // Disable @mentions when /r is active
+    } else {
+      // Input does not start with "/r ", so not a retriever query.
+      // Clear retrieverQuery if it was previously active from prop.
+      if (retrieverQuery) { 
+        setRetrieverQuery("");
+      }
+      
+      // Note selection logic for normal messages:
+      // (This is the existing note selection logic from the file)
+      const activeTitlesInInput: string[] = [];
+      const linkRegex = /@\[([^\]]+)\]/g;
+      let titleMatch;
+      while ((titleMatch = linkRegex.exec(currentInput)) !== null) {
+        activeTitlesInInput.push(titleMatch[1]);
+      }
 
-    const currentSelectedNotesFromProps = selectedNotesForContext;
-    const newSelectedNotesForContext = currentSelectedNotesFromProps.filter(note => 
-      activeTitlesInInput.includes(note.title)
-    );
+      const currentSelectedNotesFromProps = selectedNotesForContext;
+      const newSelectedNotesForContext = currentSelectedNotesFromProps.filter(note => 
+        activeTitlesInInput.includes(note.title)
+      );
 
-    if (newSelectedNotesForContext.length !== currentSelectedNotesFromProps.length) {
-      setSelectedNotesForContext(newSelectedNotesForContext);
-    }
+      if (newSelectedNotesForContext.length !== currentSelectedNotesFromProps.length) {
+        setSelectedNotesForContext(newSelectedNotesForContext);
+      }
 
-    const lastAtIndex = currentMessage.lastIndexOf("@");
-    const isNewQueryAttempt = lastAtIndex !== -1 && (lastAtIndex === currentMessage.length - 1 || !currentMessage.substring(lastAtIndex + 1).includes("]"));
+      const lastAtIndex = currentInput.lastIndexOf("@");
+      const isNewQueryAttempt = lastAtIndex !== -1 && (lastAtIndex === currentInput.length - 1 || !currentInput.substring(lastAtIndex + 1).includes("]"));
 
+      if (isNewQueryAttempt && !showNoteSelection) {
+          setShowNoteSelection(true);
+          getAllNotesFromSystem().then((fetchedNotes) => {
+              setAllNotes(fetchedNotes);
+              const availableNotesForSelection = fetchedNotes.filter(
+                  (note) => !activeTitlesInInput.includes(note.title)
+              );
+              
+              const query = currentInput.substring(lastAtIndex + 1);
+              setNoteSearchQuery(query);
 
-    if (isNewQueryAttempt && !showNoteSelection) {
-        setShowNoteSelection(true);
-        getAllNotesFromSystem().then((fetchedNotes) => {
-            setAllNotes(fetchedNotes);
-            const availableNotesForSelection = fetchedNotes.filter(
-                (note) => !activeTitlesInInput.includes(note.title)
-            );
-            
-            const query = currentMessage.substring(lastAtIndex + 1);
-            setNoteSearchQuery(query);
+              const notesMatchingQuery = availableNotesForSelection.filter((note) =>
+                  note.title.toLowerCase().includes(query.toLowerCase())
+              );
+              setFilteredNotes(notesMatchingQuery);
+              setSelectedNoteIndex(notesMatchingQuery.length > 0 ? 0 : -1);
+          });
+      } else if (showNoteSelection && currentInput.includes("@")) {
+          const availableNotesForSelection = allNotes.filter(
+              (note) => !activeTitlesInInput.includes(note.title)
+          );
 
-            const notesMatchingQuery = availableNotesForSelection.filter((note) =>
-                note.title.toLowerCase().includes(query.toLowerCase())
-            );
-            setFilteredNotes(notesMatchingQuery);
-            setSelectedNoteIndex(notesMatchingQuery.length > 0 ? 0 : -1);
-        });
-    } else if (showNoteSelection && currentMessage.includes("@")) {
-        const availableNotesForSelection = allNotes.filter(
-            (note) => !activeTitlesInInput.includes(note.title)
-        );
+          const query = currentInput.substring(currentInput.lastIndexOf("@") + 1);
+          setNoteSearchQuery(query);
 
-        const query = currentMessage.substring(currentMessage.lastIndexOf("@") + 1);
-        setNoteSearchQuery(query);
-
-        const notesMatchingQuery = availableNotesForSelection.filter((note) =>
-            note.title.toLowerCase().includes(query.toLowerCase())
-        );
-        setFilteredNotes(notesMatchingQuery);
-        setSelectedNoteIndex(notesMatchingQuery.length > 0 ? 0 : -1);
-    } else if ((!currentMessage.includes("@") || !isNewQueryAttempt) && showNoteSelection) {
-        setShowNoteSelection(false);
-        setNoteSearchQuery("");
-        setSelectedNoteIndex(-1);
-        setFilteredNotes([]);
+          const notesMatchingQuery = availableNotesForSelection.filter((note) =>
+              note.title.toLowerCase().includes(query.toLowerCase())
+          );
+          setFilteredNotes(notesMatchingQuery);
+          setSelectedNoteIndex(notesMatchingQuery.length > 0 ? 0 : -1);
+      } else if ((!currentInput.includes("@") || !isNewQueryAttempt) && showNoteSelection) {
+          setShowNoteSelection(false);
+          setNoteSearchQuery("");
+          setSelectedNoteIndex(-1);
+          setFilteredNotes([]);
+      }
     }
   };
 
   const handleNoteClick = (note: Note) => {
     setMessage(prevMessage => `${prevMessage.substring(0, prevMessage.lastIndexOf("@"))}@[${note.title}]`);
-    
     setSelectedNotesForContext(prevNotes => [...prevNotes, note]);
-    
     setShowNoteSelection(false);
     setNoteSearchQuery("");
     setFilteredNotes([]); 
     setSelectedNoteIndex(-1);
     inputRef.current?.focus(); 
   };
+  
+  let displayValue = message;
+  if (retrieverQuery || (message.toLowerCase().startsWith("/r ") && !retrieverQuery) ) {
+    // If retrieverQuery is set, or if user just typed "/r " and retrieverQuery is about to be set
+    // displayValue = `/r ${retrieverQuery}`;
+  }
+
 
   return (
     <>
@@ -301,6 +348,27 @@ export const Input: FC<InputProps> = ({
         isFocused && "input-breathing"
       )}>
         <AddToChat />
+        {retrieverQuery && (
+          <div className="flex items-center pl-2 pr-1 py-0.5 text-xs bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-md ml-1 shrink-0">
+            <FaSearch className="mr-1.5 h-3 w-3" />
+            <span className="truncate max-w-[100px] md:max-w-[150px] lg:max-w-[200px]" title={retrieverQuery}>
+              {retrieverQuery}
+            </span>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="p-0.5 h-auto ml-1 hover:bg-blue-500/30"
+              onClick={() => {
+                setRetrieverQuery("");
+                setMessage(""); // Also clear message just in case
+                ref.current?.focus();
+              }}
+              aria-label="Clear retriever query"
+            >
+              <BsXLg className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
         <Textarea
           autosize
           ref={inputRef}
@@ -309,7 +377,9 @@ export const Input: FC<InputProps> = ({
           autoComplete="off"
           id="user-input"
           placeholder={placeholderText}
-          value={message}
+          value={message} // Textarea always shows the 'message' state.
+                          // If '/r ' detected, message becomes empty, retrieverQuery holds the query.
+                          // If user types normal text, retrieverQuery is cleared, message holds the text.
           autoFocus
           onChange={handleInputChange}
           onKeyDown={handleTextareaKeyDown}
@@ -367,7 +437,7 @@ export const Input: FC<InputProps> = ({
                 !isLoading && "hover:bg-[var(--text)]/10"
               )}
               onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleSendClick();}}
-              disabled={!isLoading && !message.trim()}
+              disabled={!isLoading && !message.trim() && !retrieverQuery.trim()}
             >
               {isLoading ? (
                 <BsStopCircle className="h-5 w-5 text-foreground" />
