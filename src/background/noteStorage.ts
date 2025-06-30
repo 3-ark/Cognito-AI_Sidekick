@@ -1,6 +1,6 @@
 import localforage from 'localforage';
+import { strToU8, zipSync } from 'fflate';
 import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
-// import { indexNotes, indexSingleNote, removeNoteFromIndex } from './searchUtils'; // REMOVED
 
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 
@@ -164,14 +164,15 @@ export const deleteNotesFromSystem = async (noteIds: string[]): Promise<void> =>
 /**
  * Exports multiple notes to Obsidian MD format and triggers download for each.
  */
-export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ successCount: number, errorCount: number }> => {
+export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ successCount: number, errorCount: number, isZip: boolean }> => {
   if (!noteIds || noteIds.length === 0) {
     console.log('No note IDs provided for export.');
-    return { successCount: 0, errorCount: 0 };
+    return { successCount: 0, errorCount: 0, isZip: false };
   }
 
   let successCount = 0;
   let errorCount = 0;
+  const filesToZip: Record<string, Uint8Array> = {};
 
   for (const noteId of noteIds) {
     try {
@@ -183,20 +184,14 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
       }
 
       let mdContent = '---\n';
-      // 1. Add title
       mdContent += `title: "${note.title.replace(/"/g, '\\\\"')}"\n`;
-
-      // 2. Add source (if note.url exists)
       if (note.url) {
         mdContent += `source: "${note.url.replace(/"/g, '\\\\"')}"\n`;
       }
-
-      // 3. Add tags (if note.tags exist and are not empty)
       if (note.tags && note.tags.length > 0) {
         mdContent += 'tags:\n';
         note.tags.forEach(tag => {
           const trimmedTag = tag.trim();
-          // Conditionally double-quote and escape tags if they contain ':' or '"'
           if (trimmedTag.includes(':') || trimmedTag.includes('"')) {
             mdContent += `  - "${trimmedTag.replace(/"/g, '\\\\"')}"\n`;
           } else {
@@ -204,58 +199,74 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
           }
         });
       }
-      // Ensure no date field is added.
-      // Ensure no url field (with key 'url') is added.
       mdContent += '---\n\n';
       mdContent += note.content;
 
-      // Sanitize title for use as a filename
       const sanitizedTitle = note.title.replace(/[<>:"/\\|?*]+/g, '_') || 'Untitled Note';
       const filename = `${sanitizedTitle}.md`;
 
-      // This part is tricky for background scripts.
-      // Chrome extensions background scripts cannot directly create and click download links
-      // in the same way content scripts or UI components can.
-      // We need to use the chrome.downloads API.
-      const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-
-      await new Promise<void>((resolve, reject) => {
-        chrome.downloads.download({
-          url: url,
-          filename: filename,
-          saveAs: false // Set to true if you want the user to be prompted for each file location
-        }, (downloadId) => {
-          if (chrome.runtime.lastError) {
-            console.error(`Error downloading note ${note.title}:`, chrome.runtime.lastError.message);
-            URL.revokeObjectURL(url); // Clean up blob URL
-            // errorCount will be incremented by the outer catch block
-            reject(new Error(chrome.runtime.lastError.message));
-          } else if (downloadId === undefined) {
-            // This case can happen if the download is initiated too quickly after a previous one,
-            // or if there's some other issue.
-            console.error(`Download failed for note ${note.title}: downloadId is undefined.`);
-            URL.revokeObjectURL(url);
-            // errorCount will be incremented by the outer catch block
-            reject(new Error('Download failed: downloadId is undefined.'));
-          } else {
-            // Only increment successCount if downloadId is valid and no error
-            successCount++;
-            // It's good practice to revoke the object URL after some time,
-            // but not immediately, as the download might still be in progress.
-            // For simplicity here, we'll revoke it after a short delay.
-            // A more robust solution might involve tracking download completion.
-            setTimeout(() => URL.revokeObjectURL(url), 5000); 
-            resolve();
-          }
-        });
-      });
-
+      filesToZip[filename] = strToU8(mdContent);
+      successCount++;
     } catch (error) {
-      console.error(`Failed to process or download note ${noteId}:`, error);
+      console.error(`Failed to process note ${noteId} for zipping:`, error);
       errorCount++;
     }
   }
-  console.log(`Export finished. Success: ${successCount}, Errors: ${errorCount}`);
-  return { successCount, errorCount };
+
+  if (successCount === 0) {
+    console.log('No notes were successfully processed for export.');
+    return { successCount: 0, errorCount, isZip: false };
+  }
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const zipFilename = `Cognito-${timestamp}.zip`;
+
+    // Create the zip file content
+    const zippedContent = zipSync(filesToZip);
+
+    // Convert Uint8Array to Blob
+    const blob = new Blob([zippedContent], { type: 'application/zip' });
+
+    // Convert Blob to Base64 data URL
+    const reader = new FileReader();
+    const dataUrl = await new Promise<string>((resolveReader, rejectReader) => {
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolveReader(reader.result);
+        } else {
+          rejectReader(new Error('Failed to convert Blob to Base64 data URL.'));
+        }
+      };
+      reader.onerror = () => {
+        rejectReader(new Error('FileReader error while converting Blob to Base64.'));
+      };
+      reader.readAsDataURL(blob);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      chrome.downloads.download({
+        url: dataUrl,
+        filename: zipFilename,
+        saveAs: false
+      }, (downloadId) => {
+        // No URL.revokeObjectURL needed for data URLs
+        if (chrome.runtime.lastError) {
+          console.error(`Error downloading zip file ${zipFilename}:`, chrome.runtime.lastError.message);
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (downloadId === undefined) {
+          console.error(`Download failed for zip file ${zipFilename}: downloadId is undefined.`);
+          reject(new Error('Download failed: downloadId is undefined.'));
+        } else {
+          console.log(`Successfully initiated download for ${zipFilename}`);
+          resolve();
+        }
+      });
+    });
+    return { successCount, errorCount, isZip: true };
+  } catch (zipError) {
+    console.error('Failed to create or download zip file:', zipError);
+    // If zipping fails, we still have the individual error counts, but explicitly state zip failed.
+    return { successCount: 0, errorCount: noteIds.length, isZip: false }; // Treat all as errors if zip fails
+  }
 };

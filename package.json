@@ -55,6 +55,7 @@
     "defuddle": "^0.6.4",
     "dotenv": "^17.0.0",
     "fetch-event-stream": "^0.1.5",
+    "fflate": "^0.8.2",
     "file-loader": "^6.2.0",
     "html-to-image": "^1.11.13",
     "html-webpack-plugin": "^5.6.3",
