@@ -124,9 +124,16 @@ export interface Config {
     bm25?: {
       k1?: number;
       b?: number;
+      topK?: number; // Renamed from topK at root of rag settings
     };
-    topK?: number;
+    embedding_model?: string;
+    semantic_threshold?: number;
+    semantic_top_k?: number;
+    bm25_weight?: number;
     chunkSize?: number;
+    bm25LastRebuild?: string;
+    embeddingsLastRebuild?: string;
+    embeddingsLastUpdate?: string;
   };
 }
 
