@@ -709,3 +709,14 @@ html[data-paper-texture="true"] #root::before {
 .dark .tool-turn-message .message-markdown {
   color: #9CA3AF;
 }
+
+.blinking-cursor {
+  display: inline-block;
+  width: 1ch;
+  color: var(--foreground, #000);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
