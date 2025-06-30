@@ -2,7 +2,19 @@ import { getCurrentTab, injectContentScript } from 'src/background/util';
 import buildStoreWithDefaults from 'src/state/store';
 import storage from 'src/background/storageUtil';
 import ChannelNames from '../types/ChannelNames'; 
-import MessageType from '../types/ChannelNames'; 
+import MessageType from '../types/ChannelNames';
+
+// Keep track of chat IDs that have been initially indexed in this session
+// This is to ensure a chat is added to the BM25 index once when it's new,
+// but not re-indexed on every subsequent save while it's active.
+const initiallyIndexedChatsInSession = new Set<string>();
+
+// Function to clear the set, could be called on browser startup or specific events
+// For now, it's just session-based. If the service worker restarts, the set clears.
+// chrome.runtime.onStartup.addListener(() => {
+//   initiallyIndexedChatsInSession.clear();
+// });
+
 import { 
     getAllNotesFromSystem, 
     saveNoteInSystem, 
@@ -16,7 +28,7 @@ import {
     HydratedSearchResultItem, 
     indexSingleNote, 
     removeNoteFromIndex, 
-    indexNotes, // This is indexAllFullRebuild
+    rebuildFullIndex, // Formerly indexNotes, this is indexAllFullRebuild
     indexSingleChatMessage,
     removeChatMessageFromIndex,
     indexChatMessages // Specific re-indexer for chats
@@ -481,29 +493,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // SAVE_CHAT_REQUEST handler
   if (message.type === 'SAVE_CHAT_REQUEST' && message.payload) {
-    (async () => {
-      try {
-        const chatToSave = message.payload;
-        if (!chatToSave.turns || chatToSave.turns.length === 0) {
-          // Optional: Decide if empty chats should be saved/indexed or if this is an error
-          console.warn('[Background] Attempted to save a chat with no turns. Skipping save/index.', chatToSave.id);
-          sendResponse({ success: false, error: "Cannot save chat with no turns.", chat: null });
-          return;
+    // SAVE_CHAT_REQUEST handler
+    if (message.type === 'SAVE_CHAT_REQUEST' && message.payload) {
+      (async () => {
+        try {
+          const chatToSave = message.payload;
+          if (!chatToSave.id) { // Ensure chatToSave has an id
+            console.error('[Background] Chat to save has no ID. Skipping save/index.', chatToSave);
+            sendResponse({ success: false, error: "Chat has no ID.", chat: null });
+            return;
+          }
+          // It's okay to save a chat with no turns to localforage (e.g., if user clears input and it triggers a save)
+          // but we won't try to index it if there are no turns.
+          
+          // Always save to localforage for persistence
+          const savedChat = await saveChatMessage(chatToSave);
+          let indexedInThisCall = false;
+
+          // Conditionally index in BM25 only if it's the first time seeing this chat ID in this session
+          // AND there are turns to index.
+          if (savedChat.turns && savedChat.turns.length > 0 && !initiallyIndexedChatsInSession.has(savedChat.id)) {
+            console.log(`[Background] Chat ${savedChat.id} is new to this session or needs initial indexing (has turns). Indexing...`);
+            await indexSingleChatMessage(savedChat);
+            initiallyIndexedChatsInSession.add(savedChat.id);
+            indexedInThisCall = true;
+            console.log(`[Background] Chat ${savedChat.id} marked as initially indexed for this session.`);
+          } else if (initiallyIndexedChatsInSession.has(savedChat.id)) {
+            // console.log(`[Background] Chat ${savedChat.id} already initially indexed. Skipping BM25 re-index for this save.`);
+          } else if (!savedChat.turns || savedChat.turns.length === 0) {
+            // console.log(`[Background] Chat ${savedChat.id} has no turns. Skipping initial indexing.`);
+          }
+          
+          sendResponse({ success: true, chat: savedChat, indexed: indexedInThisCall });
+        } catch (error: any) {
+          console.error('[Background] Error saving or conditionally indexing chat:', error);
+          sendResponse({ success: false, error: error.message });
         }
-        const savedChat = await saveChatMessage(chatToSave);
-        await indexSingleChatMessage(savedChat);
-        sendResponse({ success: true, chat: savedChat });
-      } catch (error: any) {
-        console.error('[Background] Error saving or indexing chat:', error);
-        sendResponse({ success: false, error: error.message });
+      })();
+      return true; // Indicates asynchronous response
       }
-    })();
-    return true; // Indicates asynchronous response
-  }
 
   return true; 
+}
 });
-
 // TEMPORARY DEBUGGING - REMOVE LATER
 import { search as debugSearchUtil } from './searchUtils';
 // Ensure CHAT_STORAGE_PREFIX and getChatMessageById are available in this scope

@@ -444,14 +444,14 @@ export const engineInitializationPromise = searchServiceInstance.initializationP
 
 // Keep existing note-specific exports for now if they are directly used by noteStorage.
 // Consider deprecating them in favor of generic methods if applicable.
-export const indexNotes = searchServiceInstance.indexAllFullRebuild.bind(searchServiceInstance); // Points to the new unified rebuilder
+export const rebuildFullIndex = searchServiceInstance.indexAllFullRebuild.bind(searchServiceInstance); // Renamed from indexNotes
 export const indexSingleNote = searchServiceInstance.indexSingleNote.bind(searchServiceInstance);
 export const removeNoteFromIndex = (noteId: string) => searchServiceInstance.removeItemFromIndex(noteId); // Wrapper
 
 // New/updated exports for chats and generic search
 export const indexSingleChatMessage = searchServiceInstance.indexSingleChatMessage.bind(searchServiceInstance);
 export const removeChatMessageFromIndex = (chatId: string) => searchServiceInstance.removeItemFromIndex(chatId); // Wrapper
-export const indexChatMessages = async () => { // Specific re-indexer for chats, though indexAllFullRebuild is preferred for full sync
+export const indexChatMessages = async () => { // Specific re-indexer for chats, though rebuildFullIndex is preferred for full sync
   console.log('[SearchService.indexChatMessages] Starting to index all chat messages from system.');
   await searchServiceInstance.initializationPromise;
   const chats = await getAllChatMessages();
