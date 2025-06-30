@@ -87,9 +87,16 @@ const defaultConfig: Config = {
     bm25: {
       k1: 1.2,
       b: 0.75,
+      topK: 50, // Moved and updated default
     },
-    topK: 3,
-    chunkSize: 512,
+    embedding_model: 'text-embedding-3-small',
+    semantic_threshold: 0.6,
+    semantic_top_k: 50,
+    bm25_weight: 0.5,
+    chunkSize: 512, // Confirmed default
+    bm25LastRebuild: "Never",
+    embeddingsLastRebuild: "Never",
+    embeddingsLastUpdate: "Never",
   },
 };
 
