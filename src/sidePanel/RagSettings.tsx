@@ -295,44 +295,50 @@ export const RagSettings = () => {
             </div>
 
             {/* Index Management Buttons */}
-            <div className="space-y-3 pt-4 border-t border-[var(--text)]/20">
+            <div className="space-y-2 pt-4 border-t border-[var(--text)]/20">
               <Label className="text-base font-medium text-foreground">Index Management</Label>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-2" onClick={handleRebuildBm25}>
-                    <FiRefreshCw className="h-4 w-4" /> Rebuild BM25 Index
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Reindex all notes/chats from scratch for BM25.</p>
-                  <p className="text-xs opacity-80">Last rebuild: {bm25LastRebuild}</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 px-2 py-1 text-sm"
+                  onClick={handleRebuildBm25}
+                >
+                  <FiRefreshCw className="h-4 w-4" /> Rebuild BM25
+                </Button>
+                <span className="text-xs text-[var(--text)]/60 whitespace-nowrap">
+                  Last: {bm25LastRebuild}
+                </span>
+              </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-2" onClick={handleRebuildEmbeddings}>
-                    <FiRefreshCw className="h-4 w-4" /> Rebuild Embeddings
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Wipe all embeddings and re-embed every document.</p>
-                  <p className="text-xs opacity-80">Last rebuild: {embeddingsLastRebuild}</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 px-2 py-1 text-sm"
+                  onClick={handleRebuildEmbeddings}
+                >
+                  <FiRefreshCw className="h-4 w-4" /> Rebuild Embeddings
+                </Button>
+                <span className="text-xs text-[var(--text)]/60 whitespace-nowrap">
+                  Last: {embeddingsLastRebuild}
+                </span>
+              </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-2" onClick={handleUpdateEmbeddings}>
-                    <FiZap className="h-4 w-4" /> Update Embeddings
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Incremental embedding for new/changed + prune deleted items.</p>
-                  <p className="text-xs opacity-80">Last update: {embeddingsLastUpdate}</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 px-2 py-1 text-sm"
+                  onClick={handleUpdateEmbeddings}
+                >
+                  <FiZap className="h-4 w-4" /> Update Embeddings
+                </Button>
+                <span className="text-xs text-[var(--text)]/60 whitespace-nowrap">
+                  Last: {embeddingsLastUpdate}
+                </span>
+              </div>
             </div>
 
           </div>
