@@ -2,7 +2,6 @@ import { getCurrentTab, injectContentScript } from 'src/background/util';
 import buildStoreWithDefaults from 'src/state/store';
 import storage from 'src/background/storageUtil';
 import ChannelNames from '../types/ChannelNames'; 
-import MessageType from '../types/ChannelNames';
 
 // Keep track of chat IDs that have been initially indexed in this session
 // This is to ensure a chat is added to the BM25 index once when it's new,
@@ -342,7 +341,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // SEARCH_NOTES_REQUEST handler
-  if (message.type === MessageType.SEARCH_NOTES_REQUEST) {
+  if (message.type === 'SEARCH_NOTES_REQUEST') {
     const { query, topK } = message.payload;
     (async () => {
       try {

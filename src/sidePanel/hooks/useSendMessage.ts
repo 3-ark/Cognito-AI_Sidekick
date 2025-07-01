@@ -584,7 +584,7 @@ Here are the rules you should always follow to solve your task:
 2. Call a tool only when needed: do not call the search agent if you do not need information, try to solve the task yourself.
 3. If no tool call is needed, just answer the question directly.
 4. Never re-do a tool call that you previously did with the exact same parameters.
-5. For tool use, MAKE SURE to use XML tag format as shown in the examples above. Do not use any other format.
+5. To use a tool, you MUST respond with a JSON object ONLY, with the structure: {"tool_name": "name_of_tool", "tool_arguments": {"arg1": "value1", ...}}. Do not add any other text, explanation, or formatting before or after this JSON.
 
 Available tools:
 ${JSON.stringify(toolDescriptions, null, 2)}
