@@ -1,5 +1,5 @@
 import localforage from 'localforage';
-
+import { rebuildFullIndex, removeChatMessageFromIndex } from './searchUtils';
 // Interfaces
 export interface MessageTurn {
   role: 'user' | 'assistant' | 'tool';
@@ -74,13 +74,6 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
     await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   }
   
-  // Indexing is now handled by the caller (background/index.ts)
-  // try {
-  //   await indexSingleChatMessage(chatToSaveToStorage);
-  // } catch (indexError) {
-  //   console.error(`Error indexing chat message ${fullChatId}:`, indexError);
-  // }
-
   return chatToSaveToStorage; 
 };
 
@@ -110,8 +103,9 @@ export const deleteChatMessage = async (fullChatId: string): Promise<void> => {
   if (!fullChatId.startsWith(CHAT_STORAGE_PREFIX)) {
     console.warn(`deleteChatMessage called with an ID that does not have the correct prefix: ${fullChatId}. Attempting to delete anyway.`);
   }
+  await removeChatMessageFromIndex(fullChatId); // <-- This must be present!
   await localforage.removeItem(fullChatId);
-  await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`); // This will also work if fullChatId is "chat_..."
+  await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   console.log('Chat message and its embedding deleted from system:', fullChatId);
 };
 
@@ -135,6 +129,7 @@ export const deleteAllChatMessages = async (): Promise<void> => {
   await Promise.all(embeddingKeysToDelete.map(key => localforage.removeItem(key)));
   
   console.log('All chat messages and their embeddings deleted from system.');
+  await rebuildFullIndex(); // <-- This ensures the index is rebuilt after bulk delete
 };
 
 /**

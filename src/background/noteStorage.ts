@@ -1,8 +1,10 @@
 import localforage from 'localforage';
 import { strToU8, zipSync } from 'fflate';
 import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
-
+import { removeNoteFromIndex, removeChatMessageFromIndex, rebuildFullIndex } from './searchUtils';
+import { CHAT_STORAGE_PREFIX } from './chatHistoryStorage';
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
+export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_';
 
 export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
@@ -89,8 +91,7 @@ export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
   await localforage.removeItem(noteId); 
   await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
   console.log('Note and its embedding deleted from system:', noteId);
-  // After deleting the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
-  // await removeNoteFromIndex(noteId);
+  await removeNoteFromIndex(noteId); // <-- Ensure index is updated
 };
 
 /**
@@ -116,8 +117,7 @@ export const deleteAllNotesFromSystem = async (): Promise<void> => {
     await localforage.removeItem(key);
   }
   console.log('All notes and their embeddings deleted from system.');
-  // After deleting all notes, re-index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
-  // await indexNotes(); // or a more specific clearNotesFromIndex() if available
+  await rebuildFullIndex(); // <-- Rebuild index after bulk delete
 };
 
 /**
@@ -269,4 +269,43 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
     // If zipping fails, we still have the individual error counts, but explicitly state zip failed.
     return { successCount: 0, errorCount: noteIds.length, isZip: false }; // Treat all as errors if zip fails
   }
+};
+
+/**
+ * Deletes a chat message and its embedding from localforage by its ID.
+ */
+export const deleteChatMessage = async (fullChatId: string): Promise<void> => {
+  if (!fullChatId.startsWith(CHAT_STORAGE_PREFIX)) {
+    console.warn(`deleteChatMessage called with an ID that does not have the correct prefix: ${fullChatId}. Attempting to delete anyway.`);
+  }
+  await localforage.removeItem(fullChatId);
+  await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
+  console.log('Chat message and its embedding deleted from system:', fullChatId);
+  await removeChatMessageFromIndex(fullChatId); // <-- Ensure index is updated
+};
+
+/**
+ * Deletes all chat messages and their embeddings from localforage.
+ */
+export const deleteAllChatMessages = async (): Promise<void> => {
+  const keys = await localforage.keys();
+  const chatMessageKeysToDelete: string[] = [];
+  const embeddingKeysToDelete: string[] = [];
+
+  for (const key of keys) {
+    if (key.startsWith(CHAT_STORAGE_PREFIX)) {
+      chatMessageKeysToDelete.push(key);
+    } else if (key.startsWith(EMBEDDING_CHAT_PREFIX)) {
+      embeddingKeysToDelete.push(key);
+    }
+  }
+
+  for (const key of chatMessageKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  for (const key of embeddingKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  console.log('All chat messages and their embeddings deleted from system.');
+  await rebuildFullIndex(); // <-- Rebuild index after bulk delete
 };
