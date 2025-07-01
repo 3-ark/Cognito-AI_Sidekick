@@ -138,9 +138,20 @@ const useSendMessage = (
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toolDefinitions, executeToolCall } = useTools();
 
-  const updateAssistantTurn = (callId: number | null, update: string, isFinished: boolean, isError?: boolean, isCancelled?: boolean, toolCallsPayload?: LLMToolCall[]) => {
+  let toolCallTimeout: NodeJS.Timeout | null = null;
+
+  const updateAssistantTurn = (
+    callId: number | null,
+    update: string,
+    isFinished: boolean,
+    isError?: boolean,
+    isCancelled?: boolean,
+    toolCallsPayload?: LLMToolCall[]
+  ) => {
     if (completionGuard.current !== callId && !isFinished && !isError && !isCancelled) {
-      console.log(`[${callId}] updateAssistantTurn: Guard mismatch (current: ${completionGuard.current}), skipping non-final update.`);
+      if (completionGuard.current !== null) {
+        console.warn(`[${callId}] updateAssistantTurn: Guard mismatch (current: ${completionGuard.current}), skipping non-final update.`);
+      }
       return;
     }
     if (completionGuard.current === null && callId !== null) {
@@ -196,13 +207,26 @@ const useSendMessage = (
         }
       }
 
-      console.log(`[${callId}] updateAssistantTurn: Final state (Finished: ${isFinished}, Error: ${isError}, Cancelled: ${isCancelled}). Tool JSON just finished: ${justFinishedLlmToolCallJson}.`);
       setLoading(false);
 
       if (justFinishedLlmToolCallJson) {
-        console.log(`[${callId}] updateAssistantTurn: Detected finalization of LLM's tool call JSON. Completion guard will NOT be cleared yet to allow for final response processing.`);
+        // Set a timeout to set status to idle if no further assistant message arrives
+        if (toolCallTimeout) clearTimeout(toolCallTimeout);
+        toolCallTimeout = setTimeout(() => {
+          setChatStatus('idle');
+          if (completionGuard.current === callId) {
+            completionGuard.current = null;
+            if (abortControllerRef.current) {
+              abortControllerRef.current = null;
+            }
+          }
+        }, 2000);
       } else {
         setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done');
+        if (toolCallTimeout) {
+          clearTimeout(toolCallTimeout);
+          toolCallTimeout = null;
+        }
         if (completionGuard.current === callId) {
           completionGuard.current = null;
           if (abortControllerRef.current) {
@@ -253,7 +277,7 @@ const useSendMessage = (
         console.log(`[${callId}] useSendMessage: Performing BM25 search for query: "${retrieverQuery}"`);
         const results = await new Promise<string>((resolve, reject) => {
           chrome.runtime.sendMessage(
-            { type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery, topK: config?.rag?.topK } }, // will use hybrid search if RAG is added in the future
+            { type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery, topK: config?.rag?.bm25?.topK } }, // will use hybrid search if RAG is added in the future
             (response) => {
               if (chrome.runtime.lastError) {
                 reject(new Error(chrome.runtime.lastError.message));
@@ -552,7 +576,19 @@ const useSendMessage = (
         description: tool.function.description,
         parameters: tool.function.parameters
       }));
-      const toolsPrompt = `This is a strict instruction. You have access to the following tools. To use a tool, you MUST respond with a JSON object ONLY, with the structure: {"tool_name": "name_of_tool", "tool_arguments": {"arg1": "value1", ...}}. Do not add any other text, explanation, or formatting before or after this JSON. If you don't need to use a tool, respond normally.\n\nAvailable tools:\n${JSON.stringify(toolDescriptions, null, 2)}`;
+      const toolsPrompt = `In this environment you have access to a set of tools you can use to answer the user's question. You can use one tool per message, and will receive the result of that tool use in the user's response. You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
+
+Tool Use Rules
+Here are the rules you should always follow to solve your task:
+1. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
+2. Call a tool only when needed: do not call the search agent if you do not need information, try to solve the task yourself.
+3. If no tool call is needed, just answer the question directly.
+4. Never re-do a tool call that you previously did with the exact same parameters.
+5. For tool use, MAKE SURE to use XML tag format as shown in the examples above. Do not use any other format.
+
+Available tools:
+${JSON.stringify(toolDescriptions, null, 2)}
+`;
       systemPromptParts.push("## AVAILABLE TOOLS\n" + toolsPrompt);
     }
 

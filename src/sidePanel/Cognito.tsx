@@ -407,6 +407,23 @@ const Cognito = () => {
     });
   };
 
+  useEffect(() => {
+    // If the last visible message is hidden (assistant with tool_calls), set status to idle after a delay
+    const lastTurn = turns[turns.length - 1];
+    if (
+      lastTurn &&
+      lastTurn.role === 'assistant' &&
+      (
+        (lastTurn.tool_calls && lastTurn.tool_calls.length > 0) ||
+        lastTurn.status === 'streaming'
+      ) &&
+      !isLoading // Only set idle if not loading
+    ) {
+      const timer = setTimeout(() => setChatStatus('idle'), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [turns, isLoading]);
+
   return (
     <TooltipProvider delayDuration={300}>
       <div
