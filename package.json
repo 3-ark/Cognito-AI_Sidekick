@@ -1,6 +1,6 @@
 {
   "name": "Cognito - AI Sidekick",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "description": "Cognito uses AI to interpret your needs, letting you guide, query, and control your Chrome browser through natural interaction.",
   "main": "index.js",
   "scripts": {
@@ -63,7 +63,7 @@
     "localforage": "^1.10.0",
     "lucide-react": "^0.525.0",
     "mini-css-extract-plugin": "^2.9.2",
-    "motion": "^12.19.2",
+    "motion": "^12.20.2",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^5.3.31",
     "porter2": "^1.0.3",
@@ -100,7 +100,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/tiny-segmenter": "^0.2.0",
     "@types/turndown": "^5.0.5",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/eslint-plugin": "^8.35.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.30.0",
     "eslint-plugin-react": "^7.37.5",
@@ -114,7 +114,7 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.35.0",
+    "typescript-eslint": "^8.35.1",
     "webpack": "^5.99.9",
     "webpack-cli": "^6.0.1"
   }
