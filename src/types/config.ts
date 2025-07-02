@@ -62,6 +62,7 @@ export interface Config {
   maxTokens: number;
   topP: number;
   presencepenalty: number;
+  useTools?: boolean; // Added for tool usage switch
   lmStudioUrl?: string;
   lmStudioConnected?: boolean;
   lmStudioError?: string | unknown;

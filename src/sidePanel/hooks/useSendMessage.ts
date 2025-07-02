@@ -570,21 +570,28 @@ const useSendMessage = (
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
 
-    if (toolDefinitions && toolDefinitions.length > 0) {
+    // Conditionally add tool prompt based on config.useTools
+    // Default to true if config.useTools is undefined (for backward compatibility or initial load)
+    const enableTools = config?.useTools === undefined ? true : config.useTools;
+
+    if (enableTools && toolDefinitions && toolDefinitions.length > 0) {
       const toolDescriptions = toolDefinitions.map(tool => ({
         name: tool.function.name,
         description: tool.function.description,
         parameters: tool.function.parameters
       }));
-      const toolsPrompt = `In this environment you have access to a set of tools you can use to answer the user's question. You can use one tool per message, and will receive the result of that tool use in the user's response. You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
+      // Refined Tool Prompt (Option A)
+      const toolsPrompt = `To help you respond, you have access to the tools listed below. Please follow these guidelines carefully when using them:
 
-Tool Use Rules
-Here are the rules you should always follow to solve your task:
-1. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
-2. Call a tool only when needed: do not call the search agent if you do not need information, try to solve the task yourself.
-3. If no tool call is needed, just answer the question directly.
-4. Never re-do a tool call that you previously did with the exact same parameters.
-5. To use a tool, you MUST respond with a JSON object ONLY, with the structure: {"tool_name": "name_of_tool", "tool_arguments": {"arg1": "value1", ...}}. Do not add any other text, explanation, or formatting before or after this JSON.
+Tool Use Guidelines:
+Before deciding to use a tool, carefully consider if you can answer the user's request adequately with your existing knowledge. Only resort to a tool if essential information is missing or an action is explicitly required that only a tool can perform.
+
+If tool use is necessary:
+1.  **Argument Precision:** Always use the exact values for tool arguments. Do not use placeholders or variable names.
+2.  **Necessity Check:** Only call a tool if it's genuinely needed. For instance, don't use a search tool if the information is likely within your general knowledge or already provided in the conversation. Prioritize answering directly.
+3.  **Direct Answers:** If no tool is needed, provide a direct, conversational answer.
+4.  **Avoid Redundancy:** Do not repeat a tool call with the exact same arguments if it has been made previously.
+5.  **Strict JSON Format:** To use a tool, you MUST respond *only* with a single JSON object adhering to this structure: \`{"tool_name": "tool_name", "tool_arguments": {"arg_name": "value", ...}}\`. No conversational text or explanations should precede or follow this JSON object.
 
 Available tools:
 ${JSON.stringify(toolDescriptions, null, 2)}
