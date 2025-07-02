@@ -20,6 +20,9 @@ import { BsFiletypeMd } from "react-icons/bs";
 
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
 import { DEFAULT_PERSONA_IMAGES } from './constants';
+import { Changelog } from './components/Changelog/Changelog';
+import { VscRocket } from "react-icons/vsc";
+
 
 function getStatusText(mode: ChatMode, status: ChatStatus): string {
   if (status === 'idle') return 'Online';
@@ -232,6 +235,24 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { config, updateConfig } = useConfig();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
+  const [isChangelogOpen, setChangelogOpen] = useState(false);
+
+useEffect(() => {
+  const lastVersion = localStorage.getItem('lastVersion');
+  const currentVersion = APP_VERSION as string;
+
+  if (lastVersion !== currentVersion) {
+    // New version detected - clear dismissal flag and show changelog
+    localStorage.removeItem('changelogDismissed');
+    setChangelogOpen(true);
+    localStorage.setItem('lastVersion', currentVersion);
+  }
+}, []);
+
+const handleChangelogClose = () => {
+  setChangelogOpen(false);
+};
+
   const currentPersona = config?.persona || 'default';
   const currentPersonaAvatar = config?.personaAvatars?.[currentPersona] || DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
 
@@ -479,6 +500,23 @@ export const Header: React.FC<HeaderProps> = ({
                           "bg-[var(--text)]/10"
                         )}
                       />
+                      <DropdownMenuPrimitive.Item
+                        className={cn(
+                          dropdownItemClasses,
+                          "gap-2",
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                        )}
+                        onSelect={() => setChangelogOpen(true)}
+                      >
+                        <VscRocket className="mr-auto h-4 w-4" />
+                        What's New
+                      </DropdownMenuPrimitive.Item>
+                      <DropdownMenuPrimitive.Separator
+                        className={cn(
+                          dropdownSeparatorClasses,
+                          "bg-[var(--text)]/10"
+                        )}
+                      />
                       <DropdownMenuPrimitive.Sub>
                         <DropdownMenuPrimitive.SubTrigger
                           className={cn(
@@ -646,6 +684,11 @@ export const Header: React.FC<HeaderProps> = ({
           onOpenChange={setIsEditProfileDialogOpen}
           config={config}
           updateConfig={updateConfig}
+        />
+
+        <Changelog
+          isOpen={isChangelogOpen}
+          onClose={handleChangelogClose}
         />
       </div>
     </TooltipProvider>

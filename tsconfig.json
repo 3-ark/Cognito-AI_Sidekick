@@ -34,7 +34,8 @@
   "include": [
     "src",
     "config",
-    "components"
+    "components",
+    "src/types"
   ],
   "exclude": [
     "test",
