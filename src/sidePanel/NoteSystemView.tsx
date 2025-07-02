@@ -1063,7 +1063,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                   onChange={(e) => setNoteContent(e.target.value)}
                   autosize
                   minRows={5}
-                  className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden focus-visible:ring-1 focus-visible:ring-[var(--active)] thin-scrollbar"
+                  className="w-full border-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden focus-visible:ring-1 focus-visible:ring-[var(--active)]"
                 />
               </div>
             )}
