@@ -215,6 +215,18 @@ export const NotePopover = () => {
                 onCheckedChange={handleToggleUseNote}
               />
             </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="use-tools-switch" className="text-[var(--text)] font-medium cursor-pointer">
+                Use Tools
+              </Label>
+              <Switch
+                id="use-tools-switch"
+                checked={config.useTools === undefined ? true : config.useTools} // Default to true if undefined
+                onCheckedChange={(checked) => updateConfig({ useTools: checked })}
+              />
+            </div>
+
             <div>
               <Input
                 id="popover-title-input"

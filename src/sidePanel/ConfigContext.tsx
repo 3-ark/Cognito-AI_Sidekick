@@ -62,6 +62,7 @@ const defaultConfig: Config = {
   temperature: 0.7,
   topP: 0.95,
   presencepenalty: 0,
+  useTools: true, // Default to true
   models: [],
   selectedModel: undefined,
   chatMode: undefined,
