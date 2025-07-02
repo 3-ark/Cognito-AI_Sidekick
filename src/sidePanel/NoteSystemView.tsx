@@ -1033,7 +1033,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           </DialogHeader>
 
           {/* Main content area: Title, scrollable Textarea, Tags */}
-          <div className="flex-1 flex flex-col min-h-0 space-y-4">
+          <div className="flex flex-col min-h-0 space-y-4">
             <div>
             <Input
               placeholder="Note Title (optional)"
@@ -1044,11 +1044,11 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
             </div>
 
             {editingNote && !isEditingNoteContent ? (
-              <div className="flex-1 flex flex-col min-h-0 space-y-2">
+              <div className="flex flex-col min-h-0 space-y-2">
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)} className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Edit Content</Button>
                 </div>
-                <div className="flex-1 h-full border rounded-md border-[var(--text)]/10 bg-[var(--input-bg)]">
+                <div className="h-full border rounded-md border-[var(--text)]/10 bg-[var(--input-bg)]">
                   <VirtualizedContent
                     content={noteContent}
                     textClassName="text-[var(--text)]"
@@ -1056,16 +1056,13 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="flex-1 overflow-y-auto thin-scrollbar min-h-0">
                 <Textarea
                   placeholder="Your note content..."
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
-                  autosize
                   minRows={5}
-                  className="w-full border-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                  className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none focus-visible:ring-1 focus-visible:ring-[var(--active)]"
                 />
-              </div>
             )}
             <div>
             <Input
