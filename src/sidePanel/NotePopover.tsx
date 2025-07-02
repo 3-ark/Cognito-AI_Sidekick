@@ -256,7 +256,7 @@ export const NotePopover = () => {
                 className="mt-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
               />
             </div>
-            <div className="flex justify-between items-center pt-1">
+            <div className="flex justify-between items-center">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
