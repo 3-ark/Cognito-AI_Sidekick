@@ -234,14 +234,16 @@ export const NotePopover = () => {
                 placeholder="Title (optional)"
                 value={popoverTitle}
                 onChange={(e) => setPopoverTitle(e.target.value)}
-                className="mb-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
               />
+            </div>
+            <div>  
               <Textarea
                 id="note-popover-textarea"
                 value={editableNote}
                 onChange={(e) => setEditableNote(e.target.value)}
                 placeholder="Persistent notes for the AI..."
-                className="mt-1 min-h-[30vh] max-h-[70vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
+                className="mt-2 min-h-[25vh] max-h-[55vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
               />
             </div>
             <div>
@@ -296,7 +298,7 @@ export const NotePopover = () => {
                       onClick={handleSaveNoteToFile}
                       disabled={isArchiveDisabled || isSaving}
                       className={cn(
-                        "text-xs px-2 py-1 h-auto w-10" // Adjusted to ensure icon is visible
+                        "text-xs px-2 py-1 h-auto w-10"
                       )}
                     >
                       {isSaving ? "..." : <IoArchiveOutline size={16} />}

@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, ComponentPropsWithoutRef, FC } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { GoTrash, GoPencil, GoSearch, GoDownload } from "react-icons/go";
-import { LuEllipsis } from "react-icons/lu";
+import { LuEllipsis, LuVolume2, LuVolumeX } from "react-icons/lu";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
@@ -18,8 +19,8 @@ import {
   deleteAllNotesFromSystem,
   exportNotesToObsidianMD,
   deleteNotesFromSystem,
-  // saveNoteInSystem, // We will now use messaging for this
 } from '../background/noteStorage';
+import { speakMessage, stopSpeech } from '@/src/background/ttsUtils';
 import { generateObsidianMDContent } from './utils/noteUtils';
 import { cn } from '@/src/background/util';
 import { useConfig } from './ConfigContext';
@@ -300,6 +301,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   const [isEditingNoteContent, setIsEditingNoteContent] = useState(false);
   const [isDialogSaving, setIsDialogSaving] = useState(false); // Loading state for dialog save
   const [isProcessingSelectionAction, setIsProcessingSelectionAction] = useState(false); // Loading state for selection delete/export
+  const [isSpeakingDialogNote, setIsSpeakingDialogNote] = useState(false);
   
   const [pendingPageData, setPendingPageData] = useState<{title: string, content: string, url?: string} | null>(null);
 
@@ -863,7 +865,46 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setNoteTags(newNoteTags);
     setIsCreateModalOpen(true);
     setIsEditingNoteContent(note.content.length <= VIRTUALIZATION_THRESHOLD_LENGTH);
+    if (isSpeakingDialogNote) {
+      stopSpeech();
+      setIsSpeakingDialogNote(false);
+    }
   };
+
+  const handleReadAloudInDialog = () => {
+    if (!noteContent.trim()) {
+      toast("Nothing to read.", { icon: 'ℹ️' });
+      return;
+    }
+
+    if (isSpeakingDialogNote) {
+      stopSpeech();
+      setIsSpeakingDialogNote(false);
+    } else {
+      stopSpeech(); // Stop any previous speech just in case
+      setIsSpeakingDialogNote(true);
+      speakMessage(noteContent, config?.tts?.selectedVoice, config?.tts?.rate, {
+        onEnd: () => {
+          setIsSpeakingDialogNote(false);
+        },
+      });
+    }
+  };
+
+  useEffect(() => {
+    // Cleanup speech when modal is closed
+    if (!isCreateModalOpen && isSpeakingDialogNote) {
+      stopSpeech();
+      setIsSpeakingDialogNote(false);
+    }
+  }, [isCreateModalOpen, isSpeakingDialogNote]);
+
+  // Ensure speech stops when component unmounts
+  useEffect(() => {
+    return () => {
+      stopSpeech();
+    };
+  }, []);
 
   const handleDeleteNote = async (noteId: string) => {
     // No specific loading state for individual delete button in item, relies on toast
@@ -998,14 +1039,14 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               placeholder="Note Title (optional)"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)]"
+              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
             />
             </div>
 
             {editingNote && !isEditingNoteContent ? (
               <div className="flex-1 flex flex-col min-h-0 space-y-2">
                 <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)}>Edit Content</Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)} className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Edit Content</Button>
                 </div>
                 <div className="flex-1 h-full border rounded-md border-[var(--text)]/10 bg-[var(--input-bg)]">
                   <VirtualizedContent
@@ -1022,7 +1063,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                   onChange={(e) => setNoteContent(e.target.value)}
                   autosize
                   minRows={5}
-                  className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden"
+                  className="w-full bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none overflow-hidden focus-visible:ring-1 focus-visible:ring-[var(--active)] thin-scrollbar"
                 />
               </div>
             )}
@@ -1033,16 +1074,44 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               onChange={(e) => {
                 setNoteTags(e.target.value);
               }}
-              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)]"
+              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
             />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setEditingNote(null); }} disabled={isDialogSaving}>Cancel</Button>
-            <Button onClick={handleSaveNote} className="bg-[var(--active)] text-[var(--active-foreground)] hover:bg-[var(--active)]/90" disabled={isDialogSaving}>
-              {isDialogSaving ? (editingNote ? 'Saving...' : 'Creating...') : (editingNote ? 'Save Changes' : 'Create Note')}
-            </Button>
-          </DialogFooter>
+          {/* Overriding default DialogFooter styling for custom layout */}
+          <div className="flex justify-between items-center"> 
+            <div> {/* Left-aligned group - Read Aloud Button */}
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm" 
+                      className={cn(
+                        "p-1.5 rounded-md h-8 w-8", 
+                        "text-[var(--text)] hover:bg-[var(--text)]/10",
+                        "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
+                      )}
+                      onClick={handleReadAloudInDialog}
+                      disabled={!noteContent.trim() || isDialogSaving}
+                      aria-label={isSpeakingDialogNote ? "Stop reading note" : "Read note aloud"}
+                    >
+                      {isSpeakingDialogNote ? <LuVolumeX className="h-5 w-5" /> : <LuVolume2 className="h-5 w-5" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">
+                    <p>{isSpeakingDialogNote ? "Stop Reading" : "Read Note Aloud"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="space-x-2"> {/* Right-aligned group - Cancel and Save Buttons */}
+              <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setEditingNote(null); if (isSpeakingDialogNote) { stopSpeech(); setIsSpeakingDialogNote(false); } }} disabled={isDialogSaving} className="h-8 border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Cancel</Button>
+              <Button onClick={handleSaveNote} className="h-8 bg-[var(--active)] text-[var(--active-foreground)] hover:bg-[var(--active)]/90 focus-visible:ring-1 focus-visible:ring-[var(--active)]" disabled={isDialogSaving}>
+                {isDialogSaving ? (editingNote ? 'Saving...' : 'Creating...') : (editingNote ? 'Save Changes' : 'Create Note')}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
