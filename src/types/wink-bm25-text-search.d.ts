@@ -16,12 +16,13 @@ declare module 'wink-bm25-text-search' {
     learn(doc: { [key: string]: string }, id: string | number): number; // Alias for addDoc
     predict(text: string, limit?: number, filter?: (fieldValues: any, params: any) => boolean, params?: any): Array<[string | number, number]>; // Alias for search
     // Add other methods like getDocs, getTokens etc. if they become necessary for full typing
-    // getDocs(): any;
-    // getTokens(): any;
-    // getConfig(): any;
-    // getIDF(): any;
-    // getTotalCorpusLength(): number;
-    // getTotalDocs(): number;
+    getDocs(): any;
+    getTokens(): any;
+    getConfig(): any;
+    getIDF(): any;
+    getTotalCorpusLength(): number;
+    getTotalDocs(): number;
+    removeDoc(id: string | number): boolean; // Method to remove a document by ID
   }
 
   // Declare the factory function itself as the default export
