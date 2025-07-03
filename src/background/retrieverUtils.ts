@@ -23,7 +23,7 @@ export async function getBM25SearchResults(query: string, topK?: number): Promis
     try {
       const configStr: string | null = await storage.getItem('config');
       const config: Config | null = configStr ? JSON.parse(configStr) : null;
-      k = config?.rag?.topK ?? 5; // Default to 5 if not in config
+      k = config?.rag?.bm25?.topK ?? 5; // Default to 5 if not in config
     } catch (error) {
       console.warn('[retrieverUtils] Could not load topK from config, using default 5:', error);
       k = 5;

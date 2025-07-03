@@ -1,8 +1,9 @@
 Find the latest realease and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
 ## [3.7.10-3.8.3] - 2024-07-03
+  **Now you can switch off the tool use in the popover notes on the input bar**
 
-The main focus has been on **improving note management and search capabilities**, along with **refining tool usage**.
+The main focus has been on **improving note management and search capabilities**, along with **refining tool usage**. I am trying to add a good enough hybrid retrieving system (BM25+RAG) for the chat history and notes. I hope it can maintain a fast processing speed for more than 10K~50k notes/chats. For a lightweigh chrome extension, this is more than enough.
 
 Here's a concise summary:
 
