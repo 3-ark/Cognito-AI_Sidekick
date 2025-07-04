@@ -435,8 +435,8 @@ export const indexChatMessages = async () => { // Specific re-indexer for chats,
 
 // Export the generic search function that returns raw BM25 results
 export const search = searchServiceInstance.searchItems.bind(searchServiceInstance);
+// The hydrateSearchResults is more of an internal concept or for the background script to use.
 export const hydrateSearchResults = searchServiceInstance.hydrateSearchResults.bind(searchServiceInstance);
-
 // Deprecating old searchNotes if 'search' is the new standard
 // export const searchNotes = searchServiceInstance.searchNotes.bind(searchServiceInstance);
 // If external modules still use searchNotes with its specific HydratedSearchResultItem<Note> structure,

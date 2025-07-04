@@ -30,7 +30,6 @@ import {
     rebuildFullIndex, // Formerly indexNotes, this is indexAllFullRebuild
     indexSingleChatMessage,
     removeChatMessageFromIndex,
-    indexChatMessages // Specific re-indexer for chats
 } from './searchUtils';
 import { configureEmbeddingService } from './embeddingUtils'; // Added import
 import { Note, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX

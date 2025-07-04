@@ -20,7 +20,7 @@ import {
 import { generateEmbedding } from './embeddingUtils';
 import { findSimilarChunks, parseChunkId } from './semanticSearchUtils';
 import type { Note } from '../types/noteTypes'; // Import type Note
-import type { NoteChunk, ChatChunk } from '../types/chunkTypes'; // Import type Chunk
+
 /**
  * Fetches all chunk texts for a given parent document (note or chat).
  * @param parentId The ID of the parent note or chat.
@@ -41,8 +41,11 @@ export async function getChunkTextsForParent(
   
   try {
     const keys = await localforage.keys();
+    // Construct the specific starting string we expect for this parent's chunk texts
+    const expectedKeyStart = `${prefix}${parentType}chunk_${parentId}_`;
+    
     const relevantKeys = keys.filter(key => 
-      key.startsWith(prefix) && key.includes(`_${parentId}_`) // Ensure it's for the specific parent
+      key.startsWith(expectedKeyStart)
     );
 
     for (const key of relevantKeys) {
@@ -69,18 +72,10 @@ export async function getChunkTextsForParent(
  *          Returns an empty array if input is empty.
  *          If all scores are the same, all normalized scores will be 1 (or 0 if min === max === 0).
  */
-export function normalizeScores(
-    itemsWithScores: Array<{ id: string | number; score: number; [key: string]: any }>
-): Array<{ id: string | number; score: number; [key: string]: any }> {
+export function normalizeScores<T extends { id: string | number; score: number }>(
+    itemsWithScores: T[]
+): T[] {
     if (!itemsWithScores || itemsWithScores.length === 0) {
-        return [];
-    }
-
-    if (itemsWithScores.length === 0) {
-        console.warn('[normalizeScores] Input array is empty. Returning an empty array.');
-        // Consider returning an empty array or throwing an error, depending on how
-        // you want to handle this edge case.  Returning empty is a safe default.
-
         return [];
     }
 
@@ -190,28 +185,12 @@ export async function getHybridRankedChunks(
   
   // --- Step 5: Normalize Scores ---
   // Normalize semantic scores
-  const normalizedSemanticChunks = normalizeScores(
-      semanticChunks.map(c => ({ id: c.chunkId, score: c.semanticScore, ...c }))
-  ).map(c => ({ ...c, semanticScore: c.score })) as Array<{ // Explicit type assertion
-      id: string;
-      score: number;
-      parentId: string;
-      parentType: 'note' | 'chat';
-      semanticScore: number;
-      chunkId: string; // Add chunkId here
-  }>;
+  const normalizedSemanticChunks = normalizeScores(semanticChunks.map(c => ({ id: c.chunkId, score: c.semanticScore, ...c })))
+    .map(c => ({ ...c, semanticScore: c.score })); // score is now normalized semanticScore
 
   // Normalize BM25 scores (from bm25DerivedChunks)
-  const normalizedBm25Chunks = normalizeScores(
-      bm25DerivedChunks.map(c => ({ id: c.chunkId, score: c.bm25Score, ...c }))
-  ).map(c => ({ ...c, bm25Score: c.score })) as Array<{ // Explicit type assertion
-      id: string;
-      score: number;
-      parentId: string;
-      parentType: 'note' | 'chat';
-      bm25Score: number;
-      chunkId: string; // Add chunkId here
-  }>;
+  const normalizedBm25Chunks = normalizeScores(bm25DerivedChunks.map(c => ({ id: c.chunkId, score: c.bm25Score, ...c })))
+    .map(c => ({ ...c, bm25Score: c.score })); // score is now normalized bm25Score
 
 
   // --- Step 6: Combine & Calculate Hybrid Scores ---
