@@ -138,6 +138,13 @@ export interface Config {
   };
 }
 
+export interface EmbeddingModelConfig {
+  providerName: string;
+  modelId: string;
+  apiUrl: string;
+  apiKey?: string;
+}
+
 export interface ConfigContextType {
   config: Config;
   updateConfig: (newConfig: Partial<Config>) => void;

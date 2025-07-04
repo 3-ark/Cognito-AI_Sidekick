@@ -32,7 +32,9 @@ import {
     removeChatMessageFromIndex,
     indexChatMessages // Specific re-indexer for chats
 } from './searchUtils';
+import { configureEmbeddingService } from './embeddingUtils'; // Added import
 import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
+import { EmbeddingModelConfig } from 'src/types/config'; // Added import
 import { 
     getChatMessageById, 
     CHAT_STORAGE_PREFIX, 
@@ -574,3 +576,45 @@ for (const [id, score] of rawResults) {
 };
 // e.g. use 'await performBgSearch("Einstein")' in service worker console to test your search functionality
 export {};
+
+// --- Embedding Model Configuration ---
+
+// Function to load and apply embedding configuration
+const loadAndConfigureEmbeddingService = () => {
+  chrome.storage.local.get('embeddingModelConfig', (result) => {
+    if (result.embeddingModelConfig) {
+      const config = result.embeddingModelConfig as EmbeddingModelConfig;
+      if (config.apiUrl && config.modelId) {
+        console.log('[Background] Loading embedding model configuration:', config);
+        configureEmbeddingService(config.apiUrl, config.modelId, config.apiKey);
+      } else {
+        console.warn('[Background] Loaded embeddingModelConfig is incomplete. Embedding service not configured.', config);
+      }
+    } else {
+      console.log('[Background] No embeddingModelConfig found in storage. Embedding service will use defaults or remain unconfigured until set.');
+      // Optionally, configure with default values if desired
+      // configureEmbeddingService('DEFAULT_API_URL', 'DEFAULT_MODEL_ID'); 
+    }
+  });
+};
+
+// Load configuration on startup
+loadAndConfigureEmbeddingService();
+
+// Listen for changes in storage
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.embeddingModelConfig) {
+    console.log('[Background] embeddingModelConfig changed in storage.');
+    const newConfig = changes.embeddingModelConfig.newValue as EmbeddingModelConfig | undefined;
+    if (newConfig && newConfig.apiUrl && newConfig.modelId) {
+      console.log('[Background] Applying new embedding model configuration:', newConfig);
+      configureEmbeddingService(newConfig.apiUrl, newConfig.modelId, newConfig.apiKey);
+    } else if (newConfig) {
+        console.warn('[Background] New embeddingModelConfig is incomplete. Embedding service not reconfigured.', newConfig);
+    } else {
+      console.log('[Background] embeddingModelConfig was removed or cleared. Embedding service may need manual reconfiguration or revert to defaults.');
+      // Optionally, clear configuration or set to defaults
+      // configureEmbeddingService('', ''); // Example of clearing
+    }
+  }
+});
