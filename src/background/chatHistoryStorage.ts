@@ -1,5 +1,9 @@
 import localforage from 'localforage';
 import { rebuildFullIndex, removeChatMessageFromIndex } from './searchUtils';
+import { ChatChunk, ChatMessageInputForChunking } from '../types/chunkTypes'; // Added ChatChunk and ChatMessageInputForChunking
+import { chunkChatMessageTurns } from './chunkingUtils'; // Added
+import { generateEmbeddings } from './embeddingUtils'; // Added
+
 // Interfaces
 export interface MessageTurn {
   role: 'user' | 'assistant' | 'tool';
@@ -37,7 +41,9 @@ export interface ChatMessageWithEmbedding extends ChatMessage {
 
 // Constants
 export const CHAT_STORAGE_PREFIX = 'chat_';
-export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_';
+export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Used for whole chat embeddings
+export const EMBEDDING_CHAT_CHUNK_PREFIX = 'embedding_chatchunk_';
+export const CHAT_CHUNK_TEXT_PREFIX = 'chatchunktext_'; // For storing text of chat chunks
 
 // Utility Functions
 export const generateChatId = (): string => `${CHAT_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -73,6 +79,77 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
   } else {
     await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   }
+
+  // --- New Chunking and Embedding Logic for Chat Messages ---
+  try {
+    // 1. Prepare input for chunking
+    const chatInputForChunking: ChatMessageInputForChunking = {
+      id: chatToSaveToStorage.id,
+      title: chatToSaveToStorage.title,
+      turns: chatToSaveToStorage.turns.map(turn => ({ // Ensure turn structure matches input type
+        role: turn.role,
+        content: turn.content,
+        timestamp: turn.timestamp,
+      })),
+    };
+    const currentChunks: ChatChunk[] = chunkChatMessageTurns(chatInputForChunking);
+    const currentChunkIds = new Set(currentChunks.map(chunk => chunk.id));
+    const allStorageKeys = await localforage.keys();
+
+    // 2. Clean up stale chat chunk texts and embeddings
+    const oldChunkTextKeys = allStorageKeys.filter(key =>
+      key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(chatToSaveToStorage.id) // Check parentId
+    );
+    const oldChunkEmbeddingKeys = allStorageKeys.filter(key =>
+      key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(chatToSaveToStorage.id) // Check parentId
+    );
+
+    for (const oldKey of oldChunkTextKeys) {
+      // Extract chunkId from key: chatchunktext_<parentId>_<turnIndex>_<timestamp>_<role>
+      // A simple check is if the currentChunkIds (which are full chunk IDs) does not contain the ID derived from oldKey
+      const chunkId = oldKey.substring(CHAT_CHUNK_TEXT_PREFIX.length);
+      if (!currentChunkIds.has(chunkId)) {
+        await localforage.removeItem(oldKey);
+        await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunkId}`);
+        console.log(`Removed stale chat chunk text and embedding for chunk ID: ${chunkId}`);
+      }
+    }
+     for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
+        const chunkId = oldEmbeddingKey.substring(EMBEDDING_CHAT_CHUNK_PREFIX.length);
+        if (!currentChunkIds.has(chunkId)) {
+            await localforage.removeItem(oldEmbeddingKey);
+            console.log(`Removed stale chat chunk embedding (orphan check) for chunk ID: ${chunkId}`);
+        }
+    }
+
+
+    // 3. Save texts for current chat chunks
+    for (const chunk of currentChunks) {
+      await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
+    }
+
+    // 4. Generate and save embeddings for current chat chunks
+    if (currentChunks.length > 0) {
+      const chunkContents = currentChunks.map(chunk => chunk.content);
+      const embeddings = await generateEmbeddings(chunkContents);
+
+      for (let i = 0; i < currentChunks.length; i++) {
+        const chunk = currentChunks[i];
+        const embedding = embeddings[i];
+        if (embedding && embedding.length > 0) {
+          await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
+        } else {
+          console.warn(`Failed to generate embedding for chat chunk ${chunk.id}. It will not be saved.`);
+          await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`);
+        }
+      }
+    }
+    console.log(`Processed and saved ${currentChunks.length} chunks and their embeddings for chat ${chatToSaveToStorage.id}`);
+  } catch (error) {
+    console.error(`Error during chunking or embedding generation for chat ${chatToSaveToStorage.id}:`, error);
+    // Allow chat saving to succeed even if chunk processing fails.
+  }
+  // --- End of New Chunking and Embedding Logic ---
   
   return chatToSaveToStorage; 
 };

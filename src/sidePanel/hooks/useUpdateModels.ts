@@ -56,7 +56,7 @@ export const useUpdateModels = () => {
       isEnabled: (cfg) => !!cfg.geminiApiKey,
       getUrl: () => GEMINI_URL,
       getFetchOptions: (cfg) => ({ headers: { Authorization: `Bearer ${cfg.geminiApiKey}` } }),
-      parseFn: (data, host) => (data?.data as Model[] ?? []).filter(m => m.id.startsWith('models/gemini')).map(m => ({ ...m, id: m.id, host })),
+      parseFn: (data, host) => (data?.data as Model[] ?? []).map(m => ({ ...m, id: m.id, host })),
     },
     {
       host: HOST_LMSTUDIO,
@@ -80,7 +80,7 @@ export const useUpdateModels = () => {
       isEnabled: (cfg) => !!cfg.openAiApiKey,
       getUrl: () => OPENAI_URL,
       getFetchOptions: (cfg) => ({ headers: { Authorization: `Bearer ${cfg.openAiApiKey}` } }),
-      parseFn: (data, host) => (data?.data as Model[] ?? []).filter(m => m.id.startsWith('gpt-')).map(m => ({ ...m, id: m.id, host })),
+      parseFn: (data, host) => (data?.data as Model[] ?? []).map(m => ({ ...m, id: m.id, host })),
     },
     {
       host: HOST_OPENROUTER,

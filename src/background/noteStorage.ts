@@ -1,10 +1,16 @@
 import localforage from 'localforage';
 import { strToU8, zipSync } from 'fflate';
 import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
+import { NoteChunk } from '../types/chunkTypes';
 import { removeNoteFromIndex, removeChatMessageFromIndex, rebuildFullIndex } from './searchUtils';
 import { CHAT_STORAGE_PREFIX } from './chatHistoryStorage';
+import { chunkNoteContent } from './chunkingUtils';
+import { generateEmbeddings } from './embeddingUtils';
+
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
-export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_';
+export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Used for whole chat embeddings, distinct from chat CHUNK embeddings
+export const EMBEDDING_NOTE_CHUNK_PREFIX = 'embedding_notechunk_';
+export const NOTE_CHUNK_TEXT_PREFIX = 'notechunktext_'; // For storing text of note chunks
 
 export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
@@ -41,6 +47,75 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
 
   // After saving the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
   // await indexSingleNote(noteToSaveToStorage);
+
+  // --- New Chunking and Embedding Logic ---
+  try {
+    // 1. Generate chunks from the note content
+    const currentChunks: NoteChunk[] = chunkNoteContent({
+      id: noteToSaveToStorage.id,
+      content: noteToSaveToStorage.content,
+      title: noteToSaveToStorage.title,
+      url: noteToSaveToStorage.url,
+      tags: noteToSaveToStorage.tags,
+    });
+
+    const currentChunkIds = new Set(currentChunks.map(chunk => chunk.id));
+    const allStorageKeys = await localforage.keys();
+
+    // 2. Clean up stale chunk texts and embeddings
+    const oldChunkTextKeys = allStorageKeys.filter(key => 
+      key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(noteToSaveToStorage.id)
+    );
+    const oldChunkEmbeddingKeys = allStorageKeys.filter(key =>
+      key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(noteToSaveToStorage.id)
+    );
+
+    for (const oldKey of oldChunkTextKeys) {
+      const chunkId = oldKey.substring(NOTE_CHUNK_TEXT_PREFIX.length);
+      if (!currentChunkIds.has(chunkId)) {
+        await localforage.removeItem(oldKey);
+        // Also remove the corresponding embedding if it exists
+        await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunkId}`);
+        console.log(`Removed stale note chunk text and embedding for chunk ID: ${chunkId}`);
+      }
+    }
+    // Clean up any orphaned embeddings that might not have a corresponding text key (less likely but good practice)
+    for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
+        const chunkId = oldEmbeddingKey.substring(EMBEDDING_NOTE_CHUNK_PREFIX.length);
+        if (!currentChunkIds.has(chunkId)) {
+            await localforage.removeItem(oldEmbeddingKey);
+            console.log(`Removed stale note chunk embedding (orphan check) for chunk ID: ${chunkId}`);
+        }
+    }
+
+    // 3. Save texts for current chunks
+    for (const chunk of currentChunks) {
+      await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
+    }
+
+    // 4. Generate and save embeddings for current chunks
+    if (currentChunks.length > 0) {
+      const chunkContents = currentChunks.map(chunk => chunk.content);
+      const embeddings = await generateEmbeddings(chunkContents); // Assuming batching is handled inside
+
+      for (let i = 0; i < currentChunks.length; i++) {
+        const chunk = currentChunks[i];
+        const embedding = embeddings[i];
+        if (embedding && embedding.length > 0) {
+          await localforage.setItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`, embedding);
+        } else {
+          console.warn(`Failed to generate embedding for note chunk ${chunk.id}. It will not be saved.`);
+          // Ensure any old embedding for this chunk ID is removed if generation failed
+          await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`);
+        }
+      }
+    }
+    console.log(`Processed and saved ${currentChunks.length} chunks and their embeddings for note ${noteToSaveToStorage.id}`);
+  } catch (error) {
+    console.error(`Error during chunking or embedding generation for note ${noteToSaveToStorage.id}:`, error);
+    // Allow note saving to succeed even if chunk processing fails, as per requirements.
+  }
+  // --- End of New Chunking and Embedding Logic ---
 
   return noteToSaveToStorage; // Return the core Note object
 };
