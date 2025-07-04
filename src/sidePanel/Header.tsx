@@ -349,7 +349,6 @@ const handleChangelogClose = () => {
     <TooltipProvider delayDuration={500}>
       <div 
         className={cn(
-          "border border-[var(--active)]/50",
           "sticky top-0 z-10 p-0",
         )}
       >
