@@ -6,10 +6,7 @@ export interface Note {
   lastUpdatedAt: number;
   tags?: string[];
   url?: string;
-  // Future enhancements: isArchived?: boolean;
 }
-
-export const NOTE_STORAGE_PREFIX = 'note_';
 
 export type NoteWithEmbedding = Note & { embedding?: number[] };
 

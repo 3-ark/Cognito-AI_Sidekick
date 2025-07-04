@@ -33,8 +33,8 @@ import {
     indexChatMessages // Specific re-indexer for chats
 } from './searchUtils';
 import { configureEmbeddingService } from './embeddingUtils'; // Added import
-import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
-import { EmbeddingModelConfig } from 'src/types/config'; // Added import
+import { Note, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
+import { EmbeddingModelConfig, Config } from 'src/types/config'; // Added import for Config
 import { 
     getChatMessageById, 
     CHAT_STORAGE_PREFIX, 
@@ -43,8 +43,9 @@ import {
     deleteAllChatMessages,
     getAllChatMessages as storageGetAllChats // Alias to avoid conflict if any
 } from './chatHistoryStorage'; 
-import { getBM25SearchResults } from './retrieverUtils'; // Added for BM25 search
-
+// Updated imports from retrieverUtils
+import { getHybridRankedChunks, formatResultsForLLM } from './retrieverUtils'; 
+import { NOTE_STORAGE_PREFIX } from './noteStorage'; // Import NOTE_STORAGE_PREFIX
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
 
 chrome.sidePanel
@@ -477,15 +478,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates asynchronous response
   }
 
-  // GET_BM25_SEARCH_RESULTS handler
-  if (message.type === 'GET_BM25_SEARCH_RESULTS' && message.payload) {
-    const { query, topK } = message.payload;
+  // GET_BM25_SEARCH_RESULTS handler (Now GET_HYBRID_SEARCH_RESULTS)
+  if (message.type === 'GET_BM25_SEARCH_RESULTS' && message.payload) { // Keeping type for compatibility, or change to GET_HYBRID_SEARCH_RESULTS
+    const { query } = message.payload; // topK is now handled by config within getHybridRankedChunks
     (async () => {
       try {
-        const results = await getBM25SearchResults(query, topK);
-        sendResponse({ success: true, results });
+        // Fetch latest config from storage
+        const configStr: string | null = await storage.getItem('config');
+        const config: Config | null = configStr ? JSON.parse(configStr) : null;
+
+        if (!config) {
+          throw new Error("Configuration not found. Cannot perform hybrid search.");
+        }
+        
+        console.log(`[Background] Performing hybrid search for query: "${query}" with config:`, config.rag);
+        const hybridChunks = await getHybridRankedChunks(query, config);
+        
+        if (!hybridChunks || hybridChunks.length === 0) {
+          sendResponse({ success: true, results: "No relevant documents found using hybrid search." });
+          return;
+        }
+        
+        const formattedResults = formatResultsForLLM(hybridChunks);
+        sendResponse({ success: true, results: formattedResults });
       } catch (error: any) {
-        console.error('[Background] Error getting BM25 search results:', error);
+        console.error('[Background] Error getting hybrid search results:', error);
         sendResponse({ success: false, error: error.message });
       }
     })();

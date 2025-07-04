@@ -1,7 +1,7 @@
 import localforage from 'localforage';
 import { strToU8, zipSync } from 'fflate';
-import { Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding } from '../types/noteTypes';
-import { NoteChunk } from '../types/chunkTypes';
+import { Note, NoteWithEmbedding } from '../types/noteTypes';
+import type { NoteChunk } from '../types/chunkTypes'; // Consider importing as type
 import { removeNoteFromIndex, removeChatMessageFromIndex, rebuildFullIndex } from './searchUtils';
 import { CHAT_STORAGE_PREFIX } from './chatHistoryStorage';
 import { chunkNoteContent } from './chunkingUtils';
@@ -11,6 +11,7 @@ export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Used for whole chat embeddings, distinct from chat CHUNK embeddings
 export const EMBEDDING_NOTE_CHUNK_PREFIX = 'embedding_notechunk_';
 export const NOTE_CHUNK_TEXT_PREFIX = 'notechunktext_'; // For storing text of note chunks
+export const NOTE_STORAGE_PREFIX = 'note_'; // The single, correct export
 
 export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
 

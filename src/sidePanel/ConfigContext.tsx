@@ -92,7 +92,8 @@ const defaultConfig: Config = {
     },
     embedding_model: 'text-embedding-3-small',
     semantic_threshold: 0.6,
-    semantic_top_k: 50,
+    semantic_top_k: 50, // For initial semantic fetch
+    final_top_k: 10, // For final results after reranking
     bm25_weight: 0.5,
     chunkSize: 512, // Confirmed default
     bm25LastRebuild: "Never",

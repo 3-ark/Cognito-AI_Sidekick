@@ -129,7 +129,8 @@ export interface Config {
     };
     embedding_model?: string;
     semantic_threshold?: number;
-    semantic_top_k?: number;
+    semantic_top_k?: number; // For initial semantic retrieval
+    final_top_k?: number; // For the final number of reranked chunks to return
     bm25_weight?: number;
     chunkSize?: number;
     bm25LastRebuild?: string;
