@@ -92,7 +92,7 @@ const Badge = ({ children }: { children: React.ReactNode }) => (
     className={cn(
       "inline-block whitespace-nowrap overflow-hidden text-ellipsis w-full max-w-xs",
       "bg-transparent text-[var(--text)]",
-      "rounded-md py-0.5",
+      "rounded-md",
       "font-['poppins',_sans-serif] text-md text-center font-medium",
     )}
   >
@@ -349,10 +349,10 @@ const handleChangelogClose = () => {
     <TooltipProvider delayDuration={500}>
       <div 
         className={cn(
-          "sticky top-0 z-10 p-0",
+          "sticky top-0 z-10 px-2",
         )}
       >
-        <div className="flex items-center h-auto py-0.5 px-2">
+        <div className="flex items-center h-auto">
           {/* Left Button Area */}
           <div className={cn("flex justify-start items-center min-h-10", sideContainerWidthClass)}>
             <Tooltip>
@@ -396,7 +396,7 @@ const handleChangelogClose = () => {
           </div>
 
           {/* Middle Content Area */}
-          <div className="flex-grow flex justify-center items-center overflow-hidden px-1">
+          <div className="flex-grow flex justify-center items-center overflow-hidden">
             {visibleTitle && (
               <p className="text-sm font-semibold text-[var(--text)] whitespace-nowrap overflow-hidden text-ellipsis text-center">
                 {chatTitle}
