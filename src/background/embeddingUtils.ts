@@ -13,6 +13,16 @@ let embeddingServiceConfig: EmbeddingServiceConfig = {
   model: '',   // Needs to be configured
 };
 
+let _embeddingServiceReadyResolve: () => void;
+export const embeddingServiceReadyPromise = new Promise<void>(resolve => {
+  _embeddingServiceReadyResolve = resolve;
+});
+
+// Function to check if the service is configured
+const isServiceConfigured = (): boolean => {
+  return !!embeddingServiceConfig.apiUrl && !!embeddingServiceConfig.model;
+};
+
 /**
  * Configures the embedding service details.
  * This should be called during application initialization.
@@ -27,6 +37,20 @@ export const configureEmbeddingService = (
   embeddingServiceConfig.model = model;
   embeddingServiceConfig.apiKey = apiKey;
   console.log('Embedding service configured:', { apiUrl, model, apiKey: apiKey ? '******' : 'Not set' });
+
+  if (isServiceConfigured()) {
+    _embeddingServiceReadyResolve();
+  }
+};
+
+/**
+ * Returns a promise that resolves when the embedding service is configured.
+ */
+export const ensureEmbeddingServiceConfigured = (): Promise<void> => {
+  if (isServiceConfigured()) {
+    return Promise.resolve();
+  }
+  return embeddingServiceReadyPromise;
 };
 
 /**

@@ -5,7 +5,7 @@ import type { NoteChunk } from '../types/chunkTypes'; // Consider importing as t
 import { removeNoteFromIndex, removeChatMessageFromIndex, rebuildFullIndex } from './searchUtils';
 import { CHAT_STORAGE_PREFIX } from './chatHistoryStorage';
 import { chunkNoteContent } from './chunkingUtils';
-import { generateEmbeddings } from './embeddingUtils';
+import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils';
 
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Used for whole chat embeddings, distinct from chat CHUNK embeddings
@@ -38,6 +38,7 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
   await localforage.setItem(noteId, noteToSaveToStorage);
 
   // Separately, save the embedding if it exists in the input 'noteData'
+  // This "whole note" embedding might be legacy or used by features other than chunk-based RAG.
   if (noteData.embedding && noteData.embedding.length > 0) {
     await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
   } else {
@@ -51,6 +52,9 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
 
   // --- New Chunking and Embedding Logic ---
   try {
+    // Ensure embedding service is configured before proceeding
+    await ensureEmbeddingServiceConfigured();
+
     // 1. Generate chunks from the note content
     const currentChunks: NoteChunk[] = chunkNoteContent({
       id: noteToSaveToStorage.id,

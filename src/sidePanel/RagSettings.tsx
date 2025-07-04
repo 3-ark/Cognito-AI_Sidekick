@@ -82,6 +82,7 @@ export const RagSettings = () => {
   const semanticTopK = config.rag?.semantic_top_k ?? 50;
 
   // Hybrid search & general
+  const finalTopK = config.rag?.final_top_k ?? semanticTopK; // Fallback to semanticTopK then to a default in retrieverUtils
   const bm25Weight = config.rag?.bm25_weight ?? 0.5;
   const chunkSize = config.rag?.chunkSize ?? 512;
   // const embeddingModel = config.rag?.embedding_model ?? 'text-embedding-3-small'; // Replaced by new selector
@@ -409,6 +410,35 @@ export const RagSettings = () => {
               />
               <p className="text-xs text-[var(--text)]/70">
                 Number of semantic results (post-threshold). Default: 50
+              </p>
+            </div>
+            
+            {/* Final Top K */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Label htmlFor="final-top-k" className="text-base font-medium text-foreground cursor-help">
+                      Final Top K ({finalTopK})
+                    </Label>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-sm border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md rounded-md">
+                    <p>Total number of reranked chunks to return after hybrid search. Default: {semanticTopK} (matches Semantic Top K if not set).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Input
+                id="final-top-k"
+                type="number"
+                step="1"
+                min="1"
+                max="100" // Assuming a reasonable maximum
+                value={finalTopK}
+                onChange={(e) => updateConfig({ rag: { ...config.rag, final_top_k: parseInt(e.target.value) } })}
+                className="w-full h-8"
+              />
+              <p className="text-xs text-[var(--text)]/70">
+                Total reranked chunks to return. Default: {semanticTopK}
               </p>
             </div>
 

@@ -2,7 +2,7 @@ import localforage from 'localforage';
 import { rebuildFullIndex, removeChatMessageFromIndex } from './searchUtils';
 import { ChatChunk, ChatMessageInputForChunking } from '../types/chunkTypes'; // Added ChatChunk and ChatMessageInputForChunking
 import { chunkChatMessageTurns } from './chunkingUtils'; // Added
-import { generateEmbeddings } from './embeddingUtils'; // Added
+import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils'; // Added
 
 // Interfaces
 export interface MessageTurn {
@@ -74,6 +74,7 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
 
   await localforage.setItem(fullChatId, chatToSaveToStorage);
 
+  // This "whole chat" embedding might be legacy or used by features other than chunk-based RAG.
   if (chatMessageData.embedding && chatMessageData.embedding.length > 0) {
     await localforage.setItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`, chatMessageData.embedding);
   } else {
@@ -82,6 +83,9 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
 
   // --- New Chunking and Embedding Logic for Chat Messages ---
   try {
+    // Ensure embedding service is configured before proceeding
+    await ensureEmbeddingServiceConfigured();
+
     // 1. Prepare input for chunking
     const chatInputForChunking: ChatMessageInputForChunking = {
       id: chatToSaveToStorage.id,
