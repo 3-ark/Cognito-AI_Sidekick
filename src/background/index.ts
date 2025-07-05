@@ -510,11 +510,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // SAVE_CHAT_REQUEST handler
   if (message.type === 'SAVE_CHAT_REQUEST' && message.payload) {
-    // SAVE_CHAT_REQUEST handler
-    if (message.type === 'SAVE_CHAT_REQUEST' && message.payload) {
-      (async () => {
-        try {
-          const chatToSave = message.payload;
+    (async () => {
+      try {
+        const chatToSave = message.payload;
           if (!chatToSave.id) { // Ensure chatToSave has an id
             console.error('[Background] Chat to save has no ID. Skipping save/index.', chatToSave);
             sendResponse({ success: false, error: "Chat has no ID.", chat: null });
@@ -548,7 +546,67 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       })();
       return true; // Indicates asynchronous response
+  }
+
+  // REBUILD_ALL_EMBEDDINGS_REQUEST handler
+  if (message.type === 'REBUILD_ALL_EMBEDDINGS_REQUEST') {
+    (async () => {
+      try {
+        console.log("[Background] Received REBUILD_ALL_EMBEDDINGS_REQUEST.");
+        const details = await rebuildAllEmbeddings();
+        // The rebuildAllEmbeddings function now updates the config internally.
+        sendResponse({ success: true, details });
+      } catch (error: any) {
+        console.error('[Background] Error during full embeddings rebuild:', error);
+        sendResponse({ success: false, error: error.message });
       }
+    })();
+    return true; // Indicates asynchronous response
+  }
+
+  // UPDATE_MISSING_EMBEDDINGS_REQUEST handler
+  if (message.type === 'UPDATE_MISSING_EMBEDDINGS_REQUEST') {
+    (async () => {
+      try {
+        console.log("[Background] Received UPDATE_MISSING_EMBEDDINGS_REQUEST.");
+        const details = await updateMissingEmbeddings();
+        // The updateMissingEmbeddings function now updates the config internally.
+        sendResponse({ success: true, details });
+      } catch (error: any) {
+        console.error('[Background] Error during update of missing embeddings:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true; // Indicates asynchronous response
+  }
+
+  // REBUILD_BM25_INDEX_REQUEST handler
+  if (message.type === 'REBUILD_BM25_INDEX_REQUEST') {
+    (async () => {
+        try {
+            console.log("[Background] Received REBUILD_BM25_INDEX_REQUEST.");
+            await rebuildFullIndex(); // This is the existing function for BM25 full rebuild
+
+            // Update timestamp in config for BM25
+            const configStr: string | null = await storage.getItem('config');
+            let config: Config = configStr ? JSON.parse(configStr) : {};
+            config = {
+                ...config,
+                rag: {
+                    ...config.rag,
+                    bm25LastRebuild: new Date().toLocaleString(),
+                },
+            };
+            await storage.setItem('config', JSON.stringify(config));
+
+            sendResponse({ success: true, message: "BM25 index rebuild completed and timestamp updated." });
+        } catch (error: any) {
+            console.error('[Background] Error during BM25 index rebuild:', error);
+            sendResponse({ success: false, error: error.message });
+        }
+    })();
+    return true; // Indicates asynchronous response
+  }
 
   return true; 
 }
@@ -592,6 +650,10 @@ for (const [id, score] of rawResults) {
 };
 // e.g. use 'await performBgSearch("Einstein")' in service worker console to test your search functionality
 export {};
+
+// --- RAG Operations ---
+import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
+
 
 // --- Embedding Model Configuration ---
 

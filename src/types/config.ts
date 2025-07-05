@@ -133,6 +133,7 @@ export interface Config {
     final_top_k?: number; // For the final number of reranked chunks to return
     bm25_weight?: number;
     chunkSize?: number;
+    embeddingMode?: 'manual' | 'automatic'; // Added
     bm25LastRebuild?: string;
     embeddingsLastRebuild?: string;
     embeddingsLastUpdate?: string;

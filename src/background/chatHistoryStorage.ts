@@ -81,12 +81,17 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
     await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   }
 
+import storage from './storageUtil'; // Added for config access
+import { Config } from '../types/config'; // Added for config type
+
   // --- New Chunking and Embedding Logic for Chat Messages ---
   try {
-    // Ensure embedding service is configured before proceeding
-    await ensureEmbeddingServiceConfigured();
+    // Load config to check embeddingMode
+    const configStr: string | null = await storage.getItem('config');
+    const config: Config | null = configStr ? JSON.parse(configStr) : null;
+    const embeddingMode = config?.rag?.embeddingMode ?? 'manual';
 
-    // 1. Prepare input for chunking
+    // 1. Prepare input for chunking (always do this)
     const chatInputForChunking: ChatMessageInputForChunking = {
       id: chatToSaveToStorage.id,
       title: chatToSaveToStorage.title,
@@ -132,25 +137,41 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
       await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
     }
 
-    // 4. Generate and save embeddings for current chat chunks
-    if (currentChunks.length > 0) {
-      const chunkContents = currentChunks.map(chunk => chunk.content);
-      const embeddings = await generateEmbeddings(chunkContents);
+    // 4. Generate and save embeddings for current chat chunks (conditional on embeddingMode)
+    if (embeddingMode === 'automatic') {
+      if (currentChunks.length > 0) {
+        // Ensure embedding service is configured before proceeding
+        try {
+            await ensureEmbeddingServiceConfigured();
+        } catch (configError) {
+            console.warn(`Embedding service not configured. Skipping automatic embedding for chat ${chatToSaveToStorage.id}. Error: ${configError}`);
+        }
 
-      for (let i = 0; i < currentChunks.length; i++) {
-        const chunk = currentChunks[i];
-        const embedding = embeddings[i];
-        if (embedding && embedding.length > 0) {
-          await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
+        if (config?.embeddingModelConfig?.apiUrl && config?.embeddingModelConfig?.modelId) { // Check if service is configured
+            const chunkContents = currentChunks.map(chunk => chunk.content);
+            const embeddings = await generateEmbeddings(chunkContents);
+
+            for (let i = 0; i < currentChunks.length; i++) {
+                const chunk = currentChunks[i];
+                const embedding = embeddings[i];
+                if (embedding && embedding.length > 0) {
+                    await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
+                } else {
+                    console.warn(`Failed to generate embedding for chat chunk ${chunk.id}. It will not be saved.`);
+                    await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`);
+                }
+            }
+            console.log(`Automatically processed and saved ${currentChunks.length} chunk embeddings for chat ${chatToSaveToStorage.id}`);
         } else {
-          console.warn(`Failed to generate embedding for chat chunk ${chunk.id}. It will not be saved.`);
-          await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`);
+            console.log(`Automatic embedding skipped for chat ${chatToSaveToStorage.id} as embedding service is not fully configured.`);
         }
       }
+    } else {
+      console.log(`Manual embedding mode: Skipped embedding generation for chat ${chatToSaveToStorage.id}. Chunks saved without embeddings.`);
     }
-    console.log(`Processed and saved ${currentChunks.length} chunks and their embeddings for chat ${chatToSaveToStorage.id}`);
+    console.log(`Processed and saved ${currentChunks.length} chunk texts for chat ${chatToSaveToStorage.id}. Embedding mode: ${embeddingMode}`);
   } catch (error) {
-    console.error(`Error during chunking or embedding generation for chat ${chatToSaveToStorage.id}:`, error);
+    console.error(`Error during chunking or conditional embedding generation for chat ${chatToSaveToStorage.id}:`, error);
     // Allow chat saving to succeed even if chunk processing fails.
   }
   // --- End of New Chunking and Embedding Logic ---
