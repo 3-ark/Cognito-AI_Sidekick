@@ -177,8 +177,8 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   Ongoing bug fixes and performance improvements.
 *   Evaluation and integration of community pull requests.
 *   **Enhanced Agent Capabilities:**
-    *   "Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.
-    *   Autonomously invoke internal tools (like ~“save note”~, “search note”, “summarize page”) without switching modes. Here’s how to pull it off: Adding a small tool-invoking agent layer; Capturing tool-friendly intent (few-shot or system prompt); Internally calling functions when confidence is high.
+    *   ~"Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.~
+    *   ~Autonomously invoke internal tools (like ~“save note”~, “search note”, “summarize page”) without switching modes. Here’s how to pull it off: Adding a small tool-invoking agent layer; Capturing tool-friendly intent (few-shot or system prompt); Internally calling functions when confidence is high.~
     *   Better websearch with [Deepsearch](https://github.com/google-gemini/gemini-fullstack-langgraph-quickstart)
     *   "Short-term Memory" (state management) for multi-step tasks within the same context (e.g., web search followed by page parsing and comparison). Note would be used for this.
     *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
@@ -217,19 +217,19 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 ### ✅ 3. **Semantic Embedding + Cosine Similarity**
 
-* [ ] Use `@xenova/transformers` to embed:
+* [x] Use ~`@xenova/transformers`~ to embed: (transformers.js will make the package too large, pass this for public)
 
   * Each `note system` entry once
   * Each user query at runtime
-* [ ] Store embeddings in LocalForage alongside note ID
-* [ ] On query, compare query embedding to all stored vectors
+* [x] Store embeddings in LocalForage alongside note ID
+* [x] On query, compare query embedding to all stored vectors
 
   * Use cosine similarity
   * Return top-K
 
 ### ✅ 4. **Hybrid Fusion**
 
-* [ ] Implement score fusion:
+* [x] Implement score fusion:
 
   * Normalize BM25 + vector scores
   * Combine: `finalScore = α * bm25 + (1 - α) * vector`
@@ -241,9 +241,9 @@ This setup allows Cognito to understand the context of your browsing and provide
 
 ### ✅ 5. **Context Builder**
 
-* [ ] Deduplicate overlapping results (BM25 and vector)
-* [ ] Chunk or truncate large notes to fit LLM context
-* [ ] Package selected top results as `ragContext[]`
+* [x] Deduplicate overlapping results (BM25 and vector)
+* [x] Chunk or truncate large notes to fit LLM context
+* [x] Package selected top results as `ragContext[]`
 
 ---
 
@@ -261,52 +261,28 @@ This setup allows Cognito to understand the context of your browsing and provide
 ### ✅ 7. **Archive Path: `note` → `note system`**
 
 * [x] Add “Archive to Note System” button in UI
-* [ ] When archiving:
+* [x] When archiving:
 
-  * Trigger embedding generation
+  * Trigger embedding generation (manually on default)
   * Add to BM25 index and vector store
 
 ---
 
 ## 🔍 **PHASE 6: Search Tooling (Optional UI Enhancements)**
 
-* [ ] Add search bar to test hybrid search (notes only)
-* [ ] Display search scores for debugging
-* [ ] Add filters (by tag/date) to restrict RAG input
+* ~[ ] Add search bar to test hybrid search (notes only)~
+* [x] Display search scores for debugging
+* ~[ ] Add filters (by tag/date) to restrict RAG input~
 
 ---
 
 ## ⚡ **PHASE 7: Optimization + Scalability (Optional, Later)**
 
-* [ ] Add GPU acceleration (WebGPU)
-* [ ] Shard large note sets (if >20k)
-* [ ] Implement incremental embedding updates
-* [ ] Add embedding model selection
-* [ ] Cache common queries
-
----
-
-## 🧪 Dev Tip: Test Stages in Isolation
-
-Test each module independently:
-
-1. Search query → BM25 result ✅
-2. Query → embedding → cosine results ✅
-3. Fusion logic ✅
-4. Final context builder ✅
-5. Inject into LLM/chat ✅
-
----
-
-## ✅ You're Building:
-
-| Component     | Purpose                             |
-| ------------- | ----------------------------------- |
-| `note`        | live memory, always-injected        |
-| `note system` | long-term searchable memory         |
-| Hybrid search | fast + accurate retrieval           |
-| RAG engine    | builds best context on demand       |
-| Archive path  | user-controlled knowledge promotion |
+* ~[ ] Add GPU acceleration (WebGPU)~ (this is for transformers.js only)
+* ~[ ] Shard large note sets (if >20k)~
+* [x] Implement incremental embedding updates
+* [x] Add embedding model selection
+* ~[ ] Cache common queries~
 
 ---
 
