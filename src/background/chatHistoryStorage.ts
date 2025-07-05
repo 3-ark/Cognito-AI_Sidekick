@@ -146,7 +146,7 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
             console.warn(`Embedding service not configured. Skipping automatic embedding for chat ${chatToSaveToStorage.id}. Error: ${configError}`);
         }
 
-        if (config?.rag?.embedding_model && config?.rag?.embedding_model) { // Check if service is configured
+        if (config?.rag?.embedding_model) { // Check if service is configured
             const chunkContents = currentChunks.map(chunk => chunk.content);
             const embeddings = await generateEmbeddings(chunkContents);
 

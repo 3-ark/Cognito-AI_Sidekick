@@ -607,9 +607,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true; // Indicates asynchronous response
   }
-
-  return true; 
-}
 });
 // TEMPORARY DEBUGGING - REMOVE LATER
 import { search as debugSearchUtil } from './searchUtils';

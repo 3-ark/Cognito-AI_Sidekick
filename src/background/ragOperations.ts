@@ -1,6 +1,5 @@
 import localforage from 'localforage';
 import {
-  Note,
   NOTE_STORAGE_PREFIX,
   EMBEDDING_NOTE_CHUNK_PREFIX,
   NOTE_CHUNK_TEXT_PREFIX,

@@ -6,6 +6,8 @@ import { removeNoteFromIndex, removeChatMessageFromIndex, rebuildFullIndex } fro
 import { CHAT_STORAGE_PREFIX } from './chatHistoryStorage';
 import { chunkNoteContent } from './chunkingUtils';
 import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils';
+import storage from './storageUtil'; // Added for config access
+import { Config } from '../types/config'; // Added for config type
 
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
 export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Used for whole chat embeddings, distinct from chat CHUNK embeddings
@@ -50,8 +52,6 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
   // After saving the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
   // await indexSingleNote(noteToSaveToStorage);
 
-import storage from './storageUtil'; // Added for config access
-import { Config } from '../types/config'; // Added for config type
 
 // --- New Chunking and Embedding Logic ---
   try {
@@ -114,10 +114,10 @@ import { Config } from '../types/config'; // Added for config type
             // If service isn't configured, we shouldn't proceed to generateEmbeddings
             // We still want to save the note and chunks (texts), just not embeddings.
             // So, we effectively 'skip' embedding generation for this save if service is not setup.
-            // The 'error' from ensureEmbeddingServiceConfigured is treated as a condition to skip embedding.
+            // The 'error' from ensureEmbeddingServiceConfigured is treated as a condition to skip embedding. The embedding service configuration is checked internally by ensureEmbeddingServiceConfigured.
         }
-
-        if (config?.embeddingModelConfig?.apiUrl && config?.embeddingModelConfig?.modelId) { // Check if service is configured
+        // If ensureEmbeddingServiceConfigured did not throw, it means the service is ready.
+        if (config?.rag?.embedding_model) { // Check if service is configured
             const chunkContents = currentChunks.map(chunk => chunk.content);
             const embeddings = await generateEmbeddings(chunkContents); // Assuming batching is handled inside
 
