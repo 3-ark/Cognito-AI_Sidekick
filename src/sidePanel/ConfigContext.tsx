@@ -121,6 +121,32 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
     loadStoredConfig();
+
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName === 'local' && changes.config) {
+        try {
+          const newConfigValue = changes.config.newValue;
+          if (newConfigValue) {
+            const parsedConfig = JSON.parse(newConfigValue);
+            setConfig(parsedConfig);
+            console.log("ConfigContext: Detected config change from storage, updated context.", parsedConfig);
+          } else {
+            // Config was deleted or set to undefined, reset to default
+            setConfig(defaultConfig);
+            console.log("ConfigContext: Config was cleared in storage, reset to default.");
+          }
+        } catch (e) {
+          console.error("ConfigContext: Failed to parse config change from storage", e);
+        }
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    // Cleanup listener on component unmount
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   useEffect(() => {
