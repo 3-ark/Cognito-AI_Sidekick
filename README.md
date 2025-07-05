@@ -4,21 +4,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub version](https://img.shields.io/github/v/release/3-ark/Cognito)](https://github.com/3-ark/Cognito-AI_Sidekick/releases/latest)
 
-**Cognito A lightweight yet powerful Chrome extension and assistant system that combines LLM tools, web search, a smart note-taking workflow, and interact naturally with web content. - designed for effortless research, contextual memory, and semantic search (coming soon).**
-
-<!-- Optional: Add a slightly larger, more engaging screenshot or GIF here if available. docs/screenshot.png is good. -->
-![](docs/web.gif) ![](docs/local.gif) 
-
+Cognito is your intelligent browser companion — combining RAG, TTS/STT, note-taking, and customizable personas into a sleek sidebar assistant. Now with hybrid retrieval using **BM25 + semantic embeddings**!
 
 ---
 
 ## ✨ Features
 
+* **Customizable UI**: Includes theme options and a redesigned, two-tab settings layout.
 ### 🖱️ One-Click Note Capture
 
 * **Right-click any page** to instantly add it to your notes.
 * Automatically captures title, URL, and context.
 * Uses AI to clean and structure the content.
+
+### **Persona Support** & **Model Selection**
+* Pick your assistant style and model from the header.
 
 ### 🔎 Smart Web & Wiki Search
 
@@ -48,7 +48,82 @@
 
 * Short- and long-term memory support via `updateMemory`.
 * Auto-injects parsed web page content for interactive Q\&A.
-* Future-proofed for RAG/vector integration.
+* **Hybrid RAG**: Combine classic BM25 scores with semantic embeddings (private); weight-adjustable for optimal retrieval.
+* **Note System** & **Chat History**: Save, organize, and retrieve past conversations effortlessly.
+
+---
+
+## 🔧 How Hybrid RAG Works
+
+1. **BM25 Search** retrieves document chunks based on keywords.
+2. **Semantic Embeddings** (only available in private/dev builds) score based on meaning.
+3. **Score Fusion**:
+
+   ```
+   final_score = α * BM25_score + (1 – α) * semantic_score
+   ```
+4. Top-ranked chunks are fed into the assistant as context.
+
+You control `α` to balance keyword precision vs. semantic understanding.
+
+---
+
+## ⚙️ Setup & Usage
+
+### 0. Chrome Webstore
+Search for `Cognito - AI Sidekick`
+
+### 1. Install
+
+Clone and install dependencies:
+
+```bash
+git clone https://github.com/3-ark/Cognito-AI_Sidekick.git
+cd Cognito-AI_Sidekick
+npm install
+```
+
+### 2. Load in Chrome
+
+* Enable *Developer mode* in `chrome://extensions`
+* Click **Load unpacked** and select the `dist/` folder
+
+### 3. Configure
+
+* **General tab**: Choose your model and persona
+* **Assistant Memory tab**:
+
+  * Manage notes
+  * Rebuild RAG index
+  * Adjust BM25/semantic weights
+  * View or clear chat history
+
+### 4. Start Chatting
+
+* Model & persona visible in the chat header
+* Switch models with a dropdown
+* Use normal messages or data-related queries — RAG kicks in automatically
+
+---
+
+## 🔁 Rebuilding the RAG Index
+
+Whenever you:
+
+* Add/remove notes
+* Change fusion weights
+* Modify indexing settings
+
+Use **Rebuild Index** in the settings to reprocess everything.
+
+---
+
+## 📁 Note System & Chat History
+
+* Save snapshots and highlights as notes
+* Retrieve notes in chat with `@note_title`
+* Review, search, or wipe history as needed
+* Export your notes as markdown with yaml. Ready for obsidian.
 
 ---
 
@@ -67,74 +142,6 @@
      ↓
 [Note System + Memory Manager]
 ```
-
----
-
-## 🧙‍♂️ Personas
-
-Each persona defines an LLM **policy** and **tool behavior**. For example:
-
-* 🧠 `strictJsonAgent`: Only uses tools, outputs raw JSON, never explains.
-* 🔍 `researchAssistant`: Uses `searchWeb` intelligently, stores structured summaries.
-* 🗃️ `memoryCurator`: Organizes long-term memory, updates facts via `updateMemory`.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-*   Google Chrome
-
-### Installation
-
-#### Option 1: From Chrome Web Store (Recommended for most users)
-*   Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/pphjdjdoclkedgiaahmiahladgcpohca?utm_source=item-share-cb).
-
-#### Option 2: From Release (Manual Install)
-1.  Download the latest file from the [Releases page](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
-2.  Extract the downloaded ZIP file to a permanent folder on your computer.
-3.  Open Chrome and navigate to `chrome://extensions`.
-4.  Enable **Developer mode** using the toggle in the top-right corner.
-5.  Click the **Load unpacked** button.
-6.  Select the folder where you extracted the ZIP file.
-
-#### Option 3: From Source (For Developers)
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/3-ark/Cognito-AI_Sidekick.git
-    cd Cognito
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Build the extension:
-    ```bash
-    npm start
-    ```
-    This will generate the bundled extension in the `dist/chrome` folder.
-4.  Open Chrome and navigate to `chrome://extensions`.
-5.  Enable **Developer mode**.
-6.  Click **Load unpacked** and select the `dist/chrome` folder.
-
----
-
-## 📦 Exports
-
-Each note is exported as:
-
-```yaml
----
-title: "Understanding Transformers"
-tags: ["AI", "LLM", "Deep Learning"]
-url: "https://example.com/article"
-id: "note-xyz123"
----
-
-Transformers are a deep learning architecture...
-```
-
 
 ---
 
@@ -164,13 +171,6 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   **Ask About Page Content:** While viewing a complex technical document, select a confusing paragraph and ask Cognito, "Explain this selected text in simpler terms."
 *   **Connect to Local LLM:** If you have Ollama running with a model like Llama3, go to Cognito's settings, select Ollama, enter your model details (e.g., `http://localhost:11434` and model name `llama3`), and start chatting with your local AI.
 *   **Save Notes:** During a chat, if the AI provides a useful snippet or you want to remember a key piece of information, click the "Add to Note" button (or a similar function) to save it for later reference within Cognito's notes feature.
-
-## ⚙️ Configuration
-
-*   **Connecting to AI Models:** Access the settings panel to configure connections to various supported LLMs (OpenAI, Gemini, Ollama, Groq, OpenRouter, Custom). You'll typically need API keys for cloud services or endpoint URLs for local models.
-*   **Choosing Personas:** Select from available personas (Ein: Academic researcher, Warren: Business analyst, Jet: Friendly assistant, Agatha: Creative thinker, Jan: Strategist, Sherlock: Detective, Spike: All-around assistant) to tailor the AI's tone and expertise, or create your own.
-*   **TTS Settings:** Configure text-to-speech options, including browser-based TTS or integration with external services like Piper (via compatible extensions).
-*   **Theme Customization:** Personalize the appearance of the side panel.
 
 ## 🗺️ Roadmap
 
