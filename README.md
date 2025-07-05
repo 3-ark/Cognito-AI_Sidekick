@@ -17,7 +17,7 @@ Cognito is your intelligent browser companion — combining RAG, TTS/STT, note-t
 * Automatically captures title, URL, and context.
 * Uses AI to clean and structure the content.
 
-### **Persona Support** & **Model Selection**
+### 👨 **Persona Support** & **Model Selection**
 * Pick your assistant style and model from the header.
 
 ### 🔎 Smart Web & Wiki Search
