@@ -3,6 +3,8 @@ import { rebuildFullIndex, removeChatMessageFromIndex } from './searchUtils';
 import { ChatChunk, ChatMessageInputForChunking } from '../types/chunkTypes'; // Added ChatChunk and ChatMessageInputForChunking
 import { chunkChatMessageTurns } from './chunkingUtils'; // Added
 import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils'; // Added
+import storage from './storageUtil'; // Added for config access
+import { Config } from '../types/config'; // Added for config type
 
 // Interfaces
 export interface MessageTurn {
@@ -81,9 +83,6 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
     await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   }
 
-import storage from './storageUtil'; // Added for config access
-import { Config } from '../types/config'; // Added for config type
-
   // --- New Chunking and Embedding Logic for Chat Messages ---
   try {
     // Load config to check embeddingMode
@@ -147,7 +146,7 @@ import { Config } from '../types/config'; // Added for config type
             console.warn(`Embedding service not configured. Skipping automatic embedding for chat ${chatToSaveToStorage.id}. Error: ${configError}`);
         }
 
-        if (config?.embeddingModelConfig?.apiUrl && config?.embeddingModelConfig?.modelId) { // Check if service is configured
+        if (config?.rag?.embedding_model && config?.rag?.embedding_model) { // Check if service is configured
             const chunkContents = currentChunks.map(chunk => chunk.content);
             const embeddings = await generateEmbeddings(chunkContents);
 
