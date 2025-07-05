@@ -50,12 +50,17 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
   // After saving the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
   // await indexSingleNote(noteToSaveToStorage);
 
-  // --- New Chunking and Embedding Logic ---
-  try {
-    // Ensure embedding service is configured before proceeding
-    await ensureEmbeddingServiceConfigured();
+import storage from './storageUtil'; // Added for config access
+import { Config } from '../types/config'; // Added for config type
 
-    // 1. Generate chunks from the note content
+// --- New Chunking and Embedding Logic ---
+  try {
+    // Load config to check embeddingMode
+    const configStr: string | null = await storage.getItem('config');
+    const config: Config | null = configStr ? JSON.parse(configStr) : null;
+    const embeddingMode = config?.rag?.embeddingMode ?? 'manual';
+
+    // 1. Generate chunks from the note content (always do this as it's cheap)
     const currentChunks: NoteChunk[] = chunkNoteContent({
       id: noteToSaveToStorage.id,
       content: noteToSaveToStorage.content,
@@ -98,26 +103,48 @@ export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'crea
       await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
     }
 
-    // 4. Generate and save embeddings for current chunks
-    if (currentChunks.length > 0) {
-      const chunkContents = currentChunks.map(chunk => chunk.content);
-      const embeddings = await generateEmbeddings(chunkContents); // Assuming batching is handled inside
+    // 4. Generate and save embeddings for current chunks (conditional on embeddingMode)
+    if (embeddingMode === 'automatic') {
+      if (currentChunks.length > 0) {
+        // Ensure embedding service is configured before proceeding with automatic embedding
+        try {
+            await ensureEmbeddingServiceConfigured();
+        } catch (configError) {
+            console.warn(`Embedding service not configured. Skipping automatic embedding for note ${noteToSaveToStorage.id}. Error: ${configError}`);
+            // If service isn't configured, we shouldn't proceed to generateEmbeddings
+            // We still want to save the note and chunks (texts), just not embeddings.
+            // So, we effectively 'skip' embedding generation for this save if service is not setup.
+            // The 'error' from ensureEmbeddingServiceConfigured is treated as a condition to skip embedding.
+        }
 
-      for (let i = 0; i < currentChunks.length; i++) {
-        const chunk = currentChunks[i];
-        const embedding = embeddings[i];
-        if (embedding && embedding.length > 0) {
-          await localforage.setItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`, embedding);
+        if (config?.embeddingModelConfig?.apiUrl && config?.embeddingModelConfig?.modelId) { // Check if service is configured
+            const chunkContents = currentChunks.map(chunk => chunk.content);
+            const embeddings = await generateEmbeddings(chunkContents); // Assuming batching is handled inside
+
+            for (let i = 0; i < currentChunks.length; i++) {
+                const chunk = currentChunks[i];
+                const embedding = embeddings[i];
+                if (embedding && embedding.length > 0) {
+                    await localforage.setItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`, embedding);
+                } else {
+                    console.warn(`Failed to generate embedding for note chunk ${chunk.id}. It will not be saved.`);
+                    // Ensure any old embedding for this chunk ID is removed if generation failed
+                    await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`);
+                }
+            }
+            console.log(`Automatically processed and saved ${currentChunks.length} chunk embeddings for note ${noteToSaveToStorage.id}`);
         } else {
-          console.warn(`Failed to generate embedding for note chunk ${chunk.id}. It will not be saved.`);
-          // Ensure any old embedding for this chunk ID is removed if generation failed
-          await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`);
+            console.log(`Automatic embedding skipped for note ${noteToSaveToStorage.id} as embedding service is not fully configured.`);
         }
       }
+    } else {
+      console.log(`Manual embedding mode: Skipped embedding generation for note ${noteToSaveToStorage.id}. Chunks saved without embeddings.`);
+      // Optionally, one might want to remove existing embeddings if mode is manual and note is updated,
+      // but the current requirement is to just skip generation. Rebuild/Update will handle population.
     }
-    console.log(`Processed and saved ${currentChunks.length} chunks and their embeddings for note ${noteToSaveToStorage.id}`);
+    console.log(`Processed and saved ${currentChunks.length} chunk texts for note ${noteToSaveToStorage.id}. Embedding mode: ${embeddingMode}`);
   } catch (error) {
-    console.error(`Error during chunking or embedding generation for note ${noteToSaveToStorage.id}:`, error);
+    console.error(`Error during chunking or conditional embedding generation for note ${noteToSaveToStorage.id}:`, error);
     // Allow note saving to succeed even if chunk processing fails, as per requirements.
   }
   // --- End of New Chunking and Embedding Logic ---

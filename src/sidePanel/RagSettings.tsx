@@ -85,6 +85,7 @@ export const RagSettings = () => {
   const finalTopK = config.rag?.final_top_k ?? semanticTopK; // Fallback to semanticTopK then to a default in retrieverUtils
   const bm25Weight = config.rag?.bm25_weight ?? 0.5;
   const chunkSize = config.rag?.chunkSize ?? 512;
+  const embeddingMode = config.rag?.embeddingMode ?? 'manual'; // Added
   // const embeddingModel = config.rag?.embedding_model ?? 'text-embedding-3-small'; // Replaced by new selector
 
   // State for model selection
@@ -207,18 +208,56 @@ export const RagSettings = () => {
 
   const handleRebuildBm25 = () => {
     console.log("Rebuilding BM25 Index...");
-    // In a real scenario, this would trigger the rebuild and then update the timestamp
-    updateConfig({ rag: { ...config.rag, bm25LastRebuild: new Date().toLocaleString() } });
+    // This should also message the background script if BM25 rebuild is a background process
+    chrome.runtime.sendMessage({ type: "REBUILD_BM25_INDEX_REQUEST" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending REBUILD_BM25_INDEX_REQUEST:", chrome.runtime.lastError.message);
+        // Optionally, show an error to the user
+      } else if (response && response.success) {
+        console.log("BM25 Index rebuild initiated successfully.");
+        // The background script should update the timestamp in config upon completion.
+        // For now, we can optimistically update or wait for a confirmation message.
+        // To keep UI responsive and rely on background for actual update:
+        // updateConfig({ rag: { ...config.rag, bm25LastRebuild: "Processing..." } });
+        // A better approach: background updates config, and UI reflects it through context.
+      } else {
+        console.error("Failed to initiate BM25 Index rebuild:", response?.error);
+      }
+    });
   };
 
   const handleRebuildEmbeddings = () => {
-    console.log("Rebuilding Embeddings...");
-    updateConfig({ rag: { ...config.rag, embeddingsLastRebuild: new Date().toLocaleString() } });
+    console.log("Requesting full embeddings rebuild...");
+    chrome.runtime.sendMessage({ type: "REBUILD_ALL_EMBEDDINGS_REQUEST" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending REBUILD_ALL_EMBEDDINGS_REQUEST:", chrome.runtime.lastError.message);
+        // Update UI to show error
+        updateConfig({ rag: { ...config.rag, embeddingsLastRebuild: "Error!" } });
+      } else if (response && response.success) {
+        console.log("Full embeddings rebuild initiated. Processed:", response.details);
+        // Timestamp will be updated by background script and reflected via config context
+        // updateConfig({ rag: { ...config.rag, embeddingsLastRebuild: "Processing..." } }); // Optional: immediate UI feedback
+      } else {
+        console.error("Failed to initiate full embeddings rebuild:", response?.error);
+        updateConfig({ rag: { ...config.rag, embeddingsLastRebuild: `Failed: ${response?.error}` } });
+      }
+    });
   };
 
   const handleUpdateEmbeddings = () => {
-    console.log("Updating Embeddings...");
-    updateConfig({ rag: { ...config.rag, embeddingsLastUpdate: new Date().toLocaleString() } });
+    console.log("Requesting update for missing embeddings...");
+    chrome.runtime.sendMessage({ type: "UPDATE_MISSING_EMBEDDINGS_REQUEST" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending UPDATE_MISSING_EMBEDDINGS_REQUEST:", chrome.runtime.lastError.message);
+        updateConfig({ rag: { ...config.rag, embeddingsLastUpdate: "Error!" } });
+      } else if (response && response.success) {
+        console.log("Update for missing embeddings initiated. Processed:", response.details);
+        // updateConfig({ rag: { ...config.rag, embeddingsLastUpdate: "Processing..." } });
+      } else {
+        console.error("Failed to initiate update for missing embeddings:", response?.error);
+        updateConfig({ rag: { ...config.rag, embeddingsLastUpdate: `Failed: ${response?.error}` } });
+      }
+    });
   };
 
   return (
@@ -468,6 +507,48 @@ export const RagSettings = () => {
               />
               <p className="text-xs text-[var(--text)]/70">
                 Affects context granularity. Default: 512 tokens
+              </p>
+            </div>
+
+            {/* Embedding Mode Selector */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="embedding-mode-select" className="text-base font-medium text-foreground">
+                  Embedding Generation
+                </Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-[var(--text)]/70 hover:text-[var(--text)]">
+                      <FiHelpCircle />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md rounded-md">
+                    <p>
+                      <strong>Automatic:</strong> Embeddings are generated when notes/chats are saved.
+                    </p>
+                    <p>
+                      <strong>Manual:</strong> Embeddings are only generated when "Rebuild Embeddings" or "Update Embeddings" is clicked.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="flex space-x-2">
+                {(['manual', 'automatic'] as const).map((mode) => (
+                  <Button
+                    key={mode}
+                    variant={embeddingMode === mode ? "default" : "outline"}
+                    onClick={() => updateConfig({ rag: { ...config.rag, embeddingMode: mode } })}
+                    className={cn(
+                      "flex-1 text-sm h-9",
+                      embeddingMode === mode ? "bg-[var(--active)] text-[var(--active-foreground)] hover:bg-[var(--active)]/90" : "border-[var(--text)]/30 hover:bg-[var(--input-background)]"
+                    )}
+                  >
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-[var(--text)]/70">
+                Default: Manual. Automatic mode requires embedding service to be configured.
               </p>
             </div>
 

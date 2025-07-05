@@ -96,6 +96,7 @@ const defaultConfig: Config = {
     final_top_k: 10, // For final results after reranking
     bm25_weight: 0.5,
     chunkSize: 512, // Confirmed default
+    embeddingMode: 'manual', // Added default
     bm25LastRebuild: "Never",
     embeddingsLastRebuild: "Never",
     embeddingsLastUpdate: "Never",
