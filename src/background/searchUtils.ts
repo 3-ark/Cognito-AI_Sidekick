@@ -1,3 +1,4 @@
+import localforage from 'localforage';
 import winkBM25Factory from 'wink-bm25-text-search';
 import TinySegmenter from 'tiny-segmenter';
 import { stem } from 'porter2';
@@ -92,25 +93,50 @@ class SearchService {
     try {
       const json = this.engine.exportJSON();
       const key = consolidated ? BM25_CONSOLIDATED_INDEX_KEY : BM25_UNCONSOLIDATED_INDEX_KEY;
-      await storage.setItem(key, json);
-      console.log(`[SearchService._saveIndex] Index saved to ${key}`);
+      if (consolidated) {
+        await localforage.setItem(key, json);
+        console.log(`[SearchService._saveIndex] Consolidated index saved to localforage with key: ${key}`);
+      } else {
+        await storage.setItem(key, json); // Unconsolidated remains in chrome.storage.local
+        console.log(`[SearchService._saveIndex] Unconsolidated index saved to chrome.storage.local with key: ${key}`);
+      }
     } catch (error) {
       console.error(`[SearchService._saveIndex] Error saving index (consolidated: ${consolidated}):`, error);
     }
   }
 
   private async _performConsolidation(): Promise<void> {
-    console.log('[SearchService._performConsolidation] Starting consolidation process.');
-    await this._loadUnconsolidatedIndexIntoEngine(); // Loads current unconsolidated state
+    console.log('[SearchService._performConsolidation] Starting consolidation process using in-memory store.');
+    // Do NOT load from unconsolidated index file. Instead, rebuild engine from in-memory store.
+    // This ensures we are consolidating the absolute latest state.
+    this.engine.reset();
+    this._configureEngine(); // Reapply config after reset
+    console.log(`[SearchService._performConsolidation] Rebuilding engine from ${this.inMemoryItemsStore.size} in-memory items before consolidation.`);
+    for (const [docId, item] of this.inMemoryItemsStore) {
+      this.engine.addDoc({ title: item.title, content: item.content }, docId);
+    }
+
     try {
-      this.engine.consolidate();
-      console.log('[SearchService._performConsolidation] Engine consolidated.');
-      await this._saveIndex(true); // Save the consolidated state
-      console.log('[SearchService._performConsolidation] Consolidated index saved.');
+      if (this.inMemoryItemsStore.size === 0) {
+        console.log('[SearchService._performConsolidation] In-memory store is empty. Clearing consolidated index.');
+        // If there are no items, consolidation means an empty index.
+        // We still save this empty state to localforage and remove the unconsolidated index.
+      }
+      this.engine.consolidate(); // Consolidate the freshly rebuilt engine state
+      console.log('[SearchService._performConsolidation] Engine consolidated from in-memory items.');
+      await this._saveIndex(true); // Save the consolidated state to localforage
+      console.log('[SearchService._performConsolidation] Consolidated index saved to localforage.');
+
+      // Now, remove the unconsolidated index from chrome.storage.local
+      await storage.deleteItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+      console.log('[SearchService._performConsolidation] Unconsolidated index removed from chrome.storage.local.');
+
       this.unconsolidatedChangeCount = 0;
       console.log('[SearchService._performConsolidation] Change counter reset.');
     } catch (error) {
       console.error('[SearchService._performConsolidation] Error during consolidation:', error);
+      // Consider if we need to avoid deleting the unconsolidated index if saving consolidated one fails.
+      // Current logic: if _saveIndex(true) fails, it will throw and skip deletion, which is good.
     }
   }
 
@@ -222,21 +248,33 @@ class SearchService {
       let loadedIndex = false;
       let consolidateAfterLoad = false;
 
-      const consolidatedIndexJson = await storage.getItem(BM25_CONSOLIDATED_INDEX_KEY);
+      // Try loading consolidated index from localforage first
+      const consolidatedIndexJson = await localforage.getItem<string>(BM25_CONSOLIDATED_INDEX_KEY);
       if (consolidatedIndexJson) {
-        console.log('[SearchService._initialize] Found consolidated index in storage.');
+        console.log('[SearchService._initialize] Found consolidated index in localforage.');
         this.engine.importJSON(consolidatedIndexJson);
         loadedIndex = true;
         this.unconsolidatedChangeCount = 0; // Reset as we loaded a good consolidated state
-        console.log('[SearchService._initialize] Consolidated index loaded successfully.');
+        console.log('[SearchService._initialize] Consolidated index loaded successfully from localforage.');
+
+        // Optional: Check for and remove any orphaned unconsolidated index from chrome.storage.local
+        const orphanedUnconsolidatedJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+        if (orphanedUnconsolidatedJson) {
+          console.log('[SearchService._initialize] Found orphaned unconsolidated index in chrome.storage.local while a consolidated one exists. Removing it.');
+          await storage.deleteItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+        }
       } else {
+        // If no consolidated index, try loading unconsolidated index from chrome.storage.local
         const unconsolidatedIndexJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
         if (unconsolidatedIndexJson) {
-          console.log('[SearchService._initialize] Found unconsolidated index in storage.');
-          this.engine.importJSON(unconsolidatedIndexJson);
+          console.log('[SearchService._initialize] Found unconsolidated index in chrome.storage.local.');
+          this.engine.importJSON(unconsolidatedIndexJson); // Load it into the engine
           loadedIndex = true;
           consolidateAfterLoad = true; // Mark for consolidation after loading in-memory store
-          console.log('[SearchService._initialize] Unconsolidated index loaded successfully.');
+          // Set unconsolidatedChangeCount because we've loaded an unconsolidated index.
+          // This ensures that it will be processed and moved to localforage.
+          this.unconsolidatedChangeCount = 1;
+          console.log('[SearchService._initialize] Unconsolidated index loaded successfully. unconsolidatedChangeCount set to 1.');
         }
       }
 
