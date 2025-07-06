@@ -87,10 +87,10 @@ export const NotePopover = () => {
     // This message seems related to a different functionality (downloading a file perhaps)
     // and not directly to saving to the internal note system.
     // It's kept for now but might need clarification if it's causing confusion.
-    chrome.runtime.sendMessage({
-      type: 'SAVE_NOTE_TO_FILE',
-      payload: { content: editableNote },
-    });
+    // chrome.runtime.sendMessage({
+    //   type: 'SAVE_NOTE_TO_FILE',
+    //   payload: { content: editableNote },
+    // });
     // Removed optimistic toast: toast.success('Note saved to file!');
 
     if (editableNote.trim() || popoverTitle.trim() || popoverTags.trim()) {
@@ -101,32 +101,45 @@ export const NotePopover = () => {
         const finalPopoverTitle = popoverTitle.trim() || `Note from Popover - ${timestamp}`;
         const parsedTags = popoverTags.trim() === '' ? [] : popoverTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
 
-        const result = await saveNoteInSystem({ title: finalPopoverTitle, content: editableNote, tags: parsedTags });
-
-        if (result) {
-          toast.success('Memory archived to Note System!', { id: toastId });
-          // Clear content and drafts on successful save
-          setEditableNote('');
-          setPopoverTitle('');
-          setPopoverTags('');
-          updateConfig({
-            noteContent: '',
-            popoverTitleDraft: '',
-            popoverTagsDraft: '',
-          });
-          setIsOpen(false); // Close popover on successful save
-        } else {
-          toast.error('Failed to archive memory to Note System.', { id: toastId });
-        }
-      } catch (error) { // Catch unexpected errors during the process
-        console.error("Error archiving memory to system from popover:", error);
-        toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
-      } finally {
+        // Send a message to the background script to save and index the note
+        chrome.runtime.sendMessage(
+          {
+            type: 'SAVE_NOTE_REQUEST',
+            payload: {
+              title: finalPopoverTitle,
+              content: editableNote,
+              tags: parsedTags,
+            },
+          },
+          (response) => {
+            setIsSaving(false);
+            if (response && response.success) {
+              toast.success('Memory archived to Note System!', { id: toastId });
+              setEditableNote('');
+              setPopoverTitle('');
+              setPopoverTags('');
+              updateConfig({
+                noteContent: '',
+                popoverTitleDraft: '',
+                popoverTagsDraft: '',
+              });
+              setIsOpen(false); // Close popover on successful save
+            } else {
+              console.error("Error response from background script SAVE_NOTE_REQUEST:", response?.error);
+              toast.error(response?.error || 'Failed to archive memory to Note System.', { id: toastId });
+            }
+          }
+        );
+      } catch (error) { // Catch unexpected errors during the message sending process itself (less likely)
         setIsSaving(false);
+        console.error("Error sending SAVE_NOTE_REQUEST message from popover:", error);
+        toast.error(`An unexpected client-side error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
       }
     } else {
-      // If only SAVE_NOTE_TO_FILE was relevant and there's no content for system save
-      setIsOpen(false);
+      // If there's no content for system save (e.g., all fields are empty)
+      // This case should ideally be prevented by the `isArchiveDisabled` check,
+      // but as a fallback, we can just close the popover or do nothing.
+      setIsOpen(false); 
     }
   };
 
