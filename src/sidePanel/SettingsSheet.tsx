@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { IoMoonOutline, IoSunnyOutline } from 'react-icons/io5';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiBookOpen } from 'react-icons/fi'; // Removed IoMoonOutline, IoSunnyOutline, Added FiBookOpen
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -15,7 +14,7 @@ import { useUpdateModels } from './hooks/useUpdateModels';
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import AnimatedBackground from './AnimatedBackground';
 
-const SheetThemeButton = ({ theme, updateConfig, size = "h-7 w-7" }: { theme: AppTheme; updateConfig: (newConfig: Partial<Config>) => void; size?: string }) => (
+const SheetThemeButton = ({ theme, updateConfig, size = "h-6 w-6" }: { theme: AppTheme; updateConfig: (newConfig: Partial<Config>) => void; size?: string }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <Button
@@ -81,16 +80,8 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
         model.host?.toLowerCase()?.includes(searchQuery.toLowerCase())
     ) || [];
 
-  const toggleTheme = () => {
-    const isDarkTheme = document.documentElement.classList.contains('dark');
-    const nextThemeName = isDarkTheme ? 'paper' : 'dark';
-    const nextTheme = appThemes.find((t) => t.name === nextThemeName);
-    if (nextTheme) {
-      updateConfig({ theme: nextThemeName });
-    }
-  };
-
-  const isDark = config?.theme === 'dark';
+  // Removed toggleTheme function
+  // const isDark = config?.theme === 'dark'; // No longer needed for theme toggle
   const sectionPaddingX = 'px-6';
 
   const handleConfigClick = () => {
@@ -170,46 +161,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
             }}
         >
         <AnimatedBackground />
-        <div
-          className={cn(
-            config?.theme === 'dark' ? 'border border-[var(--active)]' : 'border border-[var(--text)]/20',
-            "sticky top-0 z-10 p-0"
-          )}
-        ></div>
-          <SheetHeader className="px-4 pt-4 pb-4">
-            <div className="flex items-center justify-between mb-2 relative z-10">
-               <Tooltip>
-                 <TooltipTrigger asChild>
-                   <Button variant="ghost" size="sm" aria-label={isDark ? 'Light' : 'Dark'} onClick={toggleTheme} className="text-[var(--text)] rounded-md">
-                     {isDark ? <IoSunnyOutline size="20px" /> : <IoMoonOutline size="20px" />}
-                   </Button>
-                 </TooltipTrigger>
-                 <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
-                   {isDark ? 'Light' : 'Dark'}
-                 </TooltipContent>
-               </Tooltip>
-               <Tooltip>
-                 <TooltipTrigger asChild>
-                   <Button variant="ghost" size="sm" aria-label="Close Settings" className="text-[var(--text)] rounded-md relative top-[1px]" onClick={() => onOpenChange(false)}>
-                     <FiX size="20px" />
-                   </Button>
-                 </TooltipTrigger>
-                 <TooltipContent side="bottom" className={sharedTooltipContentStyle}> Close Settings </TooltipContent>
-               </Tooltip>
-             </div>
-             <SheetTitle className="text-center font-['Bruno_Ace_SC'] tracking-tight -mt-10 cognito-title-container">
-               <a href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer"
-                  className={cn(
-                    "text-xl font-semibold text-[var(--text)] bg-[var(--active)] inline-block px-3 py-1 rounded-md no-underline",
-                    "cognito-title-blade-glow"
-                  )}>COGNITO <sub className="contrast-200 text-[0.5em]">v{APP_VERSION}</sub>
-               </a>
-             </SheetTitle>
-             <SheetDescription className="text-center font-['Bruno_Ace_SC'] text-[var(--text)] leading-tight mt-2">
-               Settings
-             </SheetDescription>
-          </SheetHeader>
-           <div className={cn("flex flex-col h-full overflow-y-auto settings-drawer-body", "no-scrollbar")}>
+           <div className={cn("flex flex-col flex-1 overflow-y-auto settings-drawer-body", "no-scrollbar")}> {/* Adjusted flex-1 to ensure content area takes up space */}
               <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-4",)}>
                 <div>
                   <div className="flex items-center justify-between mt-5 mb-3">
@@ -407,11 +359,65 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     </Button>
                  </div>
               </div>
-              <div className={cn("mt-auto text-center text-[var(--text)] opacity-70 shrink-0 text-xs font-mono pb-4")}>
-                  Made with ❤️ by @3-Ark
-              </div>
+              {/* Footer div removed */}
            </div>
-        </SheetContent>
-    </Sheet>
+            {/* New Footer Section */}
+            <div className={cn(
+                "sticky bottom-0 z-10 p-3", // p-3 provides padding around the footer content
+                "flex items-center justify-between"
+            )}>
+                {/* Pill Tag */}
+                <div className="flex rounded-sm overflow-hidden shadow-md">
+                    <SheetTitle asChild>
+                        <span
+                            className="px-2 py-0 text-xs flex items-center justify-center"
+                            style={{ backgroundColor: 'var(--active)', color: 'var(--text)' }}
+                        >
+                            COGNITO
+                        </span>
+                    </SheetTitle>
+                    <SheetDescription asChild>
+                        <span
+                            className="px-2 py-0 text-xs text-white flex items-center justify-center"
+                            style={{ backgroundColor: 'var(--link)', color: 'white' }}
+                        >
+                            v{APP_VERSION}
+                        </span>
+                    </SheetDescription>
+                </div>
+
+                {/* Icons */}
+                <div className="flex items-center space-x-1">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <a
+                                href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[var(--text)] p-1.5 hover:bg-[var(--active)]/20 focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
+                                aria-label="User Guide"
+                            >
+                                <FiBookOpen />
+                            </a>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className={sharedTooltipContentStyle}>User Guide</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button 
+                                variant={'link'}
+                                aria-label="Close Settings" 
+                                className="text-[var(--text)] p-1.5 hover:bg-[var(--active)]/20 h-6 w-6 hover:px-0 focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]" 
+                                onClick={() => onOpenChange(false)}
+                            >
+                                <FiX />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className={sharedTooltipContentStyle}> Close Settings </TooltipContent>
+                    </Tooltip>
+                </div>
+            </div>
+         </SheetContent>
+     </Sheet>
   );
 };

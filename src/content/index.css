@@ -542,40 +542,6 @@ html[data-paper-texture="true"] #root::before {
   -moz-appearance: textfield; /* Firefox */
 }
 
-.cognito-title-blade-glow {
-  position: relative;
-  z-index: 0;
-  overflow: hidden;
-  border-radius: 0.75em;
-  background: var(--active); /* Keep the background static */
-}
-
-.cognito-title-blade-glow::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  background-image: conic-gradient(
-    from 0deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.3) 25%,
-    rgba(255, 255, 255, 0.1) 50%
-  );
-  background-size: 200% 200%; /* Reduced size for sharper effect */
-  animation: lightCircleMove 5s linear infinite; /* Faster animation for sharpness */
-  pointer-events: none;
-  z-index: 1;
-
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  padding: 1px;
-  box-sizing: border-box;
-}
-
 /* Keyframes for the light point circling the border */
 @keyframes lightCircleMove {
   0% {

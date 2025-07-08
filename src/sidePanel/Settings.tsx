@@ -82,7 +82,6 @@ export const Settings = () => {
           className={cn(
             "mb-4 p-4",
             "rounded-[3rem]",
-            "cognito-title-blade-glow",
             "text-[var(--text)]",
             "text-base"
           )}
