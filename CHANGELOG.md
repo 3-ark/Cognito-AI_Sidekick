@@ -1,8 +1,8 @@
 Find the latest release and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
-## [3.8.4] - 2024-07-05
+## [3.8.6] - 2024-07-11
 
-The initial *hybrid RAG* is set up, which retrieves BM25+Semantic search results based on weight average score for the chat history and notes. I hope it can maintain a fast processing speed for more than 10K~50k notes/chats in the future. For a lightweight chrome extension, this is more than enough. This new function needs to be polished before it looks great, like the citation is just too long and without a format. But it's working properly with **some extra attention.** Before I bump the version to 3.9.0, you can see this as testing, so any bug report is welcome.
+Prepare the new UI/UX for new functions, refine the welcome modal and quick guide.
 
 **How to use RAG**:
 1. Go to RAG Settings panel in Configuration. 

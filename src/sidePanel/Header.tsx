@@ -44,50 +44,111 @@ function getStatusText(mode: ChatMode, status: ChatStatus): string {
   return 'Online';
 }
 
+// --- Word-by-word typewriter animation ---
+function TypewriterLinesWordByWord({ lines, delay = 120, className = "" }: { lines: React.ReactNode[], delay?: number, className?: string }) {
+  const words = lines.flatMap((line, idx) =>
+    typeof line === "string"
+      ? line.split(" ").map((word, i, arr) => word + (i < arr.length - 1 ? " " : "")).concat(idx < lines.length - 1 ? ["\n"] : [])
+      : [line, idx < lines.length - 1 ? "\n" : ""]
+  );
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (visibleCount < words.length) {
+      const timer = setTimeout(() => setVisibleCount(visibleCount + 1), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [visibleCount, words.length, delay]);
+
+  return (
+    <div
+      className={className}
+      style={{
+        fontFamily: "'Space Mono', monospace",
+        whiteSpace: "pre-wrap"
+      }}
+    >
+      {words.slice(0, visibleCount).map((word, idx) =>
+        word === "\n" ? <br key={idx} /> : <span key={idx}>{word}</span>
+      )}
+      {visibleCount < words.length && <span className="blinking-cursor">|</span>}
+    </div>
+  );
+}
+
+// --- Guide content with link ---
+const guideLines = [
+  "1. In Settings, go to 'API Access' to fill in your API keys or URLs.",
+  "2. Exit settings, then click the model selector in the header to choose your model. You can set your username in the top right corner.",
+  "3. Use the 'Chat Controls' (notebook icon in input bar) to toggle AI memory and tool usage.",
+  <>
+    4. Check the user guide{" "}
+    <a
+      href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+    >
+      here
+    </a>
+  </>,
+  "",
+  "Note: You can adjust other settings later. For the best experience and to avoid this guide, an API setup is recommended even for local models. Have fun!"
+];
+
 interface WelcomeModalProps {
   isOpen: boolean;
-  onClose: (open: boolean) => void;
+  onClose: () => void; // Changed to simple onClose
   setSettingsMode: (mode: boolean) => void;
 }
-const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSettingsMode}) => (
-  <Dialog open={isOpen} onOpenChange={onClose}>
-    <DialogContent
-      variant="themedPanel"
-      className={cn( 
-          "[&>button]:hidden"
-      )}
-      style={{ 
-        width: '13.75rem', 
-        height: '6.875rem',
-        borderRadius: '1.875rem',
-        boxShadow: '0.9375rem 0.9375rem 1.875rem rgb(25, 25, 25), 0 0 1.875rem rgb(60, 60, 60)'
-      }}
-      onInteractOutside={(e) => e.preventDefault()}
-    >
-      <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow">
-        <DialogTitle className="text-base">Welcome</DialogTitle>
-      </DialogHeader>
-      <DialogDescription asChild>
-        <div className="p-4 text-center">
-          <p className="text-[var(--text)] header-title-glow font-['Bruno_Ace_SC'] mb-2 -mt-7">
-            The game is afoot!<br />
-          </p>
-          <div className="flex justify-center">
 
-                <Button
-                  variant="ghost"
-                  className="fingerprint-pulse-btn"
-                  onClick={() => setSettingsMode(true)}
-                  aria-label="Connect to your models"
-                >
-                  <IoFingerPrint size="3rem" color="var(--active)" />
-                </Button>
-          </div>
+const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSettingsMode }) => {
+  const handleGotIt = () => {
+    chrome.storage.local.set({ hasSeenWelcomeGuide: true });
+    onClose();
+    setSettingsMode(true); // Navigate to settings
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}> {/* Call onClose when dialog tries to close */}
+      <DialogContent
+        variant="themedPanel"
+        className={cn(
+          "[&>button]:hidden", // Hide default close button if any
+          "flex flex-col items-center justify-center" // Center content
+        )}
+        style={{
+          width: '22rem', // Adjusted width for content
+          minHeight: '18rem', // Adjusted height for content
+          borderRadius: '1.875rem',
+          boxShadow: '0.9375rem 0.9375rem 1.875rem rgb(25, 25, 25), 0 0 1.875rem rgb(60, 60, 60)'
+        }}
+        onInteractOutside={(e) => e.preventDefault()} // Prevent closing on outside click
+      >
+        <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow mt-4">
+          <DialogTitle className="text-lg">Quick Guide</DialogTitle>
+        </DialogHeader>
+        <div className="p-4 text-left w-full max-w-md">
+          <TypewriterLinesWordByWord
+            lines={guideLines}
+            delay={50} // Faster typing
+            className="text-sm text-[var(--text)] mt-2"
+          />
         </div>
-      </DialogDescription>
-    </DialogContent>
-  </Dialog> 
-);
+        <DialogFooter className="mt-auto p-4">
+          <Button
+            variant="ghost"
+            className="fingerprint-pulse-btn"
+            onClick={handleGotIt}
+            aria-label="Got it, proceed to settings"
+          >
+            <IoFingerPrint size="3rem" color="var(--active)" />
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 interface EditProfileDialogProps {
   isOpen: boolean;
@@ -226,17 +287,35 @@ export const Header: React.FC<HeaderProps> = ({
   const { fetchAllModels } = useUpdateModels();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const [isChangelogOpen, setChangelogOpen] = useState(false);
+  const [showWelcomeModalState, setShowWelcomeModalState] = useState(false); // Renamed to avoid conflict
 
 useEffect(() => {
-  const lastVersion = localStorage.getItem('lastVersion');
+  // Check for welcome guide
+  chrome.storage.local.get('hasSeenWelcomeGuide', (result) => {
+    if (!result.hasSeenWelcomeGuide) {
+      setShowWelcomeModalState(true);
+    }
+  });
+}, []);
+
+const handleWelcomeModalClose = () => {
+  setShowWelcomeModalState(false);
+  // The flag `hasSeenWelcomeGuide` is set inside the WelcomeModal's handleGotIt by clicking the fingerprint button
+};
+
+useEffect(() => {
+  // Check for changelog
+  const lastVersionStored = localStorage.getItem('lastVersion');
   const currentVersion = APP_VERSION as string;
 
-  if (lastVersion !== currentVersion) {
-    // New version detected - clear dismissal flag and show changelog
-    localStorage.removeItem('changelogDismissed');
+  if (lastVersionStored !== currentVersion) {
+    // New version detected or first time running with this version tracking
+    localStorage.removeItem('changelogDismissed'); // Ensure changelog shows if version changed or if this flag was somehow set
     setChangelogOpen(true);
     localStorage.setItem('lastVersion', currentVersion);
   }
+  // Note: The 'changelogDismissed' flag is typically handled by the Changelog component itself if it offers a "don't show again for this version" feature.
+  // Here, we ensure it's shown if the version is new.
 }, []);
 
 const handleChangelogClose = () => {
@@ -658,8 +737,12 @@ const handleChangelogClose = () => {
           </div>
         </div>
 
-        {(!config?.models || config.models.length === 0) && !settingsMode && !historyMode && !noteSystemMode && (
-           <WelcomeModal isOpen={true} setSettingsMode={setSettingsMode} onClose={() => {}} />
+        {showWelcomeModalState && !settingsMode && !historyMode && !noteSystemMode && (
+           <WelcomeModal 
+             isOpen={showWelcomeModalState} 
+             setSettingsMode={setSettingsMode} 
+             onClose={handleWelcomeModalClose} 
+           />
         )}
 
         <SettingsSheet
