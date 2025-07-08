@@ -127,6 +127,9 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
       >
         <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow mt-4">
           <DialogTitle className="text-lg">Quick Guide</DialogTitle>
+          <DialogDescription className="sr-only">
+            A quick introduction to get you started with Cognito.
+          </DialogDescription>
         </DialogHeader>
         <div className="p-4 text-left w-full max-w-md">
           <TypewriterLinesWordByWord
