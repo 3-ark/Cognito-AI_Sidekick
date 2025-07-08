@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { type Config } from "@/src/types/config";
 import { themes as appThemes, type Theme as AppTheme } from './Themes';
 import { cn } from "@/src/background/util";
-import { useUpdateModels } from './hooks/useUpdateModels';
+// import { useUpdateModels } from './hooks/useUpdateModels'; // Model selection moved
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import AnimatedBackground from './AnimatedBackground';
 
@@ -62,26 +62,24 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   setHistoryMode,
   setNoteSystemMode,
 }) => {
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [inputFocused, setInputFocused] = React.useState(false);
-  const { fetchAllModels } = useUpdateModels();
+  // const [searchQuery, setSearchQuery] = React.useState(''); // Moved to ModelSelection
+  // const [inputFocused, setInputFocused] = React.useState(false); // Moved to ModelSelection
+  // const { fetchAllModels } = useUpdateModels(); // Moved to Header, then to ModelSelection
   const sheetContentRef = React.useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dropdownPosition, setDropdownPosition] = React.useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+  // const inputRef = useRef<HTMLInputElement>(null); // Moved to ModelSelection
+  // const [dropdownPosition, setDropdownPosition] = React.useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 }); // Moved to ModelSelection
 
 
   const currentPersona = config?.persona || 'default';
   const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
 
-  const filteredModels =
-    config?.models?.filter(
-      (model) =>
-        model.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        model.host?.toLowerCase()?.includes(searchQuery.toLowerCase())
-    ) || [];
+  // const filteredModels = // Moved to ModelSelection
+  //   config?.models?.filter(
+  //     (model) =>
+  //       model.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //       model.host?.toLowerCase()?.includes(searchQuery.toLowerCase())
+  //   ) || [];
 
-  // Removed toggleTheme function
-  // const isDark = config?.theme === 'dark'; // No longer needed for theme toggle
   const sectionPaddingX = 'px-6';
 
   const handleConfigClick = () => {
@@ -101,43 +99,43 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
 
   const presetThemesForSheet = appThemes.filter(t => t.name !== 'custom' && t.name !== config?.customTheme?.name);
 
-  useEffect(() => {
-    if (isOpen) {
-      setSearchQuery('');
-      setInputFocused(false);
-    }
-  }, [isOpen]);
+  // useEffect(() => { // Related to inputFocus, moved
+  //   if (isOpen) {
+  //     setSearchQuery('');
+  //     setInputFocused(false);
+  //   }
+  // }, [isOpen]);
 
-  useEffect(() => {
-    if (inputFocused && inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
-  }, [inputFocused]);
+  // useEffect(() => { // Related to inputFocus, moved
+  //   if (inputFocused && inputRef.current) {
+  //     const rect = inputRef.current.getBoundingClientRect();
+  //     setDropdownPosition({
+  //       top: rect.bottom + window.scrollY,
+  //       left: rect.left + window.scrollX,
+  //       width: rect.width,
+  //     });
+  //   }
+  // }, [inputFocused]);
 
-  useEffect(() => {
-    if (!inputFocused) return;
-    const handle = () => {
-      if (inputRef.current) {
-        const rect = inputRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-        });
-      }
-    };
-    window.addEventListener('resize', handle);
-    window.addEventListener('scroll', handle, true);
-    return () => {
-      window.removeEventListener('resize', handle);
-      window.removeEventListener('scroll', handle, true);
-    };
-  }, [inputFocused]);
+  // useEffect(() => { // Related to inputFocus, moved
+  //   if (!inputFocused) return;
+  //   const handle = () => {
+  //     if (inputRef.current) {
+  //       const rect = inputRef.current.getBoundingClientRect();
+  //       setDropdownPosition({
+  //         top: rect.bottom + window.scrollY,
+  //         left: rect.left + window.scrollX,
+  //         width: rect.width,
+  //       });
+  //     }
+  //   };
+  //   window.addEventListener('resize', handle);
+  //   window.addEventListener('scroll', handle, true);
+  //   return () => {
+  //     window.removeEventListener('resize', handle);
+  //     window.removeEventListener('scroll', handle, true);
+  //   };
+  // }, [inputFocused]);
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -216,100 +214,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="model-input" className="block text-[var(--text)] opacity-80 text-lg font-['Bruno_Ace_SC']">Model</label>
-                  <div className="relative">
-                    <Input
-                       id="model-input"
-                       ref={inputRef}
-                       value={inputFocused ? searchQuery : config?.selectedModel || ''}
-                       placeholder={
-                         inputFocused
-                           ? 'Search models...'
-                           : config?.selectedModel || 'Select model...'
-                       }
-                       onChange={(e) => setSearchQuery(e.target.value)}
-                       onFocus={() => {
-                         setSearchQuery('');
-                         setInputFocused(true);
-                         fetchAllModels();
-                       }}
-                       className={cn(
-                         "text-[var(--text)] rounded-xl shadow-md w-full justify-start font-medium h-9 font-['Space_Mono',_monospace]",
-                         "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-                         "hover:border-[var(--active)] hover:brightness-95",
-                         "mb-2 mt-3",
-                         "ring-1 ring-inset ring-[var(--active)]/50",
-                       )}
-                    />
-                    {inputFocused && (
-                      <div 
-                        className="fixed inset-0 z-50"
-                        onClick={() => setInputFocused(false)}
-                      >
-                        <div 
-                          className={cn(
-                            "absolute left-0 right-0",
-                            "bg-[var(--bg)]",
-                            "border border-[var(--active)]/20",
-                            "rounded-xl shadow-lg",
-                            "no-scrollbar",
-                            "overflow-y-auto"
-                          )}
-                          style={{ 
-                            maxHeight: `min(calc(50vh - 6rem), 300px)`,
-                            top: `${dropdownPosition.top}px`,
-                            left: `${dropdownPosition.left}px`,
-                            width: `${dropdownPosition.width}px`,
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="py-0.5">
-                            {filteredModels.length > 0 ? (
-                              filteredModels.map((model) => (
-                                <button
-                                  key={model.id}
-                                  type="button"
-                                  className={cn(
-                                    "w-full text-left",
-                                    "px-4 py-1.5",
-                                    "text-[var(--text)] text-sm",
-                                    "hover:bg-[var(--active)]/20",
-                                    "focus:bg-[var(--active)]/30",
-                                    "transition-colors duration-150",
-                                    "font-['Space_Mono',_monospace]"
-                                  )}
-                                  onClick={() => {
-                                    updateConfig({ selectedModel: model.id });
-                                    setSearchQuery('');
-                                    setInputFocused(false);
-                                  }}
-                                >
-                                  <div className="flex items-center">
-                                    <span>
-                                      {model.host ? `(${model.host}) ` : ''}
-
-                                      {model.id}
-                                      {model.context_length && (
-                                        <span className="text-xs text-[var(--text)] opacity-50 ml-1">
-                                          [ctx: {model.context_length}]
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                </button>
-                              ))
-                            ) : (
-                              <div className="px-4 py-1.5 text-[var(--text)] opacity-50 text-sm">
-                                No models found
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* Model Selection Removed Here */}
 
                  <div className="space-y-3">
                     <Button

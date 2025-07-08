@@ -21,6 +21,8 @@ import { BsFiletypeMd } from "react-icons/bs";
 import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import { Changelog } from './components/Changelog/Changelog';
+import { ModelSelection } from './ModelSelection';
+import { useUpdateModels } from './hooks/useUpdateModels';
 import { VscRocket } from "react-icons/vsc";
 
 
@@ -85,19 +87,6 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
       </DialogDescription>
     </DialogContent>
   </Dialog> 
-);
-
-const Badge = ({ children }: { children: React.ReactNode }) => (
-  <div
-    className={cn(
-      "inline-block whitespace-nowrap overflow-hidden text-ellipsis w-full max-w-xs",
-      "bg-transparent text-[var(--text)]",
-      "rounded-md",
-      "font-['poppins',_sans-serif] text-md text-center font-medium",
-    )}
-  >
-    {children}
-  </div>
 );
 
 interface EditProfileDialogProps {
@@ -234,6 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectNotesRequest, // Destructure new prop
 }) => {
   const { config, updateConfig } = useConfig();
+  const { fetchAllModels } = useUpdateModels();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
   const [isChangelogOpen, setChangelogOpen] = useState(false);
 
@@ -396,16 +386,20 @@ const handleChangelogClose = () => {
           </div>
 
           {/* Middle Content Area */}
-          <div className="flex-grow flex justify-center items-center overflow-hidden">
+          <div className="flex-grow flex flex-col justify-center items-center overflow-hidden"> {/* Removed py-1 */}
+            {!historyMode && !settingsMode && !noteSystemMode && (
+              <div className="w-full max-w-xs"> {/* Removed px-1 */}
+                <ModelSelection
+                  config={config}
+                  updateConfig={updateConfig}
+                  fetchAllModels={fetchAllModels}
+                />
+              </div>
+            )}
             {visibleTitle && (
-              <p className="text-sm font-semibold text-[var(--text)] whitespace-nowrap overflow-hidden text-ellipsis text-center">
+              <p className="text-xs text-[var(--text)] opacity-70 whitespace-nowrap overflow-hidden text-ellipsis text-center mt-0.5"> {/* Small, muted, margin-top */}
                 {chatTitle}
               </p>
-            )}
-            {!visibleTitle && !historyMode && !settingsMode && !noteSystemMode && (
-              <Badge>
-                  {config?.selectedModel || 'No Model Selected'}
-              </Badge>
             )}
             {settingsMode && (
               <div className="flex items-center justify-center">

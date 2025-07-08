@@ -49,7 +49,7 @@ function TypewriterLinesWordByWord({ lines, delay = 120, className = "" }: { lin
 // --- Guide content with link ---
 const guideLines = [
   "1. Fill your API key or urls in API Access",
-  "2. Exit settings, then click the avatar icon to select your model to chat with. You can set username in the top right corner.",
+  "2. Exit settings, then click the selector in header to choose your model. You can set username in the top right corner.",
   "3. Use the 'Chat Controls' (notebook icon in input bar) to toggle AI memory and tool usage.",
   <>
     4. Check the user guide{" "}
