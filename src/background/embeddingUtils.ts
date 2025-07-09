@@ -1,4 +1,3 @@
-// @file embeddingUtils.ts
 // Utilities for generating embeddings for text content.
 
 interface EmbeddingServiceConfig {
@@ -181,24 +180,3 @@ export const generateEmbeddings = async (
   return allEmbeddings.map(emb => emb === null ? [] : emb);
 };
 
-// Example of how to configure (this should be done in background/index.ts or similar setup file):
-/*
-import { getEmbeddingConfigFromStorage } from './configStorage'; // Assuming a function to get config
-
-async function initializeEmbeddingService() {
-  // const config = await getEmbeddingConfigFromStorage(); // Or get from chrome.storage.local
-  // Example fixed config:
-  const exampleApiUrl = 'YOUR_EMBEDDING_SERVICE_ENDPOINT'; // e.g., 'https://api.openai.com/v1/embeddings'
-  const exampleModel = 'YOUR_MODEL_NAME'; // e.g., 'text-embedding-ada-002'
-  const exampleApiKey = 'YOUR_API_KEY'; // Optional, depending on service
-
-  if (exampleApiUrl && exampleModel) {
-    configureEmbeddingService(exampleApiUrl, exampleModel, exampleApiKey);
-  } else {
-    console.warn('Embedding service URL or model not found in configuration. Embeddings will not be generated.');
-  }
-}
-
-// Call this early in your service worker lifecycle
-// initializeEmbeddingService();
-*/

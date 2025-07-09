@@ -146,16 +146,22 @@ export async function getHybridRankedChunks(
   // --- Step 1: Get Query Embedding ---
   const queryEmbedding = await generateEmbedding(query);
   if (!queryEmbedding || queryEmbedding.length === 0) {
-    console.warn('[getHybridRankedChunks] Could not generate query embedding. Falling back to BM25 only (or empty).');
-    // Decide fallback: for now, return empty if semantic search is crucial part of hybrid
-    return []; 
+    console.warn('[getHybridRankedChunks] Could not generate query embedding. Proceeding with BM25 part of hybrid search if weighted.');
+    // Do not return here; allow BM25 processing to occur.
+    // queryEmbedding will remain [] and semanticChunks will consequently be empty if semantic weight > 0.
   }
-
-  // --- Step 2: Get Semantic Results ---
+  
   let semanticChunks: Array<{ chunkId: string; parentId: string; parentType: 'note' | 'chat'; semanticScore: number }> = [];
-  if (1 - bm25Weight > 0) { // Only perform semantic search if it has a weight
+  
+  // --- Step 2: Get Semantic Results ---
+  // Only attempt semantic search if embedding was successful AND semantic search has a weight
+  if (queryEmbedding && queryEmbedding.length > 0 && (1 - bm25Weight) > 0) { 
     semanticChunks = await findSimilarChunks(queryEmbedding, semanticTopK, semanticThreshold);
+  } else if ((1 - bm25Weight) > 0 && (!queryEmbedding || queryEmbedding.length === 0)) {
+    // This condition explicitly means embedding failed AND semantic search had weight.
+    console.log('[getHybridRankedChunks] Semantic search part is skipped due to failed embedding generation.');
   }
+  // If embedding succeeded but (1 - bm25Weight) <= 0 (i.e., bm25Weight is 1), semanticChunks remains [].
   
   // --- Step 3: Get BM25 Results (Parent Documents) ---
   let bm25ParentResults: RawBM25SearchResult[] = [];
@@ -185,12 +191,22 @@ export async function getHybridRankedChunks(
   
   // --- Step 5: Normalize Scores ---
   // Normalize semantic scores
-  const normalizedSemanticChunks = normalizeScores(semanticChunks.map(c => ({ id: c.chunkId, score: c.semanticScore, ...c })))
-    .map(c => ({ ...c, semanticScore: c.score })); // score is now normalized semanticScore
+  const semanticScoresToNormalize = semanticChunks.map(c => ({ id: c.chunkId, score: c.semanticScore }));
+  const normalizedSemanticScores = normalizeScores(semanticScoresToNormalize);
+  const normalizedSemanticScoreMap = new Map(normalizedSemanticScores.map(s => [s.id, s.score]));
+  const normalizedSemanticChunks = semanticChunks.map(chunk => ({
+    ...chunk,
+    semanticScore: normalizedSemanticScoreMap.get(chunk.chunkId) ?? 0,
+  }));
 
   // Normalize BM25 scores (from bm25DerivedChunks)
-  const normalizedBm25Chunks = normalizeScores(bm25DerivedChunks.map(c => ({ id: c.chunkId, score: c.bm25Score, ...c })))
-    .map(c => ({ ...c, bm25Score: c.score })); // score is now normalized bm25Score
+  const bm25ScoresToNormalize = bm25DerivedChunks.map(c => ({ id: c.chunkId, score: c.bm25Score }));
+  const normalizedBm25Scores = normalizeScores(bm25ScoresToNormalize);
+  const normalizedBm25ScoreMap = new Map(normalizedBm25Scores.map(s => [s.id, s.score]));
+  const normalizedBm25Chunks = bm25DerivedChunks.map(chunk => ({
+    ...chunk,
+    bm25Score: normalizedBm25ScoreMap.get(chunk.chunkId) ?? 0,
+  }));
 
 
   // --- Step 6: Combine & Calculate Hybrid Scores ---

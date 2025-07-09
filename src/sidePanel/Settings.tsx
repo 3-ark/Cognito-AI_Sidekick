@@ -19,7 +19,6 @@ export const Settings = () => {
       className="relative z-[1] top-0 w-full h-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent text-foreground px-6 pb-10 pt-[56px] scrollbar-hidden"
     >
       <AnimatedBackground />
-      {/* Quick Guide section has been removed */}
       <Accordion
         type="single"
         collapsible

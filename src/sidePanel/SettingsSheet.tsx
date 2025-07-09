@@ -1,16 +1,17 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { FiX, FiBookOpen } from 'react-icons/fi'; // Removed IoMoonOutline, IoSunnyOutline, Added FiBookOpen
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
+import { FiX, FiBookOpen, FiSearch } from 'react-icons/fi';
+import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet"; // SheetHeader removed as it's not used
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import type { HybridRankedChunk } from '@/src/background/retrieverUtils'; // Only import the type
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { type Config } from "@/src/types/config";
 import { themes as appThemes, type Theme as AppTheme } from './Themes';
 import { cn } from "@/src/background/util";
-// import { useUpdateModels } from './hooks/useUpdateModels'; // Model selection moved
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import AnimatedBackground from './AnimatedBackground';
 
@@ -62,23 +63,56 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   setHistoryMode,
   setNoteSystemMode,
 }) => {
-  // const [searchQuery, setSearchQuery] = React.useState(''); // Moved to ModelSelection
-  // const [inputFocused, setInputFocused] = React.useState(false); // Moved to ModelSelection
-  // const { fetchAllModels } = useUpdateModels(); // Moved to Header, then to ModelSelection
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<HybridRankedChunk[]>([]);
+  const [isLoadingSearch, setIsLoadingSearch] = React.useState(false);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
   const sheetContentRef = React.useRef<HTMLDivElement>(null);
-  // const inputRef = useRef<HTMLInputElement>(null); // Moved to ModelSelection
-  // const [dropdownPosition, setDropdownPosition] = React.useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 }); // Moved to ModelSelection
 
 
   const currentPersona = config?.persona || 'default';
   const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
 
-  // const filteredModels = // Moved to ModelSelection
-  //   config?.models?.filter(
-  //     (model) =>
-  //       model.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //       model.host?.toLowerCase()?.includes(searchQuery.toLowerCase())
-  //   ) || [];
+  useEffect(() => {
+    const performSearch = async () => {
+      if (searchQuery.trim().length < 3) { // Only search if query is 3+ chars
+        setSearchResults([]);
+        setSearchError(null);
+        return;
+      }
+      setIsLoadingSearch(true);
+      setSearchError(null);
+      chrome.runtime.sendMessage(
+        {
+          type: 'PERFORM_SETTINGS_SEARCH',
+          payload: { query: searchQuery },
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("Error sending PERFORM_SETTINGS_SEARCH message:", chrome.runtime.lastError.message);
+            setSearchError("Error communicating with background script.");
+            setSearchResults([]);
+            setIsLoadingSearch(false);
+            return;
+          }
+          if (response.success) {
+            setSearchResults(response.results);
+          } else {
+            console.error("Search failed:", response.error);
+            setSearchError(response.error || "Failed to fetch search results.");
+            setSearchResults([]);
+          }
+          setIsLoadingSearch(false);
+        }
+      );
+    };
+
+    const debounceTimeout = setTimeout(() => {
+      performSearch();
+    }, 500); // Debounce search by 500ms
+
+    return () => clearTimeout(debounceTimeout);
+  }, [searchQuery]); // Removed config from dependencies as it's managed by background
 
   const sectionPaddingX = 'px-6';
 
@@ -98,44 +132,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   };
 
   const presetThemesForSheet = appThemes.filter(t => t.name !== 'custom' && t.name !== config?.customTheme?.name);
-
-  // useEffect(() => { // Related to inputFocus, moved
-  //   if (isOpen) {
-  //     setSearchQuery('');
-  //     setInputFocused(false);
-  //   }
-  // }, [isOpen]);
-
-  // useEffect(() => { // Related to inputFocus, moved
-  //   if (inputFocused && inputRef.current) {
-  //     const rect = inputRef.current.getBoundingClientRect();
-  //     setDropdownPosition({
-  //       top: rect.bottom + window.scrollY,
-  //       left: rect.left + window.scrollX,
-  //       width: rect.width,
-  //     });
-  //   }
-  // }, [inputFocused]);
-
-  // useEffect(() => { // Related to inputFocus, moved
-  //   if (!inputFocused) return;
-  //   const handle = () => {
-  //     if (inputRef.current) {
-  //       const rect = inputRef.current.getBoundingClientRect();
-  //       setDropdownPosition({
-  //         top: rect.bottom + window.scrollY,
-  //         left: rect.left + window.scrollX,
-  //         width: rect.width,
-  //       });
-  //     }
-  //   };
-  //   window.addEventListener('resize', handle);
-  //   window.addEventListener('scroll', handle, true);
-  //   return () => {
-  //     window.removeEventListener('resize', handle);
-  //     window.removeEventListener('scroll', handle, true);
-  //   };
-  // }, [inputFocused]);
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -160,7 +156,45 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
         >
         <AnimatedBackground />
            <div className={cn("flex flex-col flex-1 overflow-y-auto settings-drawer-body", "no-scrollbar")}> {/* Adjusted flex-1 to ensure content area takes up space */}
-              <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-4",)}>
+              <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-4")}>
+                {/* Search Bar */}
+                <div className="relative mt-5">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text)] opacity-50" />
+                  <Input
+                    type="text"
+                    placeholder="Search your notes and chat history..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(
+                      "pl-10 pr-4 py-2 w-full rounded-md border border-[var(--text)]/20 bg-[var(--bg)]/50 text-[var(--text)] placeholder:text-[var(--text)]/50",
+                      "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]"
+                    )}
+                  />
+                </div>
+
+                {/* Search Results */}
+                {isLoadingSearch && <div className="text-center text-[var(--text)] opacity-70">Searching...</div>}
+                {searchError && <div className="text-center text-red-500">{searchError}</div>}
+                {searchResults.length > 0 && (
+                  <ScrollArea className="h-[200px] rounded-md border border-[var(--text)]/20 p-2 bg-[var(--bg)]/30">
+                    <div className="space-y-2">
+                      {searchResults.map((result) => (
+                        <div key={result.chunkId} className="p-2 rounded-md bg-[var(--bg)]/50 border border-[var(--text)]/10">
+                          <div className="text-xs text-[var(--text)] opacity-70">
+                            {result.parentType === 'note' ? 'Note' : 'Chat'} - Score: {result.hybridScore.toFixed(2)}
+                          </div>
+                          <div className="font-medium text-sm text-[var(--text)] truncate" title={result.parentTitle}>
+                            {result.parentTitle}
+                          </div>
+                          <p className="text-xs text-[var(--text)] opacity-80 line-clamp-2" title={result.chunkText}>
+                            {result.chunkText}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+
                 <div>
                   <div className="flex items-center justify-between mt-5 mb-3">
                       <label htmlFor="persona-select" className="text-[var(--text)] opacity-80 font-['Bruno_Ace_SC'] text-lg shrink-0">
@@ -213,8 +247,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     </Select>
                   </div>
                 </div>
-
-                {/* Model Selection Removed Here */}
 
                  <div className="space-y-3">
                     <Button

@@ -31,7 +31,7 @@ import {
     indexSingleChatMessage,
     removeChatMessageFromIndex,
 } from './searchUtils';
-import { configureEmbeddingService } from './embeddingUtils'; // Added import
+import { configureEmbeddingService, ensureEmbeddingServiceConfigured } from './embeddingUtils'; // Added ensureEmbeddingServiceConfigured
 import { Note, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
 import { EmbeddingModelConfig, Config } from 'src/types/config'; // Added import for Config
 import { 
@@ -608,46 +608,66 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates asynchronous response
   }
 });
-// TEMPORARY DEBUGGING - REMOVE LATER
-import { search as debugSearchUtil } from './searchUtils';
-// Ensure CHAT_STORAGE_PREFIX and getChatMessageById are available in this scope
-(globalThis as any).performBgSearch = async (query: string) => {
-  console.log(`[DEBUG] Performing background search for: "${query}"`);
-  await engineInitializationPromise; // Make sure engine is ready
-  const rawResults = await debugSearchUtil(query, 10);
-  console.log('[DEBUG] Raw Results:', rawResults);
-  const hydrated = [];
-for (const [id, score] of rawResults) {
-  if (id.startsWith(NOTE_STORAGE_PREFIX)) {
-    const note = await getNoteByIdFromSystem(id);
-    if (note) hydrated.push({
-      ...note, // Spread first
-      type: 'note',
-      score,
-      title: note.title,    // These will override any from the spread
-      content: note.content
-    });
-  }
-  else if (id.startsWith(CHAT_STORAGE_PREFIX)) {
-    const chat = await getChatMessageById(id);
-    if (chat) {
-      hydrated.push({
-        ...chat, // Spread first
-        type: 'chat',
-        score,
-        id: chat.id,
-        title: chat.title || `Chat from ${new Date(chat.last_updated).toLocaleDateString()}`,
-        content: chat.turns.map(t => t.content).join('\n')
-      });
-    }
-  }
-}    // END CHANGE
-  console.log('[DEBUG] Hydrated Results:', hydrated);
-  return hydrated;
-};
-// e.g. use 'await performBgSearch("Einstein")' in service worker console to test your search functionality
-export {};
 
+// --- Message Handler for Settings Search ---
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'PERFORM_SETTINGS_SEARCH') {
+    const { query } = message.payload;
+    (async () => {
+      try {
+        const configStr: string | null = await storage.getItem('config');
+        const config: Config | null = configStr ? JSON.parse(configStr) : null;
+
+        if (!config) {
+          // Try to load embedding model config directly if main config is missing RAG settings
+          // This is a fallback, ideally config.rag should be populated
+          const embeddingConfigResult = await chrome.storage.local.get('embeddingModelConfig');
+          const embeddingModelConfig = embeddingConfigResult.embeddingModelConfig as EmbeddingModelConfig;
+
+          if (embeddingModelConfig && embeddingModelConfig.apiUrl && embeddingModelConfig.modelId) {
+             // Ensure embedding service is configured if it wasn't already
+            await ensureEmbeddingServiceConfigured(); // Wait for it to be ready
+          }
+          // If embeddingModelConfig is missing/incomplete, the ensureEmbeddingServiceConfigured() will throw an error.
+          // So, no need for an explicit throw here.
+        } else if (config.rag?.embedding_model) { // Check if embedding_model is set in RAG config
+            // The embedding service configuration should be handled by loadAndConfigureEmbeddingService based on stored config,
+            // which is called on startup and on config changes. So, we just need to ensure it's ready.
+            await ensureEmbeddingServiceConfigured(); // Wait for it
+        } else {
+          // Fallback: ensure service is configured, relying on loadAndConfigureEmbeddingService having run
+          await ensureEmbeddingServiceConfigured();
+        }
+        
+        // Log the config being used by getHybridRankedChunks
+        const currentGlobalConfigStr: string | null = await storage.getItem('config');
+        const currentGlobalConfig: Config | null = currentGlobalConfigStr ? JSON.parse(currentGlobalConfigStr) : null;
+        if (!currentGlobalConfig) {
+            throw new Error("Global configuration not found right before search. This is unexpected.");
+        }
+
+
+        console.log(`[Background - PERFORM_SETTINGS_SEARCH] Performing hybrid search for query: "${query}" with current global config RAG settings:`, currentGlobalConfig.rag);
+        const hybridChunks = await getHybridRankedChunks(query, currentGlobalConfig);
+        
+        sendResponse({ success: true, results: hybridChunks });
+      } catch (error: any) {
+        console.error('[Background - PERFORM_SETTINGS_SEARCH] Error getting hybrid search results:', error);
+        sendResponse({ success: false, error: error.message, results: [] });
+      }
+    })();
+    return true; // Indicates asynchronous response
+  }
+  // Keep other message listeners if any, or ensure this is structured to allow multiple listeners
+  // For example, by returning true only for messages you handle asynchronously.
+  // If this is the only async listener, this is fine. Otherwise, be careful about returning true.
+  // For now, assuming other listeners might exist and they might return true or false appropriately.
+  // To be safe, one might check message.type and only return true if it's 'PERFORM_SETTINGS_SEARCH'.
+  // However, the boilerplate onMessage handler already returns true for other async handlers.
+  // The key is that an onMessage handler should return true if and only if it will call sendResponse asynchronously.
+  // If it handles the message synchronously or not at all, it should return false or undefined.
+  // Since this block IS handling 'PERFORM_SETTINGS_SEARCH' asynchronously, returning true here is correct for this specific message type.
+});
 // --- RAG Operations ---
 import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
 
