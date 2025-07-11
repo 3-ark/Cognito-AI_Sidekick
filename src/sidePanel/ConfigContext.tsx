@@ -95,7 +95,7 @@ const defaultConfig: Config = {
     semantic_top_k: 50, // For initial semantic fetch
     final_top_k: 10, // For final results after reranking
     bm25_weight: 0.5,
-    chunkSize: 512, // Confirmed default
+    vectorDimension: 1024, // Default vector dimension
     embeddingMode: 'manual', // Added default
     bm25LastRebuild: "Never",
     embeddingsLastRebuild: "Never",

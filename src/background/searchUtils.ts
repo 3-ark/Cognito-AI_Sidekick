@@ -1,13 +1,17 @@
 import localforage from 'localforage';
 import winkBM25Factory from 'wink-bm25-text-search';
 import TinySegmenter from 'tiny-segmenter';
-import { stem } from 'porter2';
+// import { stem } from 'porter2'; // No longer needed
+import winkNLP from 'wink-nlp';
+import model from 'wink-eng-lite-web-model';
 import { getAllNotesFromSystem, getNoteByIdFromSystem } from './noteStorage';
 import { Note } from '../types/noteTypes';
 import { ChatMessage, getAllChatMessages, getChatMessageById } from './chatHistoryStorage'; // Import chat types and functions
 import storage from './storageUtil';
 
 type BM25Engine = ReturnType<typeof winkBM25Factory>;
+const nlp = winkNLP(model);
+const its = nlp.its;
 
 const BM25_UNCONSOLIDATED_INDEX_KEY = 'bm25_index_unconsolidated';
 const BM25_CONSOLIDATED_INDEX_KEY = 'bm25_index_consolidated';
@@ -63,29 +67,64 @@ class SearchService {
   }
 
   private _configureEngine(): void {
-    const multilingualTokenizerSync = (text: string): string[] => {
-      let tokens: string[] = [];
+    const prepTask = (text: string): string[] => {
       if (!text || text.trim().length === 0) return [];
-      const firstChar = text.trim().charAt(0);
+      let nlpUtils: any;
+      let processedText = text;
+      nlpUtils = require('wink-nlp-utils');
+
+      // Apply pre-cleaning steps for all languages before language-specific tokenization
+      processedText = nlpUtils.string.removeHTMLTags(processedText);
+      processedText = nlpUtils.string.removeExtraSpaces(processedText);
+      // removePunctuation might be too aggressive for CJK languages if not handled carefully
+      // For now, we'll rely on wink-nlp's tokenizer for punctuation with English-like text
+      // and keep existing CJK logic which doesn't explicitly remove punctuation before segmentation.
+
+      if (processedText.trim().length === 0) return [];
+
+      const tokens: string[] = [];
+      const firstChar = processedText.trim().charAt(0);
       const code = firstChar.charCodeAt(0);
+
+      // Handle Japanese and Korean with TinySegmenter
       if ((code >= 0x3040 && code <= 0x30FF) || (code >= 0x31F0 && code <= 0x31FF)) { // Japanese
-        tokens = this.tinySegmenter.segment(text);
+        return this.tinySegmenter.segment(processedText);
       } else if (code >= 0xAC00 && code <= 0xD7A3) { // Korean
-        tokens = text.split('').filter(char => char.charCodeAt(0) >= 0xAC00 && char.charCodeAt(0) <= 0xD7A3);
-      } else if (code >= 0x0400 && code <= 0x04FF) { // Cyrillic
-        tokens = text.toLowerCase().split(/\s+/).filter(Boolean);
-      } else if (code >= 0x0600 && code <= 0x06FF) { // Arabic
-        tokens = text.split(/\s+/).filter(Boolean);
-      } else if (code >= 0x0900 && code <= 0x097F) { // Devanagari
-        tokens = text.toLowerCase().split(/\s+/).filter(Boolean);
-      } else { // Default
-        tokens = text.toLowerCase().split(/\s+/).filter(Boolean).map(token => stem(token));
+        return processedText.split('').filter(char => char.charCodeAt(0) >= 0xAC00 && char.charCodeAt(0) <= 0xD7A3);
       }
-      return tokens;
+      // For other languages (e.g., English) use wink-nlp
+      else {
+        // Apply lowercasing for non-CJK text
+        if (nlpUtils && nlpUtils.string && typeof nlpUtils.string.lowerCase === 'function') {
+          try {
+            processedText = nlpUtils.string.lowerCase(processedText) || '';
+          } catch (e) {
+            console.error('[SearchService prepTask] Error during nlpUtils.string.lowerCase:', e, 'Text was:', processedText);
+            // processedText remains as is or defaults to empty if it became non-string
+            if (typeof processedText !== 'string') processedText = '';
+          }
+        } else {
+          console.warn('[SearchService prepTask] nlpUtils.string.lowerCase not available. Skipping lowercasing.');
+        }
+        
+        // Safeguard before trim if lowerCase failed or wasn't available
+        if (typeof processedText !== 'string') {
+          processedText = ''; 
+        }
+        if (processedText.trim().length === 0) return []; // Re-check after potential lowercasing
+
+
+        nlp.readDoc(processedText)
+          .tokens()
+          // Keep all 'word' type tokens, do not filter by stopWordFlag
+          .filter((t) => (t.out(its.type) === 'word')) 
+          .each((t) => tokens.push((t.out(its.negationFlag)) ? '!' + t.out(its.stem) : t.out(its.stem)));
+        return tokens;
+      }
     };
     // Field weights can be adjusted if title relevance differs between notes and chats
     this.engine.defineConfig({ fldWeights: { title: 1, content: 2 } });
-    this.engine.definePrepTasks([multilingualTokenizerSync]);
+    this.engine.definePrepTasks([prepTask]);
   }
 
   private async _saveIndex(consolidated: boolean): Promise<void> {

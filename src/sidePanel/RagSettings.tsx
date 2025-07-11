@@ -84,7 +84,7 @@ export const RagSettings = () => {
   // Hybrid search & general
   const finalTopK = config.rag?.final_top_k ?? semanticTopK; // Fallback to semanticTopK then to a default in retrieverUtils
   const bm25Weight = config.rag?.bm25_weight ?? 0.5;
-  const chunkSize = config.rag?.chunkSize ?? 512;
+  const vectorDimension = config.rag?.vectorDimension ?? 1024; // Changed from chunkSize
   const embeddingMode = config.rag?.embeddingMode ?? 'manual'; // Added
   // const embeddingModel = config.rag?.embedding_model ?? 'text-embedding-3-small'; // Replaced by new selector
 
@@ -481,32 +481,32 @@ export const RagSettings = () => {
               </p>
             </div>
 
-            {/* Chunk Size */}
+            {/* Vector Dimension */}
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Label htmlFor="chunk-size" className="text-base font-medium text-foreground cursor-help">
-                      Chunk Size ({chunkSize} tokens)
+                    <Label htmlFor="vector-dimension" className="text-base font-medium text-foreground cursor-help">
+                      Vector Dimension (inactive for now) ({vectorDimension})
                     </Label>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-sm border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md rounded-md">
-                    <p>Maximum number of tokens in each text chunk. Affects context granularity. Default: 512 tokens.</p>
+                    <p>The dimensionality of the embedding vectors. This is usually determined by the selected embedding model. Common values: 256, 512, 768, 1024, 1536, 3072. Default: 1024.</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
               <Input
-                id="chunk-size"
+                id="vector-dimension"
                 type="number"
-                step="10" // Chunk sizes are often in multiples
-                min="50"
-                max="2000"
-                value={chunkSize}
-                onChange={(e) => updateConfig({ rag: { ...config.rag, chunkSize: parseInt(e.target.value) } })}
+                step="1" 
+                min="128" // Lower bound for typical vector dimensions
+                max="4096" // Upper bound for typical vector dimensions
+                value={vectorDimension}
+                onChange={(e) => updateConfig({ rag: { ...config.rag, vectorDimension: parseInt(e.target.value) } })}
                 className="w-full h-8"
               />
               <p className="text-xs text-[var(--text)]/70">
-                Affects context granularity. Default: 512 tokens
+                Dimensionality of embedding vectors. Default: 1024
               </p>
             </div>
 
