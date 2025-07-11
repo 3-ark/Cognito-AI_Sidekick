@@ -1,7 +1,6 @@
 import localforage from 'localforage';
 import winkBM25Factory from 'wink-bm25-text-search';
 import TinySegmenter from 'tiny-segmenter';
-// import { stem } from 'porter2'; // No longer needed
 import winkNLP from 'wink-nlp';
 import model from 'wink-eng-lite-web-model';
 import { getAllNotesFromSystem, getNoteByIdFromSystem } from './noteStorage';
@@ -15,7 +14,7 @@ const its = nlp.its;
 
 const BM25_UNCONSOLIDATED_INDEX_KEY = 'bm25_index_unconsolidated';
 const BM25_CONSOLIDATED_INDEX_KEY = 'bm25_index_consolidated';
-const DEFERRED_CONSOLIDATION_THRESHOLD = 5;
+const CONSOLIDATION_DEBOUNCE_TIME_MS = 60000; // 60 seconds
 
 // Types for documents stored in BM25
 export interface BM25TextDoc { // What the engine's addDoc expects
@@ -57,6 +56,8 @@ class SearchService {
   private unconsolidatedChangeCount: number = 0;
   private rebuildDebounceTimer: NodeJS.Timeout | null = null;
   private readonly DEBOUNCE_DELAY_MS = 1500; // 1.5 seconds
+  private lastUnconsolidatedChangeTime: number | null = null;
+  private consolidationDebounceTimer: NodeJS.Timeout | null = null;
 
   public readonly initializationPromise: Promise<void>;
 
@@ -145,6 +146,13 @@ class SearchService {
   }
 
   private async _performConsolidation(): Promise<void> {
+    // Clear any pending time-based consolidation timer, as we are consolidating now.
+    if (this.consolidationDebounceTimer) {
+      clearTimeout(this.consolidationDebounceTimer);
+      this.consolidationDebounceTimer = null;
+      console.log('[SearchService._performConsolidation] Cleared pending consolidationDebounceTimer.');
+    }
+
     console.log('[SearchService._performConsolidation] Starting consolidation process using in-memory store.');
     // Do NOT load from unconsolidated index file. Instead, rebuild engine from in-memory store.
     // This ensures we are consolidating the absolute latest state.
@@ -179,15 +187,6 @@ class SearchService {
     }
   }
 
-  private async _triggerDeferredConsolidation(): Promise<void> {
-    if (this.unconsolidatedChangeCount >= DEFERRED_CONSOLIDATION_THRESHOLD) {
-      console.log(`[SearchService._triggerDeferredConsolidation] Change threshold (${DEFERRED_CONSOLIDATION_THRESHOLD}) reached.`);
-      await this._performConsolidation();
-    } else {
-      console.log(`[SearchService._triggerDeferredConsolidation] Change count ${this.unconsolidatedChangeCount}/${DEFERRED_CONSOLIDATION_THRESHOLD}. Deferring.`);
-    }
-  }
-
   private async _loadUnconsolidatedIndexIntoEngine(): Promise<void> {
     const unconsolidatedJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
     this.engine.reset(); // Reset before loading to ensure clean state
@@ -218,10 +217,38 @@ class SearchService {
       }
       await this._saveIndex(false); // Save as unconsolidated
       this.unconsolidatedChangeCount++;
-      console.log(`[SearchService._rebuildEngineFromMemoryStore] DEBOUNCED: Unconsolidated index saved. Change count: ${this.unconsolidatedChangeCount}`);
-      await this._triggerDeferredConsolidation();
+      this.lastUnconsolidatedChangeTime = Date.now();
+      console.log(`[SearchService._rebuildEngineFromMemoryStore] DEBOUNCED: Unconsolidated index saved. Change count: ${this.unconsolidatedChangeCount}. Last change time: ${this.lastUnconsolidatedChangeTime}`);
+      await this._scheduleOrPerformConsolidation(); // New method to handle consolidation logic
       this.rebuildDebounceTimer = null; 
     }, this.DEBOUNCE_DELAY_MS);
+  }
+
+  private async _scheduleOrPerformConsolidation(): Promise<void> {
+    // Clear any existing consolidation timer, as we might consolidate now or reschedule.
+    if (this.consolidationDebounceTimer) {
+      clearTimeout(this.consolidationDebounceTimer);
+      this.consolidationDebounceTimer = null;
+    }
+
+    // If there are pending changes, schedule time-based consolidation.
+    // The count-based threshold has been removed in favor of purely time-based + search-triggered consolidation.
+    if (this.unconsolidatedChangeCount > 0) {
+      console.log(`[SearchService._scheduleOrPerformConsolidation] Scheduling time-based consolidation for ${this.unconsolidatedChangeCount} pending changes.`);
+      this.consolidationDebounceTimer = setTimeout(async () => {
+        // Check if there are still changes. It's possible they were consolidated by a search operation
+        // or a full rebuild that occurred after this timer was set but before it fired.
+        if (this.unconsolidatedChangeCount > 0) {
+          console.log(`[SearchService._scheduleOrPerformConsolidation] Time-based consolidation timer fired. Performing consolidation for ${this.unconsolidatedChangeCount} changes.`);
+          await this._performConsolidation();
+        } else {
+          console.log('[SearchService._scheduleOrPerformConsolidation] Time-based consolidation timer fired, but no pending changes found (likely consolidated by search/rebuild). Skipping.');
+        }
+        this.consolidationDebounceTimer = null;
+      }, CONSOLIDATION_DEBOUNCE_TIME_MS);
+    } else {
+      console.log('[SearchService._scheduleOrPerformConsolidation] No pending unconsolidated changes. No consolidation scheduled.');
+    }
   }
 
   // New method to fully rebuild both notes and chats into the inMemoryItemsStore
@@ -514,8 +541,3 @@ export const indexChatMessages = async () => { // Specific re-indexer for chats,
 export const search = searchServiceInstance.searchItems.bind(searchServiceInstance);
 // The hydrateSearchResults is more of an internal concept or for the background script to use.
 export const hydrateSearchResults = searchServiceInstance.hydrateSearchResults.bind(searchServiceInstance);
-// Deprecating old searchNotes if 'search' is the new standard
-// export const searchNotes = searchServiceInstance.searchNotes.bind(searchServiceInstance);
-// If external modules still use searchNotes with its specific HydratedSearchResultItem<Note> structure,
-// it might need to be kept temporarily or refactored.
-// For now, we assume the background script (step 3) will handle hydration from `search`.
