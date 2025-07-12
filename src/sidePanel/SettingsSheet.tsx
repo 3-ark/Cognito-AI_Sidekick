@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { FiX, FiBookOpen, FiSearch, FiHelpCircle, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiMessageSquare, FiFileText } from 'react-icons/fi';
+import { FiX, FiBookOpen, FiSearch, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiFileText } from 'react-icons/fi';
 import { PersonaEditPopover, DeletePersonaDialog } from './Persona'; // Import new persona components
 import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { RiChatHistoryLine } from "react-icons/ri";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; 
 import { type EmbeddingModelConfig, type Model, type Config as AppConfig } from "@/src/types/config";
 import { Input } from "@/components/ui/input";
@@ -253,7 +254,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               </ScrollArea>
             )}
             <div>
-              <div className="flex items-center justify-between mt-5 mb-5">
+              <div className="flex items-center justify-between mt-10 mb-10">
                 <div className="flex items-center space-x-1.5">
                   {presetThemesForSheet.map(theme => (<SheetThemeButton key={theme.name} theme={theme} updateConfig={updateConfig} size="h-5 w-5" />))}
                 </div>
@@ -331,8 +332,8 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 <div className="space-y-5">
                   <div className="flex space-x-4"> {/* Adjusted spacing */}
                     <Button variant="outline" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                      <FiMessageSquare className="h-3 w-3 mr-1.5" />
-                      <span className="text-xs">Chats</span>
+                      <RiChatHistoryLine className="h-3 w-3 mr-1.5" />
+                      <span className="text-xs">History</span>
                     </Button>
                     <Button variant="outline" onClick={handleNoteSystemClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
                       <FiFileText className="h-3 w-3 mr-1.5" />
