@@ -253,7 +253,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               </ScrollArea>
             )}
             <div>
-              <div className="flex items-center justify-between mt-5 mb-3">
+              <div className="flex items-center justify-between mt-5 mb-5">
                 <div className="flex items-center space-x-1.5">
                   {presetThemesForSheet.map(theme => (<SheetThemeButton key={theme.name} theme={theme} updateConfig={updateConfig} size="h-5 w-5" />))}
                 </div>

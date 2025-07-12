@@ -93,7 +93,7 @@ const guideLines = [
     </a>
   </>,
   "",
-  "Note: You can adjust other settings later. For the best experience and to avoid this guide, an API setup is recommended even for local models. Have fun!"
+  "Have fun!"
 ];
 
 interface WelcomeModalProps {
