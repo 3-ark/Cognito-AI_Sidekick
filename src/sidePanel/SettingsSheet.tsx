@@ -82,7 +82,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     // Remove path-like prefixes
     const parts = name.split('/');
     name = parts[parts.length - 1];
-    // Remove common model file extensions
     const extensions = ['.gguf', '.bin', '.safetensors'];
     for (const ext of extensions) {
       if (name.endsWith(ext)) {
@@ -110,12 +109,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     if (avatar) {
       newAvatars[name] = avatar;
     } else if (name !== currentPersona && !newAvatars[name]) { 
-      // If it's a new persona or an existing one without a specific avatar being set now,
-      // and no new avatar is provided, ensure no old avatar reference persists if it's not a default.
-      // However, if it's an existing persona being edited and no new avatar is chosen, we keep the old one.
-      // This logic might need refinement based on exact desired behavior for avatar reset/persistence.
-      // For now, if no avatar is explicitly passed, we don't clear it unless it's a truly new persona.
-      // If 'name' is a new persona, and no avatar is given, it won't have one in newAvatars.
     }
 
 

@@ -79,7 +79,6 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
           className={cn(
             "text-[var(--text)] bg-transparent rounded-none w-full justify-start font-medium h-6 font-['Space_Mono',_monospace]", // Removed shadow-md
             "pr-7" // Add padding to the right for the arrow
-            // Consider if mb-2 mt-3 is needed here or in parent Header
           )}
         />
         <FiChevronDown

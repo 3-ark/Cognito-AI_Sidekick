@@ -22,7 +22,7 @@ import { cn } from "@/src/background/util";
 import { Textarea } from "@/components/ui/textarea";
 import { AvatarUpload } from './AvatarUpload'; // Assuming this is still relevant for popover
 import { DEFAULT_PERSONA_IMAGES } from './constants';
-import { FiEdit2, FiPlus, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi'; // Added new icons
+import { FiSave, FiXCircle } from 'react-icons/fi'; // Added new icons
 
 interface PersonaEditPopoverProps {
   trigger: React.ReactNode;

@@ -4,7 +4,6 @@ import AnimatedBackground from './AnimatedBackground';
 import { Connect } from './Connect';
 import { PageContext } from './PageContext';
 import { ModelSettingsPanel } from './ModelSettingsPanel';
-// Persona component is no longer imported here
 import { Themes } from './Themes';
 import { TtsSettings } from './TtsSettings';
 import { WebSearch } from './WebSearch';
@@ -29,7 +28,6 @@ export const Settings = () => {
         <Connect />
         <Themes /> 
         <ModelSettingsPanel />
-        {/* Persona component is no longer rendered here */}
         <TtsSettings />
         <PageContext />
         <WebSearch />
