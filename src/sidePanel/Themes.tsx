@@ -14,8 +14,6 @@ import { Switch } from "@/components/ui/switch";
 import { useConfig } from './ConfigContext';
 import { SettingTitle } from './SettingsTitle';
 import { useState, useEffect, useCallback } from 'react';
-import { Config } from '../types/config';
-import storage from '../background/storageUtil';
 import { ColorPicker, useColor, IColor } from 'react-color-palette';
 import 'react-color-palette/css';
 import { cn } from "@/src/background/util";
@@ -72,8 +70,8 @@ export const themes: Theme[] = [
     italic: '#a3b36e',
     mute: '#A08C7D',
     tableBorder: '#E0CDA9',
-    error: '#d32f2f',
-    success: '#388e3c',
+    error: '#df9696',
+    success: '#80c684',
     warning: '#fbc02d',
   },
   {
@@ -118,7 +116,7 @@ export const themes: Theme[] = [
     bg: '#373737',
     text: '#e3e3e3',
     bold: '#d28400',
-    italic: '#97e9b5',
+    italic: '#82d19f',
     link: '#a5bfff',
     codeBg: '#e3e3e3',
     codeFg: '#373737',
@@ -126,8 +124,8 @@ export const themes: Theme[] = [
     preFg: '#373737',
     mute: '#A9A9A9',
     tableBorder: '#e3e3e3',
-    error: '#d32f2f',
-    success: '#388e3c',
+    error: '#d18383',
+    success: '#76ae79',
     warning: '#fbc02d',
   },
   {
@@ -182,7 +180,7 @@ export const setTheme = (c: Theme, paperTextureEnabled: boolean = true) => {
   }
 
   const isDarkBg = c.bg && isColorDark(c.bg);
-  const isDarkTheme = c.name === 'dark' || (c.name === 'custom' && isDarkBg);
+  const isDarkTheme = isDarkBg;
   root.dataset.theme = isDarkTheme ? 'dark' : 'light';
   
   if (isDarkTheme) {
