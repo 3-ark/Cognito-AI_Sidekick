@@ -92,7 +92,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent className="w-80 bg-[var(--bg)] border-[var(--text)]/20 shadow-xl rounded-xl p-4 space-y-4" side="bottom" align="end">
+      <PopoverContent className="w-100 bg-[var(--bg)] border-[var(--text)]/20 shadow-xl rounded-xl p-4 space-y-4" side="bottom" align="end">
         <div className="space-y-1">
           <h4 className="font-medium leading-none text-[var(--text)]">{isEditing ? "Edit Persona" : "Add New Persona"}</h4>
           <p className="text-sm text-[var(--text)]/70">
@@ -129,7 +129,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
         </div>
 
         <div>
-            <Label htmlFor="persona-popover-prompt" className="text-xs font-medium text-[var(--text)]/90">System Prompt</Label>
+            <Label htmlFor="persona-popover-prompt" className="text-xs mb-1 font-medium text-[var(--text)]/90">System Prompt</Label>
             <Textarea
                 id="persona-popover-prompt"
                 placeholder="You are a helpful assistant..."
