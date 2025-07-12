@@ -71,6 +71,13 @@ Welcome to the Cognito application! This guide will help you understand its feat
     *   [AI-Powered Note Saving (`saveNote` Tool)](#ai-powered-note-saving-savenote-tool)
     *   [AI-Powered Memory Updates (`updateMemory` Tool)](#ai-powered-memory-updates-updatememory-tool)
     *   [Searching Notes](#searching-notes)
+*   [Using RAG for Smart Search & Context](#using-rag-for-smart-search--context)
+    *   [1. Navigate to RAG Settings](#1-navigate-to-rag-settings)
+    *   [2. Configure Your Embedding Model](#2-configure-your-embedding-model)
+    *   [3. Generate Embeddings for Your Data](#3-generate-embeddings-for-your-data)
+    *   [4. Keeping Your Index Up-to-Date](#4-keeping-your-index-up-to-date)
+    *   [5. Query Your Data with RAG](#5-query-your-data-with-rag)
+    *   [6. Quick Search from the Main Menu](#6-quick-search-from-the-main-menu)
 *   [Model Management](#model-management)
     *   [Fetching and Selecting Models](#fetching-and-selecting-models)
 *   [Connecting to LLM Services (API Settings)](#connecting-to-llm-services-api-settings)
@@ -182,6 +189,44 @@ The Note System also includes a search function to help you quickly find specifi
 *   Search is case-insensitive.
 *   A "No notes found" message will appear if your query doesn't match any notes.
 *   Results are paginated.
+## Using RAG for Smart Search & Context
+
+Cognito uses a powerful Retrieval-Augmented Generation (RAG) system to search your notes and chat history. This allows you to ask questions based on your own data. The system uses a hybrid approach, combining keyword-based search (BM25) with semantic search (via embeddings) for the best results. Here's how to set it up and use it.
+
+### 1. Navigate to RAG Settings
+*   Open the main menu by clicking your persona's avatar in the top-left.
+*   Click the **Settings** button to open the full configuration panel.
+*   Find and expand the **RAG Settings** section.
+
+### 2. Configure Your Embedding Model
+This is the most critical step for good performance. In the "RAG Settings" panel, select an embedding model.
+*   **For Local Models:** If you are using a local model (e.g., via Ollama), make sure the model is running *before* you start the embedding process.
+*   **Important:** You must use the same embedding model for creating the embeddings and for querying them later.
+
+### 3. Generate Embeddings for Your Data
+Cognito needs to process your notes and chats to create searchable embeddings. You have two modes for this, configured in "RAG Settings":
+*   **Manual Mode (Default):** You control when embeddings are created. This is recommended to avoid unnecessary processing and costs (for API models).
+*   **Automatic Mode:** Embeddings are automatically created or updated whenever you save a note or chat. This is more convenient but requires your embedding model to be constantly available if it's a local one.
+
+**First-Time Setup:** Go to the main slide-out menu (click the avatar). In the "Embedding Management" section, click the **Rebuild** button. This will process all your existing notes and chats. This may take some time.
+
+### 4. Keeping Your Index Up-to-Date
+*   **BM25 (Keyword) Index:** This updates automatically as you add or change notes and chats.
+*   **Embeddings (Semantic) Index:**
+    *   In **Manual Mode**, you need to periodically click the **Update** button in the "Embedding Management" section of the main menu. This will process only the new or changed items, which is faster than a full rebuild.
+    *   In **Automatic Mode**, this happens in the background.
+
+### 5. Query Your Data with RAG
+In the main chat input bar, type `/r` followed by your search query.
+*   **Example:** `/r what were the key points from the project alpha meeting?`
+*   Cognito will search your knowledge base, find the most relevant information, and feed it to the LLM as context to answer your question.
+
+### 6. Quick Search from the Main Menu
+You can perform a quick test search directly from the main slide-out menu. Use the search bar at the top to see instant results from your notes and chats.
+
+### A Note on Language Support
+*   **Keyword Search (BM25):** Has excellent support for Latin-based languages. Cyrillic, Korean, Arabic, and Devanagari are also well-supported. Japanese performance is similar to Latin languages.
+*   **Semantic Search (Embeddings):** The quality of search for any language depends entirely on the embedding model you choose. A model trained on your target language is crucial for good results.
 
 ## Model Management
 
