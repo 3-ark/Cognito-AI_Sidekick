@@ -67,7 +67,7 @@ export const themes: Theme[] = [
     codeFg: '#E0CDA9',
     preBg: '#403930',
     preFg: '#E0CDA9',
-    link: '#c2b28f',
+    link: '#a5bfff',
     bold: '#d97c5f',
     italic: '#a3b36e',
     mute: '#A08C7D',

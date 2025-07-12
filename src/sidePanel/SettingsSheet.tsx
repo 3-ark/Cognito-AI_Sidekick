@@ -1,13 +1,12 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { FiX, FiBookOpen, FiSearch, FiHelpCircle, FiRefreshCw, FiZap } from 'react-icons/fi';
+import { FiX, FiBookOpen, FiSearch, FiHelpCircle, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { PersonaEditPopover, DeletePersonaDialog } from './Persona'; // Import new persona components
 import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; 
 import { type EmbeddingModelConfig, type Model, type Config as AppConfig } from "@/src/types/config";
-import { GEMINI_URL, GROQ_URL, OPENAI_URL, OPENROUTER_URL } from './constants';
-import { normalizeApiEndpoint } from "@/src/background/util";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { HybridRankedChunk } from '@/src/background/retrieverUtils';
@@ -73,99 +72,111 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   const [searchError, setSearchError] = React.useState<string | null>(null);
   const sheetContentRef = React.useRef<HTMLDivElement>(null);
 
+  const parseModelNameForDisplay = (modelString: string): string => {
+    if (!modelString || modelString === 'Not Set') {
+      return modelString;
+    }
+    // Remove provider part like `[lmStudio] `
+    let name = modelString.replace(/\[.*?\]\s*/, '');
+    // Remove path-like prefixes
+    const parts = name.split('/');
+    name = parts[parts.length - 1];
+    // Remove common model file extensions
+    const extensions = ['.gguf', '.bin', '.safetensors'];
+    for (const ext of extensions) {
+      if (name.endsWith(ext)) {
+        name = name.slice(0, -ext.length);
+        break;
+      }
+    }
+    return name;
+  };
 
-  const currentPersona = config?.persona || 'default';
+  const currentPersona = config?.persona || 'Ein'; // Default to 'Ein' if not set
   const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
 
+  // --- Persona Management State & Handlers ---
+  const personas = config?.personas || { Ein: "You are Ein, a helpful AI assistant." };
+  const currentPersonaPrompt = personas[currentPersona] || "";
+  // Ensure currentPersonaAvatar has a fallback if the persona or its avatar isn't in defaults
+  const defaultAvatarForCurrent = DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
+  const currentPersonaAvatar = config?.personaAvatars?.[currentPersona] || defaultAvatarForCurrent;
+
+
+  const handleSavePersona = (name: string, prompt: string, avatar?: string) => {
+    const newPersonas = { ...config.personas, [name]: prompt };
+    const newAvatars = { ...config.personaAvatars };
+    if (avatar) {
+      newAvatars[name] = avatar;
+    } else if (name !== currentPersona && !newAvatars[name]) { 
+      // If it's a new persona or an existing one without a specific avatar being set now,
+      // and no new avatar is provided, ensure no old avatar reference persists if it's not a default.
+      // However, if it's an existing persona being edited and no new avatar is chosen, we keep the old one.
+      // This logic might need refinement based on exact desired behavior for avatar reset/persistence.
+      // For now, if no avatar is explicitly passed, we don't clear it unless it's a truly new persona.
+      // If 'name' is a new persona, and no avatar is given, it won't have one in newAvatars.
+    }
+
+
+    updateConfig({ 
+      personas: newPersonas, 
+      personaAvatars: newAvatars,
+      persona: name // Select the newly saved/created persona
+    });
+  };
+
+  const handleDeletePersona = () => {
+    if (currentPersona === 'Ein' || currentPersona === 'Default') return; // Cannot delete default
+
+    const newPersonas = { ...config.personas };
+    delete newPersonas[currentPersona];
+    
+    const newAvatars = { ...config.personaAvatars };
+    delete newAvatars[currentPersona];
+
+    updateConfig({
+      personas: newPersonas,
+      personaAvatars: newAvatars,
+      persona: 'Ein' // Revert to default persona
+    });
+  };
+
   // --- RAG Controls Logic (Moved and Adapted) ---
-  const [ragSearchQuery, setRagSearchQuery] = useState('');
-  const [inputFocused, setInputFocused] = useState(false);
   const [selectedEmbeddingModelDisplay, setSelectedEmbeddingModelDisplay] = useState<string>('');
-  const ragInputRef = useRef<HTMLInputElement>(null);
-  const ragDropdownRef = useRef<HTMLDivElement>(null);
-
-  const getApiUrlForProvider = (providerName: string, appConfig: AppConfig): string => {
-    switch (providerName?.toLowerCase()) {
-      case 'openai': return OPENAI_URL.replace('/chat/completions', '/embeddings');
-      case 'ollama': return normalizeApiEndpoint(appConfig.ollamaUrl || '') + '/api/embeddings';
-      case 'lmstudio': return normalizeApiEndpoint(appConfig.lmStudioUrl || '') + '/v1/embeddings';
-      case 'gemini': return GEMINI_URL.replace(':generateContent', ':embedContent');
-      case 'groq': console.warn("Groq may not support standalone embeddings."); return GROQ_URL.replace('/chat/completions', '/embeddings');
-      case 'openrouter': return OPENROUTER_URL.replace('/chat/completions', '/embeddings');
-      case 'custom': return normalizeApiEndpoint(appConfig.customEndpoint || '') + '/v1/embeddings';
-      default: console.warn(`Unknown provider for API URL: ${providerName}`); return '';
-    }
-  };
-
-  const getApiKeyForProvider = (providerName: string, appConfig: AppConfig): string | undefined => {
-    switch (providerName?.toLowerCase()) {
-      case 'openai': return appConfig.openAiApiKey;
-      case 'gemini': return appConfig.geminiApiKey;
-      case 'groq': return appConfig.groqApiKey;
-      case 'openrouter': return appConfig.openRouterApiKey;
-      case 'custom': return appConfig.customApiKey;
-      default: return undefined;
-    }
-  };
 
   useEffect(() => {
-    chrome.storage.local.get('embeddingModelConfig', (result) => {
-      if (result.embeddingModelConfig) {
-        const storedConfig = result.embeddingModelConfig as EmbeddingModelConfig;
-        setSelectedEmbeddingModelDisplay(`[${storedConfig.providerName}] ${storedConfig.modelId}`);
-      } else if (config.rag?.embedding_model && config.models) {
-        const currentModelId = config.rag.embedding_model;
-        const modelDetail = config.models.find(m => m.id === currentModelId);
-        if (modelDetail) setSelectedEmbeddingModelDisplay(`[${modelDetail.host || 'Unknown'}] ${modelDetail.id}`);
-        else setSelectedEmbeddingModelDisplay(currentModelId);
-      }
-    });
-  }, [config.rag?.embedding_model, config.models]);
+    const updateDisplay = () => {
+      chrome.storage.local.get('embeddingModelConfig', (result) => {
+        if (result.embeddingModelConfig) {
+          const storedConfig = result.embeddingModelConfig as EmbeddingModelConfig;
+          setSelectedEmbeddingModelDisplay(`[${storedConfig.providerName}] ${storedConfig.modelId}`);
+        } else if (config.rag?.embedding_model && config.models) {
+          const currentModelId = config.rag.embedding_model;
+          const modelDetail = config.models.find(m => m.id === currentModelId);
+          if (modelDetail) {
+            setSelectedEmbeddingModelDisplay(`[${modelDetail.host || 'Unknown'}] ${modelDetail.id}`);
+          } else {
+            setSelectedEmbeddingModelDisplay(currentModelId);
+          }
+        } else {
+          setSelectedEmbeddingModelDisplay('Not Set');
+        }
+      });
+    };
 
-  const allModels: Model[] = config.models || [];
-  const filteredModels = allModels
-    .map(model => ({ ...model, providerName: model.host || 'Unknown', displayName: `[${model.host || 'Unknown'}] ${model.id}` }))
-    .filter(model => {
-      const modelIdLower = model.id.toLowerCase();
-      const queryLower = ragSearchQuery.toLowerCase();
-      const displayNameLower = model.displayName.toLowerCase();
-      if (!queryLower) return true;
-      const queryMatch = displayNameLower.includes(queryLower) || modelIdLower.includes(queryLower);
-      if (!queryMatch) return false;
-      return !(queryLower.includes('embed') && !modelIdLower.includes('embed'));
-    })
-    .sort((a, b) => {
-      const aHasEmbed = a.id.toLowerCase().includes('embed');
-      const bHasEmbed = b.id.toLowerCase().includes('embed');
-      if (aHasEmbed && !bHasEmbed) return -1;
-      if (!aHasEmbed && bHasEmbed) return 1;
-      return a.displayName.localeCompare(b.displayName);
-    });
-
-  const handleModelSelect = (model: Model) => {
-    const providerName = model.host || 'Unknown';
-    const modelId = model.id;
-    const apiUrl = getApiUrlForProvider(providerName, config);
-    const apiKey = getApiKeyForProvider(providerName, config);
-    if (!apiUrl) { console.error(`Could not determine API URL for provider: ${providerName}`); return; }
-    const newEmbeddingConfig: EmbeddingModelConfig = { providerName, modelId, apiUrl, apiKey };
-    chrome.storage.local.set({ embeddingModelConfig: newEmbeddingConfig }, () => {
-      setSelectedEmbeddingModelDisplay(`[${providerName}] ${modelId}`);
-      updateConfig({ rag: { ...config.rag, embedding_model: modelId } });
-    });
-    setRagSearchQuery(''); setInputFocused(false);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (ragInputRef.current && !ragInputRef.current.contains(event.target as Node) &&
-          ragDropdownRef.current && !ragDropdownRef.current.contains(event.target as Node)) {
-        setInputFocused(false);
+    updateDisplay();
+    // Also listen for changes from other parts of the extension
+    const messageListener = (message: any) => {
+      if (message.type === 'CONFIG_UPDATED') {
+        updateDisplay();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    chrome.runtime.onMessage.addListener(messageListener);
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
+  }, [config.rag?.embedding_model, config.models]); // Keep dependencies to re-run if the direct config object changes
 
   const bm25LastRebuild = config.rag?.bm25LastRebuild ?? "Never";
   const embeddingsLastRebuild = config.rag?.embeddingsLastRebuild ?? "Never";
@@ -209,7 +220,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     return () => clearTimeout(debounceTimeout);
   }, [searchQuery]);
 
-  const sectionPaddingX = 'px-6';
+  const sectionPaddingX = 'px-8';
   const handleConfigClick = () => { setSettingsMode(true); onOpenChange(false); };
   const handleHistoryClick = () => { setHistoryMode(true); onOpenChange(false); };
   const handleNoteSystemClick = () => { setNoteSystemMode(true); onOpenChange(false); };
@@ -244,34 +255,79 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
             <div>
               <div className="flex items-center justify-between mt-5 mb-3">
                 <div className="flex items-center space-x-1.5">
-                  {presetThemesForSheet.map(theme => (<SheetThemeButton key={theme.name} theme={theme} updateConfig={updateConfig} />))}
+                  {presetThemesForSheet.map(theme => (<SheetThemeButton key={theme.name} theme={theme} updateConfig={updateConfig} size="h-5 w-5" />))}
                 </div>
+                <Button size="sm" onClick={handleConfigClick} variant="outline" 
+                  className={cn(
+                    "text-white rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", 
+                    "border-none",
+                    "font-['Space_Mono',_monospace]", 
+                    "hover:brightness-95 active:brightness-90", 
+                    "focus:ring-1 focus:ring-white/50"
+                  )}
+                  style={{ backgroundColor: 'var(--link)' }}
+                >
+                  Settings
+                </Button>
               </div>
-              <div className="w-full">
+              <div className="w-full flex items-center space-x-2">
                 <Select value={currentPersona} onValueChange={(value) => updateConfig({ persona: value })}>
-                  <SelectTrigger id="persona-select" variant="settingsPanel" className="w-full font-['Space_Mono',_monospace] data-[placeholder]:text-muted-foreground"><SelectValue placeholder="Select Persona..." /></SelectTrigger>
+                  <SelectTrigger id="persona-select" variant="settingsPanel" className="flex-1 font-['Space_Mono',_monospace] data-[placeholder]:text-muted-foreground w-auto">
+                    <SelectValue placeholder="Select Persona..." />
+                  </SelectTrigger>
                   <SelectContent variant="settingsPanel">
                     {Object.keys(config?.personas || {}).map((p) => {
                       const personaAvatar = config?.personaAvatars?.[p] || DEFAULT_PERSONA_IMAGES[p] || DEFAULT_PERSONA_IMAGES.default;
-                      return (<SelectItem key={p} value={p} className={cn("hover:brightness-95 focus:bg-[var(--active)]", "font-['Space_Mono',_monospace]", "flex items-center gap-2")}>
-                        <Avatar className="h-5 w-5"><AvatarImage src={personaAvatar} alt={p} /><AvatarFallback>{p.substring(0, 1).toUpperCase()}</AvatarFallback></Avatar>{p}
-                      </SelectItem>);
+                      return (
+                        <SelectItem key={p} value={p} className={cn("hover:brightness-95 focus:bg-[var(--active)]", "font-['Space_Mono',_monospace]", "flex items-center gap-2")}>
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={personaAvatar} alt={p} />
+                            <AvatarFallback>{p.substring(0, 1).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          {p}
+                        </SelectItem>
+                      );
                     })}
                   </SelectContent>
                 </Select>
+
+                <PersonaEditPopover
+                  isEditing
+                  personaName={currentPersona}
+                  initialPrompt={currentPersonaPrompt}
+                  initialAvatar={currentPersonaAvatar}
+                  onSave={handleSavePersona}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label="Edit selected persona">
+                      <FiEdit2 />
+                    </Button>
+                  }
+                />
+                <PersonaEditPopover
+                  onSave={handleSavePersona}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label="Add new persona">
+                      <FiPlus />
+                    </Button>
+                  }
+                />
+                {currentPersona !== 'Ein' && currentPersona !== 'Default' && Object.keys(personas).length > 1 && (
+                  <DeletePersonaDialog
+                    personaName={currentPersona}
+                    onConfirm={handleDeletePersona}
+                    trigger={
+                      <Button variant="ghost" size="sm" className="text-[var(--error)]/80 hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-md" aria-label="Delete selected persona">
+                        <FiTrash2 />
+                      </Button>
+                    }
+                  />
+                )}
               </div>
             </div>
-            
-            {/* Configuration Button - direct child of space-y-5 container */}
-            <Button size="default" onClick={handleConfigClick} variant="outline" className={cn("text-[var(--text)] rounded-xl shadow-md w-full justify-start font-medium h-8", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-              Configuration
-            </Button>
-
             {/* Memory Section - direct child of space-y-5 container */}
-            <div>
-              <label className="text-[var(--text)] opacity-80 font-['Bruno_Ace_SC'] text-lg">Memory</label>
+            <div className="py-5 border-t border-[var(--text)]/10">
               <TooltipProvider>
-                <div className="space-y-3 mt-3">
+                <div className="space-y-5">
                   <div className="flex space-x-2"> {/* Flex container for horizontal layout */}
                     <Button variant="outline" size="default" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-center font-medium h-8 text-sm px-2 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
                       Chat History
@@ -280,9 +336,14 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                       Note System
                     </Button>
                   </div>
-                  {/* Index Management Buttons - Refactored for compactness - MOVED UP */}
+                  {/* Index Management Buttons */}
                   <div className="pt-4 border-t border-[var(--text)]/10">
-                    <Label className="text-base font-medium text-foreground opacity-80 mb-2 block">Embedding Management</Label>
+                    <div className="flex justify-between items-center mb-2">
+                      <Label className="text-base font-medium text-foreground opacity-80">Embedding Management</Label>
+                    </div>
+                    <p className="text-xs text-[var(--text)]/70 mb-3">
+                      Current Model: {parseModelNameForDisplay(selectedEmbeddingModelDisplay) || 'None'}
+                    </p>
                     <div className="flex space-x-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -309,28 +370,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         </TooltipContent>
                       </Tooltip>
                     </div>
-                  </div>
-                  {/* Embedding Model Selector - MOVED DOWN */}
-                  <div className="space-y-3 pt-4 border-t border-[var(--text)]/10">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="embedding-model-select-sheet" className="text-base font-medium text-foreground opacity-80">Embedding Model</Label>
-                      <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="xs" className="text-[var(--text)]/70 hover:text-[var(--text)]"><FiHelpCircle /></Button></TooltipTrigger><TooltipContent side="top" className="max-w-sm border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md rounded-xl"><p>For best results, choose a model designed for embeddings. If using a custom model not listed, consider renaming it to include 'embed' for model discovery here.</p></TooltipContent></Tooltip>
-                    </div>
-                    <div className="relative">
-                      <Input id="embedding-model-select-sheet" ref={ragInputRef} type="text" value={inputFocused ? ragSearchQuery : selectedEmbeddingModelDisplay} placeholder={inputFocused ? "Search embedding models..." : (selectedEmbeddingModelDisplay || "Select embedding model...")} onFocus={() => setInputFocused(true)} onChange={(e) => setRagSearchQuery(e.target.value)} className={cn("w-full h-8 text-sm font-['Space_Mono',_monospace]", "text-[var(--text)] rounded-xl shadow-sm", "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]", "hover:border-[var(--active)]/70", "bg-[var(--input-background)] border-[var(--text)]/20")} /> {/* Added font */}
-                      {inputFocused && (
-                        <div ref={ragDropdownRef} className={cn("absolute z-50 w-full mt-1", "bg-[var(--bg)] border border-[var(--text)]/20 rounded-xl shadow-lg", "max-h-60 overflow-y-auto no-scrollbar py-1")}>
-                          {filteredModels.length > 0 ? (
-                            filteredModels.map((model) => (
-                              <Button key={model.id + (model.host || '') + "-sheet"} variant="ghost" className={cn("w-full justify-start text-left h-auto px-3 py-1.5 text-sm", "text-[var(--text)] hover:bg-[var(--active)]/20 focus:bg-[var(--active)]/30", "font-normal")} onClick={() => handleModelSelect(model)}>
-                                {model.displayName} {model.id.toLowerCase().includes('embed') && (<span className="ml-2 px-1.5 py-0.5 text-xs rounded-sm bg-[var(--active)]/20 text-[var(--active)]">Embed</span>)}
-                              </Button>
-                            ))
-                          ) : (<div className="px-3 py-2 text-sm text-[var(--text)]/70">No models found.</div>)}
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-[var(--text)]/70">Selected: {selectedEmbeddingModelDisplay || 'None'}</p>
                   </div>
                 </div>
               </TooltipProvider>

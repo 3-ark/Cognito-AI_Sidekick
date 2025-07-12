@@ -486,7 +486,7 @@ const handleChangelogClose = () => {
             {settingsMode && (
               <div className="flex items-center justify-center">
                 <p className="relative top-0 text-lg font-['Bruno_Ace_SC'] header-title-glow">
-                  Configuration
+                  Settings
                 </p>
               </div>
             )}

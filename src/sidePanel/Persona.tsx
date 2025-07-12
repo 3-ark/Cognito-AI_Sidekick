@@ -1,9 +1,4 @@
-import { useEffect, useRef, useState, ChangeEvent, Dispatch, SetStateAction } from 'react';
-import {
-  AccordionItem,
-  AccordionContent,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,444 +7,193 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { IoAdd, IoTrashOutline } from 'react-icons/io5';
-import React from 'react';
 import { useConfig } from './ConfigContext';
-import { SettingTitle } from './SettingsTitle';
 import { cn } from "@/src/background/util";
 import { Textarea } from "@/components/ui/textarea";
-import { AvatarUpload } from './AvatarUpload';
+import { AvatarUpload } from './AvatarUpload'; // Assuming this is still relevant for popover
 import { DEFAULT_PERSONA_IMAGES } from './constants';
-const SaveButtons = ({
-  hasChange,
+import { FiEdit2, FiPlus, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi'; // Added new icons
+
+interface PersonaEditPopoverProps {
+  trigger: React.ReactNode;
+  personaName?: string; // For editing existing persona
+  onSave: (name: string, prompt: string, avatar?: string) => void;
+  initialPrompt?: string;
+  initialAvatar?: string;
+  isEditing?: boolean;
+}
+
+export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
+  trigger,
+  personaName: initialName,
   onSave,
-  onSaveAs,
-  onCancel,
-}: {
-  hasChange: boolean;
-  onSave: () => void;
-  onSaveAs: () => void;
-  onCancel: () => void;
+  initialPrompt = "",
+  initialAvatar,
+  isEditing = false,
 }) => {
-  if (!hasChange) return null;
-
-  return (
-    <div className="flex mt-4 space-x-2 justify-end w-full">
-      <Button
-        variant="active-bordered"
-        size="sm"
-        onClick={onSave}
-      >
-        Save
-      </Button>
-      <Button
-        variant="active-bordered"
-        size="sm"
-        onClick={onSaveAs}
-      >
-        Save As...
-      </Button>
-      <Button
-        variant="outline-subtle"
-        size="sm"
-        onClick={onCancel}
-      >
-        Cancel
-      </Button>
-    </div>
-  );
-};
-
-// Update the PersonaModal component in Persona.tsx
-const PersonaModal = ({
-  isOpen, onOpenChange, personaPrompt, personas, updateConfig, onModalClose
-}: {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  personaPrompt: string;
-  personas: Record<string, string>;
-  updateConfig: (config: any) => void;
-  onModalClose: () => void;
-}) => {
-  const { config } = useConfig();
-  const [name, setName] = useState('');
+  const { config } = useConfig(); // Access config for avatar defaults if needed
+  const [isOpen, setIsOpen] = useState(false);
+  const [name, setName] = useState(initialName || '');
+  const [prompt, setPrompt] = useState(initialPrompt);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialAvatar || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(initialName || '');
+      setPrompt(initialPrompt);
+      setAvatarPreview(initialAvatar || (initialName ? config?.personaAvatars?.[initialName] : null) || DEFAULT_PERSONA_IMAGES.default);
+      setAvatarFile(null);
+    }
+  }, [isOpen, initialName, initialPrompt, initialAvatar, config?.personaAvatars]);
+
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     setAvatarFile(file);
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setAvatarPreview(event.target?.result as string);
-    };
+    reader.onload = (event) => setAvatarPreview(event.target?.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleCreate = () => {
-    if (!name.trim()) return;
-    
-    const newPersonas = { ...personas, [name.trim()]: personaPrompt };
-    let newConfig: any = {
-      personas: newPersonas,
-      persona: name.trim()
-    };
+  const handleSave = () => {
+    if (!name.trim() || !prompt.trim()) return; // Basic validation
 
     if (avatarFile) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        newConfig.personaAvatars = {
-          ...config.personaAvatars,
-          [name.trim()]: event.target?.result as string
-        };
-        updateConfig(newConfig);
+        onSave(name.trim(), prompt, event.target?.result as string);
+        setIsOpen(false);
       };
       reader.readAsDataURL(avatarFile);
     } else {
-      updateConfig(newConfig);
+      onSave(name.trim(), prompt, avatarPreview || undefined);
+      setIsOpen(false);
     }
-
-    setName('');
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    onModalClose();
   };
+  
+  const defaultAvatarSrc = initialName 
+    ? (config?.personaAvatars?.[initialName] || DEFAULT_PERSONA_IMAGES[initialName] || DEFAULT_PERSONA_IMAGES.default)
+    : DEFAULT_PERSONA_IMAGES.default;
+
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "sm:max-w-[425px]",
-          "bg-[var(--bg)]",
-        )}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-[var(--text)]">Create New Persona</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 rounded-full overflow-hidden border border-[var(--text)]/10">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <img 
-                    src={DEFAULT_PERSONA_IMAGES.default} 
-                    alt="Default" 
-                    className="w-full h-full object-cover" 
-                  />
-                )}
-              </div>
-              <Button
-                variant="outline-subtle"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Select Avatar
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="persona-name" className="text-sm font-medium text-foreground">
-                Persona Name
-              </Label>
-              <Input
-                id="persona-name"
-                placeholder="Enter persona name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className={cn(
-                  "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-                  "hover:border-[var(--active)] hover:brightness-98",
-                )}
-              />
-            </div>
-          </div>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent className="w-80 bg-[var(--bg)] border-[var(--text)]/20 shadow-xl rounded-xl p-4 space-y-4" side="bottom" align="end">
+        <div className="space-y-1">
+          <h4 className="font-medium leading-none text-[var(--text)]">{isEditing ? "Edit Persona" : "Add New Persona"}</h4>
+          <p className="text-sm text-[var(--text)]/70">
+            {isEditing ? "Modify the details of this persona." : "Create a new persona for your chats."}
+          </p>
         </div>
-        <DialogFooter className="sm:justify-end">
-          <Button type="button" variant="outline-subtle" size="sm"
-            onClick={onModalClose}
-          > Cancel </Button>
-          <Button type="button" variant="active-bordered" size="sm"
-            disabled={!name.trim()} 
-            onClick={handleCreate}
-          > Create </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        
+        <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-12 h-12 rounded-full overflow-hidden border border-[var(--text)]/20 bg-[var(--input-background)]">
+                <img 
+                    src={avatarPreview || defaultAvatarSrc} 
+                    alt="Avatar Preview" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => (e.currentTarget.src = DEFAULT_PERSONA_IMAGES.default)} // Fallback
+                />
+              </div>
+              <Button variant="link" size="xs" className="text-xs text-[var(--link)] hover:text-[var(--active)] p-0 h-auto" onClick={() => fileInputRef.current?.click()}>
+                Change
+              </Button>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+            </div>
+            <div className="flex-1 space-y-1.5">
+                <Label htmlFor="persona-popover-name" className="text-xs font-medium text-[var(--text)]/90">Name</Label>
+                <Input
+                    id="persona-popover-name"
+                    placeholder="Persona Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-8 text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] rounded-md"
+                    disabled={isEditing && (initialName === 'Ein' || initialName === 'Default')}
+                />
+            </div>
+        </div>
+
+        <div>
+            <Label htmlFor="persona-popover-prompt" className="text-xs font-medium text-[var(--text)]/90">System Prompt</Label>
+            <Textarea
+                id="persona-popover-prompt"
+                placeholder="You are a helpful assistant..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                minRows={3}
+                maxRows={6}
+                className="text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] no-scrollbar"
+            />
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-2">
+          <Button variant="outline" size="sm" onClick={() => setIsOpen(false)} className="h-7 px-2 text-xs border-[var(--text)]/20 hover:border-[var(--active)]">
+            <FiXCircle className="mr-1 h-3.5 w-3.5" /> Cancel
+          </Button>
+          <Button variant="default" size="sm" onClick={handleSave} disabled={!name.trim() || !prompt.trim()} className="h-7 px-2 text-xs bg-[var(--active)] hover:bg-[var(--active)]/90 text-[var(--active-foreground)]">
+            <FiSave className="mr-1 h-3.5 w-3.5" /> Save
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
-const DeleteModal = ({
-  isOpen, onOpenChange, persona, personas, updateConfig, onModalClose
-}: {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  persona: string;
-  personas: Record<string, string>;
-  updateConfig: (config: any) => void;
-  onModalClose: () => void;
-}) => {
-  const handleDelete = () => {
-    const newPersonas = { ...personas };
-    delete newPersonas[persona];
-    const remainingPersonas = Object.keys(newPersonas);
-    updateConfig({
-      personas: newPersonas,
-      persona: remainingPersonas.length > 0 ? remainingPersonas[0] : 'Ein'
-    });
-    onModalClose();
-  };
+
+export const DeletePersonaDialog: React.FC<{
+  trigger: React.ReactNode;
+  personaName: string;
+  onConfirm: () => void;
+}> = ({ trigger, personaName, onConfirm }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (personaName === 'Ein' || personaName === 'Default') { // Prevent deletion of default personas
+    return null; 
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "sm:max-w-[425px]",
-          "bg-[var(--bg)]",
-          "border",
-          "text-[var(--text)]"
-        )}
-      >
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-[425px] bg-[var(--bg)] border-[var(--text)]/20 text-[var(--text)] rounded-xl shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-[var(--text)]">Delete "{persona}"</DialogTitle>
-          <DialogDescription className="text-[var(--text)]/80 pt-2">
-            Are you sure you want to delete this persona? This action cannot be undone.
+          <DialogTitle className="text-[var(--text)]">Delete Persona: "{personaName}"</DialogTitle>
+          <DialogDescription className="text-[var(--text)]/70 pt-2">
+            Are you sure you want to delete the persona "{personaName}"? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="sm:justify-end pt-4">
-           <Button type="button" variant="outline-subtle" size="sm"
-            onClick={onModalClose}
-          > Cancel </Button>
-          <Button type="button" variant="destructive" size="sm"
-            onClick={handleDelete}
-          > Delete </Button>
+          <DialogClose asChild>
+            <Button type="button" variant="outline" size="sm" className="h-8 border-[var(--text)]/20 hover:border-[var(--active)]">Cancel</Button>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="h-8"
+            onClick={() => {
+              onConfirm();
+              setIsOpen(false);
+            }}
+          >
+            Delete
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-};
-
-const PersonaSelect = ({
-  personas, persona, updateConfig
-}: {
-  personas: Record<string, string>;
-  persona: string;
-  updateConfig: (config: any) => void;
-}) => {
-  const { config } = useConfig();
-  
-  return (
-    <div className="flex items-center gap-2 w-full">
-      <AvatarUpload personaName={persona} />
-      <div className="flex-1"> {/* Wrapper div takes the flex-1 property */}
-        <Select
-          value={persona}
-          onValueChange={(value) => updateConfig({ persona: value })}
-          // className="flex-1" removed from here
-        >
-          <SelectTrigger
-            variant="settings"
-            className={cn(
-              "flex w-full", // This will make the trigger fill the new flex-1 div
-              "data-[placeholder]:text-muted-foreground"
-            )}
-          >
-            <SelectValue placeholder="Select persona" />
-          </SelectTrigger>
-          <SelectContent
-            variant="settingsPanel"
-          >
-            {Object.keys(personas).map((p) => (
-              <SelectItem
-                key={p} value={p}
-                focusVariant="activeTheme"
-              > 
-                {p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  );
-};
-
-const PersonaTextareaWrapper = ({
-  personaPrompt, setPersonaPrompt, isEditing, setIsEditing
-}: {
-  personaPrompt: string;
-  setPersonaPrompt: (value: string) => void;
-  isEditing: boolean;
-  setIsEditing: Dispatch<SetStateAction<boolean>>;
-}) => {
-  const onFocusProp = {
-    onFocus: (e: React.FocusEvent<HTMLTextAreaElement>) => {
-      if (!isEditing) setIsEditing(true);
-    },
-  };
-
-  return (
-    <Textarea
-      autosize
-      minRows={3}
-      maxRows={8}
-      value={personaPrompt}
-      onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-        if (!isEditing) setIsEditing(true);
-        setPersonaPrompt(e.target.value);
-      }}
-      readOnly={!isEditing}
-      {...onFocusProp}
-      data-slot="textarea-default"
-      placeholder="Define the persona's characteristics and instructions here..."
-      className={cn(
-        "w-full min-h-[80px] border border-[var(--text)]/10 px-3 py-2 text-sm ring-offset-[var(--bg)] placeholder:text-[var(--muted-foreground)] rounded-[12px]",
-        "text-[var(--text)]",
-        "no-scrollbar",
-        "focus-visible:outline-none focus-visible:ring-0 focus-visible:box-shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1),_0_0_8px_rgba(168,123,255,0.3)]",
-        !isEditing
-          ? "opacity-75 cursor-default"
-          : "hover:border-[var(--active)] focus:border-[var(--active)]",
-      )}
-    />
-  );
-};
-
-export const Persona = () => {
-  const { config, updateConfig } = useConfig();
-
-  const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isEditingPersona, setIsEditingPersona] = useState(false);
-
-  const personas = config?.personas || { Ein: "You are Ein, a helpful AI assistant." };
-  const currentPersonaName = config?.persona || 'Ein';
-
-  const defaultPromptForCurrentPersona = personas?.[currentPersonaName] ?? personas?.Ein ?? "You are Ein, a helpful AI assistant.";
-  const [personaPrompt, setPersonaPrompt] = useState(defaultPromptForCurrentPersona);
-
-  const hasChange = isEditingPersona && personaPrompt !== defaultPromptForCurrentPersona;
-
-  useEffect(() => {
-    const newDefaultPrompt = personas?.[currentPersonaName] ?? personas?.Ein ?? "";
-    setPersonaPrompt(newDefaultPrompt);
-    setIsEditingPersona(false);
-  }, [currentPersonaName, JSON.stringify(personas)]);
-
-  const handlePersonaModalOpenChange = (open: boolean) => {
-    setIsPersonaModalOpen(open);
-    if (!open) {
-      setPersonaPrompt(defaultPromptForCurrentPersona);
-      setIsEditingPersona(false);
-    }
-  };
-
-  const handleOpenPersonaModalForCreate = () => {
-    setPersonaPrompt('');
-    setIsEditingPersona(true);
-    setIsPersonaModalOpen(true);
-  };
-  
-  const handleOpenPersonaModalForSaveAs = () => {
-    setIsPersonaModalOpen(true);
-  };
-
-  return (
-    <AccordionItem
-      value="persona"
-      className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md",
-        "transition-all duration-150 ease-in-out",
-        "hover:border-[var(--active)] hover:brightness-105"
-      )}
-    >
-      <AccordionTrigger
-        className={cn(
-          "flex items-center justify-between w-full px-3 py-2 hover:no-underline",
-          "text-[var(--text)] font-medium", "hover:brightness-95",
-        )}
-      >
-        <SettingTitle icon="🥷" text="Persona" />
-      </AccordionTrigger>
-      <AccordionContent className="px-3 pb-4 pt-2 text-[var(--text)]">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <PersonaSelect
-              persona={currentPersonaName}
-              personas={personas}
-              updateConfig={updateConfig}
-            />
-            <Button variant="ghost" size="sm" aria-label="Add new persona"
-              className={cn("text-[var(--text)] p-1.5 rounded-md", "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]")}
-              onClick={handleOpenPersonaModalForCreate}
-            > <IoAdd className="h-5 w-5" /> </Button>
-            {Object.keys(personas).length > 1 && (
-              <Button variant="ghost" size="sm" aria-label="Delete current persona"
-                className={cn("text-[var(--text)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 p-1.5 rounded-md", "focus-visible:ring-1 focus-visible:ring-[var(--error)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]")}
-                onClick={() => setIsDeleteModalOpen(true)}
-              > <IoTrashOutline className="h-5 w-5" /> </Button>
-            )}
-          </div>
-
-          <PersonaTextareaWrapper
-            personaPrompt={personaPrompt}
-            setPersonaPrompt={setPersonaPrompt}
-            isEditing={isEditingPersona}
-            setIsEditing={setIsEditingPersona}
-          />
-
-          <SaveButtons
-            hasChange={hasChange}
-            onSave={() => {
-              updateConfig({ personas: { ...personas, [currentPersonaName]: personaPrompt } });
-              setIsEditingPersona(false);
-            }}
-            onSaveAs={handleOpenPersonaModalForSaveAs}
-            onCancel={() => {
-              setPersonaPrompt(defaultPromptForCurrentPersona);
-              setIsEditingPersona(false);
-            }}
-          />
-        </div>
-      </AccordionContent>
-
-      <PersonaModal
-        isOpen={isPersonaModalOpen}
-        onOpenChange={handlePersonaModalOpenChange}
-        personaPrompt={personaPrompt}
-        personas={personas}
-        updateConfig={updateConfig}
-        onModalClose={() => setIsPersonaModalOpen(false)}
-      />
-      <DeleteModal
-        isOpen={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        persona={currentPersonaName}
-        personas={personas}
-        updateConfig={updateConfig}
-        onModalClose={() => setIsDeleteModalOpen(false)}
-      />
-    </AccordionItem>
   );
 };
