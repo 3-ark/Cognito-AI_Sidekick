@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { FiX, FiBookOpen, FiSearch, FiHelpCircle, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiX, FiBookOpen, FiSearch, FiHelpCircle, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiMessageSquare, FiFileText } from 'react-icons/fi';
 import { PersonaEditPopover, DeletePersonaDialog } from './Persona'; // Import new persona components
 import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -267,6 +267,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   )}
                   style={{ backgroundColor: 'var(--link)' }}
                 >
+                  <FiSliders className="h-3 w-3 mr-1" />
                   Settings
                 </Button>
               </div>
@@ -328,12 +329,14 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
             <div className="py-5 border-t border-[var(--text)]/10">
               <TooltipProvider>
                 <div className="space-y-5">
-                  <div className="flex space-x-2"> {/* Flex container for horizontal layout */}
-                    <Button variant="outline" size="default" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-center font-medium h-8 text-sm px-2 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                      Chat History
+                  <div className="flex space-x-4"> {/* Adjusted spacing */}
+                    <Button variant="outline" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
+                      <FiMessageSquare className="h-3 w-3 mr-1.5" />
+                      <span className="text-xs">Chats</span>
                     </Button>
-                    <Button variant="outline" size="default" onClick={handleNoteSystemClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-center font-medium h-8 text-sm px-2 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                      Note System
+                    <Button variant="outline" onClick={handleNoteSystemClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
+                      <FiFileText className="h-3 w-3 mr-1.5" />
+                      <span className="text-xs">Notes</span>
                     </Button>
                   </div>
                   {/* Index Management Buttons */}
@@ -344,12 +347,12 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     <p className="text-xs text-[var(--text)]/70 mb-3">
                       Current Model: {parseModelNameForDisplay(selectedEmbeddingModelDisplay) || 'None'}
                     </p>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-4"> {/* Adjusted spacing */}
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={handleRebuildEmbeddings} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-center font-medium h-8 text-xs px-2 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                            <FiRefreshCw className="h-3.5 w-3.5 flex-shrink-0" />
-                            <span className="truncate">Rebuild</span>
+                          <Button variant="outline" onClick={handleRebuildEmbeddings} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
+                            <FiRefreshCw className="h-3 w-3" />
+                            <span className="truncate ml-1.5">Rebuild</span>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
@@ -359,9 +362,9 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={handleUpdateEmbeddings} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-center font-medium h-8 text-xs px-2 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                            <FiZap className="h-3.5 w-3.5 flex-shrink-0" />
-                            <span className="truncate">Update</span>
+                          <Button variant="outline" onClick={handleUpdateEmbeddings} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
+                            <FiZap className="h-3 w-3" />
+                            <span className="truncate ml-1.5">Update</span>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
