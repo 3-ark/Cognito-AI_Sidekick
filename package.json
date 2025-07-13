@@ -1,6 +1,6 @@
 {
   "name": "Cognito - AI Sidekick",
-  "version": "3.8.7",
+  "version": "3.8.8",
   "description": "Cognito uses AI to interpret your needs, letting you guide, query, and control your Chrome browser through natural interaction.",
   "main": "index.js",
   "scripts": {
@@ -53,7 +53,7 @@
     "copy-webpack-plugin": "^13.0.0",
     "css-loader": "^7.1.2",
     "defuddle": "^0.6.4",
-    "dotenv": "^17.1.0",
+    "dotenv": "^17.2.0",
     "fetch-event-stream": "^0.1.5",
     "fflate": "^0.8.2",
     "file-loader": "^6.2.0",
@@ -63,7 +63,7 @@
     "localforage": "^1.10.0",
     "lucide-react": "^0.525.0",
     "mini-css-extract-plugin": "^2.9.2",
-    "motion": "^12.23.0",
+    "motion": "^12.23.3",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^5.3.93",
     "prop-types": "^15.8.1",
@@ -91,17 +91,17 @@
     "wink-bm25-text-search": "^3.1.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.30.1",
+    "@eslint/js": "^9.31.0",
     "@stylistic/eslint-plugin-ts": "^4.4.1",
     "@tailwindcss/postcss": "^4.1.11",
-    "@types/chrome": "^0.0.330",
+    "@types/chrome": "^0.1.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/tiny-segmenter": "^0.2.0",
     "@types/turndown": "^5.0.5",
     "@typescript-eslint/eslint-plugin": "^8.36.0",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.30.1",
+    "eslint": "^9.31.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",
@@ -114,7 +114,7 @@
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.36.0",
-    "webpack": "^5.99.9",
+    "webpack": "^5.100.1",
     "webpack-cli": "^6.0.1"
   }
 }

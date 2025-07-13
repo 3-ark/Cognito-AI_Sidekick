@@ -1,15 +1,16 @@
 Find the latest release and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
-## [3.8.7] - 2024-07-13
+## [3.8.7 & 8] - 2024-07-13
 
 * new UI/UX for new functions: 
   * Added a search bar and buttons for updating vector storage in the settings sheet
-  * Refactor header, now you can select your models directly from chat UI without clicking avatar first.
-  * Refine the welcome modal and quick guide
+  * Added a progress bar for embedding process
+  * Refactored header, now you can select your models directly from chat UI without clicking avatar first.
+  * Refined the welcome modal and quick guide
   * Cleaned up some debug logging code
 * Simplify BM25 consolidation to be time-based (60s) and search-triggered
 * Wink-NLP lite model for BM25 for a better retrieval 
-
+* Polishing UI/UX
 ```
 How_to_use_RAG:
 

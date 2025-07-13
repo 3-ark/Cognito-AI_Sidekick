@@ -46,13 +46,12 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
   totalChunksToProcess += allNotes.reduce((acc, note) => acc + chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags }).length, 0);
   totalChunksToProcess += allChats.reduce((acc, chat) => acc + chunkChatMessageTurns({ id: chat.id, title: chat.title, turns: chat.turns }).length, 0);
 
-  const progressCallback = (processedInBatch: number) => {
-    processedChunks += processedInBatch;
+  const progressCallback = (processed: number, total: number) => {
     chrome.runtime.sendMessage({
       type: 'EMBEDDING_PROGRESS',
       payload: {
-        processed: processedChunks,
-        total: totalChunksToProcess,
+        processed,
+        total,
         operation: 'rebuild'
       }
     });
@@ -87,7 +86,8 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
 
         if (noteChunks.length > 0) {
           const chunkContents = noteChunks.map(chunk => chunk.content);
-          const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback);
+          const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback, processedChunks, totalChunksToProcess);
+          processedChunks += noteChunks.length;
           for (let i = 0; i < noteChunks.length; i++) {
             const chunk = noteChunks[i];
             const embedding = embeddings[i];
@@ -139,7 +139,8 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
 
         if (chatChunks.length > 0) {
           const chunkContents = chatChunks.map(chunk => chunk.content);
-          const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback);
+          const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback, processedChunks, totalChunksToProcess);
+          processedChunks += chatChunks.length;
           for (let i = 0; i < chatChunks.length; i++) {
             const chunk = chatChunks[i];
             const embedding = embeddings[i];
@@ -227,17 +228,16 @@ export const updateMissingEmbeddings = async (): Promise<{ notesUpdated: number,
   if (totalChunksToProcess > 0) {
     console.log(`Found ${totalChunksToProcess} chunks missing embeddings. Generating...`);
     const chunkContents = chunksToEmbed.map(c => c.content);
-    const embeddings = await generateEmbeddings(chunkContents, 5, (processedInBatch) => {
-      processedChunks += processedInBatch;
+    const embeddings = await generateEmbeddings(chunkContents, 5, (processed, total) => {
       chrome.runtime.sendMessage({
         type: 'EMBEDDING_PROGRESS',
         payload: {
-          processed: processedChunks,
-          total: totalChunksToProcess,
+          processed,
+          total,
           operation: 'update'
         }
       });
-    });
+    }, 0, totalChunksToProcess);
 
     for (let i = 0; i < chunksToEmbed.length; i++) {
       const chunk = chunksToEmbed[i];
@@ -245,10 +245,18 @@ export const updateMissingEmbeddings = async (): Promise<{ notesUpdated: number,
       const prefix = 'noteId' in chunk ? EMBEDDING_NOTE_CHUNK_PREFIX : EMBEDDING_CHAT_CHUNK_PREFIX;
       if (embedding && embedding.length > 0) {
         await localforage.setItem(`${prefix}${chunk.id}`, embedding);
-        if ('noteId' in chunk) notesUpdated++; else chatsUpdated++;
+        if ('noteId' in chunk) {
+          notesUpdated++;
+        } else {
+          chatsUpdated++;
+        }
       } else {
         console.warn(`Failed to generate embedding for chunk ${chunk.id} during update.`);
-        if ('noteId' in chunk) notesFailed++; else chatsFailed++;
+        if ('noteId' in chunk) {
+          notesFailed++;
+        } else {
+          chatsFailed++;
+        }
       }
     }
   }

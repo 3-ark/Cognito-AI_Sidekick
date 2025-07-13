@@ -131,7 +131,9 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
 export const generateEmbeddings = async (
   texts: string[],
   batchSize = 5,
-  progressCallback?: (processed: number) => void
+  progressCallback?: (processed: number, total: number) => void,
+  processedChunks = 0,
+  totalChunksToProcess = 0
 ): Promise<number[][]> => {
   if (!embeddingServiceConfig.apiUrl || !embeddingServiceConfig.model) {
     console.error(
@@ -174,7 +176,7 @@ export const generateEmbeddings = async (
     } finally {
       processedCount += batchTexts.length;
       if (progressCallback) {
-        progressCallback(batchTexts.length);
+        progressCallback(processedChunks + processedCount, totalChunksToProcess);
       }
     }
   }
