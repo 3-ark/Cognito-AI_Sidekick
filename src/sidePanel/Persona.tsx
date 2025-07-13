@@ -137,7 +137,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
                 onChange={(e) => setPrompt(e.target.value)}
                 minRows={3}
                 maxRows={6}
-                className="text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] no-scrollbar"
+                className="text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]"
             />
         </div>
 
