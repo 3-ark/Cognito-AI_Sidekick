@@ -130,14 +130,20 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
 
         <div>
             <Label htmlFor="persona-popover-prompt" className="text-xs mb-1 font-medium text-[var(--text)]/90">System Prompt</Label>
-            <div className="max-h-48 overflow-y-auto rounded-md border bg-[var(--input-background)] border-[var(--text)]/20 thin-scrollbar p-4">
+            <div className="rounded-md border bg-[var(--input-background)] border-[var(--text)]/20 thin-scrollbar p-1">
               <Textarea
                   id="persona-popover-prompt"
                   placeholder="You are a helpful assistant..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="text-sm border-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-full"
+                  className="text-sm border-none focus-visible:ring-0 max-h-48 min-h-[100px] overflow-y-auto focus-visible:ring-offset-0"
                   autosize={true}
+                  onWheel={(e) => {
+                  // Prevent the event from bubbling up to parent containers
+                    e.stopPropagation();
+                  // Manually scroll the textarea
+                    e.currentTarget.scrollTop += e.deltaY;
+                    }}
               />
             </div>
         </div>
