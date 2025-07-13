@@ -1,7 +1,7 @@
 {
   "name": "Cognito - AI Sidekick",
   "version": "3.8.8",
-  "description": "Cognito uses AI to interpret your needs, letting you guide, query, and control your Chrome browser through natural interaction.",
+  "description": "Context-aware AI assistant for Chrome. Summarize, save, and search webpages with smart memory and fast recall.",
   "main": "index.js",
   "scripts": {
     "start": "npm run clear && webpack -w --config config/webpack.config.js",
