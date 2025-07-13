@@ -480,6 +480,107 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setSelectedNoteIds([]);
   };
 
+  const handleSelectAll = () => {
+    const allVisibleNoteIds = paginatedNotes.map(note => note.id);
+    const allVisibleSelected = allVisibleNoteIds.every(id => selectedNoteIds.includes(id));
+
+    if (allVisibleSelected) {
+      setSelectedNoteIds(prevSelectedIds => prevSelectedIds.filter(id => !allVisibleNoteIds.includes(id)));
+    } else {
+      setSelectedNoteIds(prevSelectedIds => [...new Set([...prevSelectedIds, ...allVisibleNoteIds])]);
+    }
+  };
+
+  const handleDeleteAllNotes = async () => {
+    if (isProcessingSelectionAction) return;
+
+    toast.custom(
+      (t) => (
+        <div
+          className={cn(
+            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
+            "p-4 rounded-lg shadow-xl max-w-sm w-full",
+            "flex flex-col space-y-3"
+          )}
+        >
+          <h4 className="text-lg font-semibold text-[var(--text)]">Confirm Deletion</h4>
+          <p className="text-sm text-[var(--text)] opacity-90">
+            Are you sure you want to delete ALL notes? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "bg-transparent text-[var(--text)] border-[var(--text)]",
+                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]"
+              )}
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className={cn(
+                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]"
+              )}
+              onClick={async () => {
+                toast.dismiss(t.id);
+                setIsProcessingSelectionAction(true);
+                const deleteToastId = toast.loading(`Deleting all notes...`);
+                try {
+                  await deleteAllNotesFromSystem();
+                  toast.success(`All notes deleted.`, { id: deleteToastId });
+                  await fetchNotes();
+                } catch (error) {
+                  console.error("Error deleting all notes:", error);
+                  toast.error(`Failed to delete all notes. Error: ${error instanceof Error ? error.message : String(error)}`, { id: deleteToastId });
+                  await fetchNotes();
+                } finally {
+                  setIsProcessingSelectionAction(false);
+                  handleCancelSelectionMode();
+                }
+              }}
+            >
+              Delete All
+            </Button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: 'top-center',
+      }
+    );
+  };
+
+  const handleExportAllNotes = async () => {
+    if (allNotes.length === 0) {
+      toast.error("No notes to export.");
+      return;
+    }
+    const toastId = toast.loading(`Exporting all ${allNotes.length} note(s)...`);
+    try {
+      const allNoteIds = allNotes.map(note => note.id);
+      const result = await exportNotesToObsidianMD(allNoteIds);
+      if (result.successCount > 0) {
+        toast.success(`${result.successCount} note(s) exported successfully.`, { id: toastId });
+      }
+      if (result.errorCount > 0) {
+        toast.error(`${result.errorCount} note(s) failed to export. Check console for details.`, {
+          id: result.successCount === 0 ? toastId : undefined,
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting all notes:", error);
+      toast.error("An unexpected error occurred during export.", { id: toastId });
+    } finally {
+      handleCancelSelectionMode();
+    }
+  };
+
   const handleExportSelectedNotes = async () => {
     if (selectedNoteIds.length === 0) {
       toast.error("No notes selected to export.");
@@ -967,23 +1068,38 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         )}
       </ScrollArea>
 
-      {isSelectionModeActive && selectedNoteIds.length > 0 && (
+      {isSelectionModeActive && (
         <div className="sticky bottom-0 z-10 p-2 bg-[var(--bg)] border-t border-[var(--text)]/10 shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-[var(--text)]">
-              {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
-            </span>
-            <div className="space-x-2">
-               <Button variant="outline" size="sm" onClick={handleExportSelectedNotes} disabled={isProcessingSelectionAction}>
-                 {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Export"}
-               </Button>
-               <Button variant="destructive" size="sm" onClick={handleDeleteSelectedNotes} disabled={isProcessingSelectionAction}>
-                 {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Delete"}
-               </Button>
-               <Button variant="ghost" size="sm" onClick={handleCancelSelectionMode} disabled={isProcessingSelectionAction}>
-                 Done
-               </Button>
+          {selectedNoteIds.length > 0 && (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-[var(--text)]">
+                {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
+              </span>
+              <div className="space-x-2">
+                 <Button variant="outline" size="sm" onClick={handleExportSelectedNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
+                   {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Export"}
+                 </Button>
+                 <Button variant="destructive" size="sm" onClick={handleDeleteSelectedNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
+                   {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Delete"}
+                 </Button>
+              </div>
             </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="space-x-2">
+                <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={isProcessingSelectionAction} className="h-6 text-xs">
+                    Select All
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportAllNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
+                    Export All
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDeleteAllNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
+                    Delete All
+                </Button>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleCancelSelectionMode} disabled={isProcessingSelectionAction} className="h-6 text-xs">
+              Done
+            </Button>
           </div>
         </div>
       )}
