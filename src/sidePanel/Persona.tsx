@@ -98,34 +98,38 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-16 h-16 rounded-full overflow-hidden border border-[var(--text)]/20 bg-[var(--input-background)]">
-                <img 
-                    src={avatarPreview || defaultAvatarSrc} 
-                    alt="Avatar Preview" 
-                    className="w-full h-full object-cover" 
-                    onError={(e) => (e.currentTarget.src = DEFAULT_PERSONA_IMAGES.default)} // Fallback
-                />
-              </div>
-              <Button variant="link" size="xs" className="text-xs text-[var(--link)] hover:text-[var(--active)] p-0 h-auto" onClick={() => fileInputRef.current?.click()}>
-                Change
-              </Button>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+        <div className="flex items-start gap-4">
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+            <div className="w-16 h-16 rounded-full overflow-hidden border border-[var(--text)]/20 bg-[var(--input-background)]">
+              <img
+                src={avatarPreview || defaultAvatarSrc}
+                alt="Avatar Preview"
+                className="w-full h-full object-cover"
+                onError={(e) => (e.currentTarget.src = DEFAULT_PERSONA_IMAGES.default)}
+              />
             </div>
-            <div className="flex-1 ml-4 space-y-2">
-                <Label htmlFor="persona-popover-name" className="text-xs font-medium text-[var(--text)]/90">Name</Label>
-                <Input
-                    id="persona-popover-name"
-                    placeholder="Persona Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="h-8 text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] rounded-md"
-                    disabled={isEditing && (initialName === 'Ein' || initialName === 'Default')}
-                />
+            <Button variant="link" size="xs" className="text-xs text-[var(--link)] hover:text-[var(--active)] p-0 h-auto" onClick={() => fileInputRef.current?.click()}>
+              Change
+            </Button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+          </div>
+      
+          {/* Name and Instructions Section */}
+          <div className="flex-grow ml-8 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="persona-popover-name" className="text-xs font-medium text-[var(--text)]/90">Name</Label>
+              <Input
+                id="persona-popover-name"
+                placeholder="Persona Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-8 text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] rounded-md"
+                disabled={isEditing && (initialName === 'Ein' || initialName === 'Default')}
+              />
             </div>
+          </div>
         </div>
-
         <div>
             <Label htmlFor="persona-popover-prompt" className="text-xs mb-2 font-medium text-[var(--text)]/90">Persona Instruction</Label>
             <div className="rounded-md border bg-[var(--input-background)] border-[var(--text)]/20 thin-scrollbar p-1">
