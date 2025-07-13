@@ -102,7 +102,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
         
         <div className="flex items-center gap-3">
             <div className="flex flex-col items-center gap-1">
-              <div className="w-12 h-12 rounded-full overflow-hidden border border-[var(--text)]/20 bg-[var(--input-background)]">
+              <div className="w-16 h-16 rounded-full overflow-hidden border border-[var(--text)]/20 bg-[var(--input-background)]">
                 <img 
                     src={avatarPreview || defaultAvatarSrc} 
                     alt="Avatar Preview" 
@@ -130,15 +130,16 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
 
         <div>
             <Label htmlFor="persona-popover-prompt" className="text-xs mb-1 font-medium text-[var(--text)]/90">System Prompt</Label>
-            <Textarea
-                id="persona-popover-prompt"
-                placeholder="You are a helpful assistant..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                minRows={3}
-                maxRows={6}
-                className="text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]"
-            />
+            <div className="max-h-48 overflow-y-auto rounded-md border bg-[var(--input-background)] border-[var(--text)]/20 thin-scrollbar p-4">
+              <Textarea
+                  id="persona-popover-prompt"
+                  placeholder="You are a helpful assistant..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="text-sm border-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-full"
+                  autosize={true}
+              />
+            </div>
         </div>
 
         <div className="flex justify-end space-x-2 pt-2">
