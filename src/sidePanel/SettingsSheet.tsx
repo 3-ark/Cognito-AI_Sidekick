@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { FiX, FiBookOpen, FiSearch, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiFileText } from 'react-icons/fi';
+import { FiX, FiBookOpen, FiSearch, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiFileText, FiInfo } from 'react-icons/fi';
 import { PersonaEditPopover, DeletePersonaDialog } from './Persona'; // Import new persona components
 import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -256,7 +256,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     "text-white rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", 
                     "border-none",
                     "font-['Space_Mono',_monospace]", 
-                    "hover:brightness-95 active:brightness-90", 
+                    "hover:brightness-80 active:brightness-90", 
                     "focus:ring-1 focus:ring-white/50"
                   )}
                   style={{ backgroundColor: 'var(--link)' }}
@@ -336,28 +336,38 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   {/* Index Management Buttons */}
                   <div className="pt-4 border-t border-[var(--text)]/10">
                     <div className="flex justify-between items-center">
-                      <Label className="text-base font-medium text-foreground opacity-80">Embeddings</Label>
+                      <div className="flex items-center space-x-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <FiInfo className="px-0 mr-1 text-[var(--text)]/50" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className={sharedTooltipContentStyle}>
+                            <p>Manage your vector index</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Label className="text-base font-medium text-foreground opacity-80">Embeddings</Label>
+                      </div>
                       <div className="flex space-x-2">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={handleRebuildEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-95 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
+                            <Button variant="outline" size="sm" onClick={handleRebuildEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-80 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
                               <FiRefreshCw className="h-3 w-3" />
                               <span className="truncate">Rebuild</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
+                          <TooltipContent side="top" className={sharedTooltipContentStyle}>
                             <p>Rebuild Embeddings</p>
                             <p className="text-xs opacity-80">Last: {embeddingsLastRebuild}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={handleUpdateEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-95 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
+                            <Button variant="outline" size="sm" onClick={handleUpdateEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-80 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
                               <FiZap className="h-3 w-3" />
                               <span className="truncate">Update</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
+                          <TooltipContent side="top" className={sharedTooltipContentStyle}>
                             <p>Update Embeddings</p>
                             <p className="text-xs opacity-80">Last: {embeddingsLastUpdate}</p>
                           </TooltipContent>
