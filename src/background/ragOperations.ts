@@ -29,10 +29,9 @@ from '../types/config';
  */
 export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, chatsProcessed: number, notesFailed: number, chatsFailed: number }> => {
   console.log("Starting full embedding rebuild process...");
-  let notesProcessed = 0;
-  let chatsProcessed = 0;
-  let notesFailed = 0;
-  let chatsFailed = 0;
+  let notesProcessed = 0, chatsProcessed = 0, notesFailed = 0, chatsFailed = 0;
+  let totalChunksToProcess = 0;
+  let processedChunks = 0;
 
   try {
     await ensureEmbeddingServiceConfigured();
@@ -41,32 +40,36 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
     throw new Error("Embedding service not configured. Please configure it first.");
   }
 
+  const allNotes = await getAllNotesFromSystem();
+  const allChats = await getAllChatMessagesFromStorage();
+
+  totalChunksToProcess += allNotes.reduce((acc, note) => acc + chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags }).length, 0);
+  totalChunksToProcess += allChats.reduce((acc, chat) => acc + chunkChatMessageTurns({ id: chat.id, title: chat.title, turns: chat.turns }).length, 0);
+
+  const progressCallback = (processedInBatch: number) => {
+    processedChunks += processedInBatch;
+    chrome.runtime.sendMessage({
+      type: 'EMBEDDING_PROGRESS',
+      payload: {
+        processed: processedChunks,
+        total: totalChunksToProcess,
+        operation: 'rebuild'
+      }
+    });
+  };
+
   // Process Notes
   try {
-    const allNotes = await getAllNotesFromSystem();
     console.log(`Found ${allNotes.length} notes to process for embedding rebuild.`);
     for (const note of allNotes) {
       try {
         console.log(`Rebuilding embeddings for note: ${note.id} - ${note.title}`);
-        // 1. Chunk the note
-        const noteChunks: NoteChunk[] = chunkNoteContent({
-          id: note.id,
-          content: note.content,
-          title: note.title,
-          url: note.url,
-          tags: note.tags,
-        });
-
+        const noteChunks: NoteChunk[] = chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags });
         const currentChunkIds = new Set(noteChunks.map(chunk => chunk.id));
 
-        // 2. Clean up old chunk texts and embeddings for this note specifically
         const allStorageKeys = await localforage.keys();
-        const oldChunkTextKeys = allStorageKeys.filter(key =>
-          key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(note.id)
-        );
-        const oldChunkEmbeddingKeys = allStorageKeys.filter(key =>
-          key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(note.id)
-        );
+        const oldChunkTextKeys = allStorageKeys.filter(key => key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(note.id));
+        const oldChunkEmbeddingKeys = allStorageKeys.filter(key => key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(note.id));
 
         for (const oldKey of oldChunkTextKeys) {
           const chunkId = oldKey.substring(NOTE_CHUNK_TEXT_PREFIX.length);
@@ -77,20 +80,14 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
         }
         for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
           const chunkId = oldEmbeddingKey.substring(EMBEDDING_NOTE_CHUNK_PREFIX.length);
-          if (!currentChunkIds.has(chunkId)) {
-            await localforage.removeItem(oldEmbeddingKey);
-          }
+          if (!currentChunkIds.has(chunkId)) await localforage.removeItem(oldEmbeddingKey);
         }
 
-        // 3. Save new chunk texts
-        for (const chunk of noteChunks) {
-          await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
-        }
+        for (const chunk of noteChunks) await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
 
-        // 4. Generate and save new embeddings
         if (noteChunks.length > 0) {
           const chunkContents = noteChunks.map(chunk => chunk.content);
-          const embeddings = await generateEmbeddings(chunkContents);
+          const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback);
           for (let i = 0; i < noteChunks.length; i++) {
             const chunk = noteChunks[i];
             const embedding = embeddings[i];
@@ -110,37 +107,22 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
     }
   } catch (error) {
     console.error("Error processing notes during embedding rebuild:", error);
-    // This would be a more general error, like failing to get all notes.
   }
 
   // Process Chat Messages
   try {
-    const allChats = await getAllChatMessagesFromStorage();
     console.log(`Found ${allChats.length} chats to process for embedding rebuild.`);
     for (const chat of allChats) {
       try {
         console.log(`Rebuilding embeddings for chat: ${chat.id} - ${chat.title}`);
-        // 1. Chunk the chat
-        const chatInputForChunking: ChatMessageInputForChunking = {
-          id: chat.id,
-          title: chat.title,
-          turns: chat.turns.map(turn => ({
-            role: turn.role,
-            content: turn.content,
-            timestamp: turn.timestamp,
-          })),
-        };
+        const chatInputForChunking: ChatMessageInputForChunking = { id: chat.id, title: chat.title, turns: chat.turns.map(turn => ({ role: turn.role, content: turn.content, timestamp: turn.timestamp })) };
         const chatChunks: ChatChunk[] = chunkChatMessageTurns(chatInputForChunking);
         const currentChunkIds = new Set(chatChunks.map(chunk => chunk.id));
 
-        // 2. Clean up old chunk texts and embeddings for this chat
         const allStorageKeys = await localforage.keys();
-        const oldChunkTextKeys = allStorageKeys.filter(key =>
-          key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(chat.id)
-        );
-        const oldChunkEmbeddingKeys = allStorageKeys.filter(key =>
-          key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(chat.id)
-        );
+        const oldChunkTextKeys = allStorageKeys.filter(key => key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(chat.id));
+        const oldChunkEmbeddingKeys = allStorageKeys.filter(key => key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(chat.id));
+
         for (const oldKey of oldChunkTextKeys) {
           const chunkId = oldKey.substring(CHAT_CHUNK_TEXT_PREFIX.length);
           if (!currentChunkIds.has(chunkId)) {
@@ -148,22 +130,16 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
             await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunkId}`);
           }
         }
-         for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
+        for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
           const chunkId = oldEmbeddingKey.substring(EMBEDDING_CHAT_CHUNK_PREFIX.length);
-          if (!currentChunkIds.has(chunkId)) {
-            await localforage.removeItem(oldEmbeddingKey);
-          }
+          if (!currentChunkIds.has(chunkId)) await localforage.removeItem(oldEmbeddingKey);
         }
 
-        // 3. Save new chunk texts
-        for (const chunk of chatChunks) {
-          await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
-        }
+        for (const chunk of chatChunks) await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
 
-        // 4. Generate and save new embeddings
         if (chatChunks.length > 0) {
           const chunkContents = chatChunks.map(chunk => chunk.content);
-          const embeddings = await generateEmbeddings(chunkContents);
+          const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback);
           for (let i = 0; i < chatChunks.length; i++) {
             const chunk = chatChunks[i];
             const embedding = embeddings[i];
@@ -211,10 +187,9 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
  */
 export const updateMissingEmbeddings = async (): Promise<{ notesUpdated: number, chatsUpdated: number, notesFailed: number, chatsFailed: number }> => {
   console.log("Starting process to update missing embeddings...");
-  let notesUpdated = 0;
-  let chatsUpdated = 0;
-  let notesFailed = 0;
-  let chatsFailed = 0;
+  let notesUpdated = 0, chatsUpdated = 0, notesFailed = 0, chatsFailed = 0;
+  let totalChunksToProcess = 0;
+  let processedChunks = 0;
 
   try {
     await ensureEmbeddingServiceConfigured();
@@ -223,118 +198,61 @@ export const updateMissingEmbeddings = async (): Promise<{ notesUpdated: number,
     throw new Error("Embedding service not configured. Please configure it first.");
   }
 
-  // Process Notes
-  try {
-    const allNotes = await getAllNotesFromSystem();
-    console.log(`Found ${allNotes.length} notes to check for missing embeddings.`);
-    for (const note of allNotes) {
-      let noteActuallyUpdated = false;
-      try {
-        const noteChunks: NoteChunk[] = chunkNoteContent({
-          id: note.id,
-          content: note.content,
-          title: note.title,
-          url: note.url,
-          tags: note.tags,
-        });
+  const allNotes = await getAllNotesFromSystem();
+  const allChats = await getAllChatMessagesFromStorage();
+  let chunksToEmbed: (NoteChunk | ChatChunk)[] = [];
 
-        if (noteChunks.length > 0) {
-          const chunksToEmbed: NoteChunk[] = [];
-          const chunkContentsToEmbed: string[] = [];
-
-          for (const chunk of noteChunks) {
-            // Save chunk text if not already there (rebuild does this, update should ensure it too)
-            // This is important if a note was saved in manual mode and then update is hit.
-            await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
-
-            const existingEmbedding = await localforage.getItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`);
-            if (!existingEmbedding) {
-              chunksToEmbed.push(chunk);
-              chunkContentsToEmbed.push(chunk.content);
-            }
-          }
-
-          if (chunksToEmbed.length > 0) {
-            console.log(`Found ${chunksToEmbed.length} chunks missing embeddings for note ${note.id}. Generating...`);
-            const embeddings = await generateEmbeddings(chunkContentsToEmbed);
-            for (let i = 0; i < chunksToEmbed.length; i++) {
-              const chunk = chunksToEmbed[i];
-              const embedding = embeddings[i];
-              if (embedding && embedding.length > 0) {
-                await localforage.setItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`, embedding);
-                noteActuallyUpdated = true;
-              } else {
-                console.warn(`Failed to generate embedding for note chunk ${chunk.id} during update. It will not be saved.`);
-              }
-            }
-          }
-        }
-        if (noteActuallyUpdated) notesUpdated++;
-      } catch (e) {
-        console.error(`Failed to update embeddings for note ${note.id}:`, e);
-        notesFailed++;
+  for (const note of allNotes) {
+    const noteChunks = chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags });
+    for (const chunk of noteChunks) {
+      await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
+      if (!await localforage.getItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`)) {
+        chunksToEmbed.push(chunk);
       }
     }
-  } catch (error) {
-    console.error("Error processing notes during missing embedding update:", error);
   }
 
-  // Process Chat Messages
-  try {
-    const allChats = await getAllChatMessagesFromStorage();
-    console.log(`Found ${allChats.length} chats to check for missing embeddings.`);
-    for (const chat of allChats) {
-      let chatActuallyUpdated = false;
-      try {
-        const chatInputForChunking: ChatMessageInputForChunking = {
-          id: chat.id,
-          title: chat.title,
-          turns: chat.turns.map(turn => ({
-            role: turn.role,
-            content: turn.content,
-            timestamp: turn.timestamp,
-          })),
-        };
-        const chatChunks: ChatChunk[] = chunkChatMessageTurns(chatInputForChunking);
-
-        if (chatChunks.length > 0) {
-          const chunksToEmbed: ChatChunk[] = [];
-          const chunkContentsToEmbed: string[] = [];
-
-          for (const chunk of chatChunks) {
-            await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
-
-            const existingEmbedding = await localforage.getItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`);
-            if (!existingEmbedding) {
-              chunksToEmbed.push(chunk);
-              chunkContentsToEmbed.push(chunk.content);
-            }
-          }
-
-          if (chunksToEmbed.length > 0) {
-            console.log(`Found ${chunksToEmbed.length} chunks missing embeddings for chat ${chat.id}. Generating...`);
-            const embeddings = await generateEmbeddings(chunkContentsToEmbed);
-            for (let i = 0; i < chunksToEmbed.length; i++) {
-              const chunk = chunksToEmbed[i];
-              const embedding = embeddings[i];
-              if (embedding && embedding.length > 0) {
-                await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
-                chatActuallyUpdated = true;
-              } else {
-                console.warn(`Failed to generate embedding for chat chunk ${chunk.id} during update. It will not be saved.`);
-              }
-            }
-          }
-        }
-        if (chatActuallyUpdated) chatsUpdated++;
-      } catch (e) {
-        console.error(`Failed to update embeddings for chat ${chat.id}:`, e);
-        chatsFailed++;
+  for (const chat of allChats) {
+    const chatChunks = chunkChatMessageTurns({ id: chat.id, title: chat.title, turns: chat.turns });
+    for (const chunk of chatChunks) {
+      await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
+      if (!await localforage.getItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`)) {
+        chunksToEmbed.push(chunk);
       }
     }
-  } catch (error) {
-    console.error("Error processing chat messages during missing embedding update:", error);
   }
+
+  totalChunksToProcess = chunksToEmbed.length;
+
+  if (totalChunksToProcess > 0) {
+    console.log(`Found ${totalChunksToProcess} chunks missing embeddings. Generating...`);
+    const chunkContents = chunksToEmbed.map(c => c.content);
+    const embeddings = await generateEmbeddings(chunkContents, 5, (processedInBatch) => {
+      processedChunks += processedInBatch;
+      chrome.runtime.sendMessage({
+        type: 'EMBEDDING_PROGRESS',
+        payload: {
+          processed: processedChunks,
+          total: totalChunksToProcess,
+          operation: 'update'
+        }
+      });
+    });
+
+    for (let i = 0; i < chunksToEmbed.length; i++) {
+      const chunk = chunksToEmbed[i];
+      const embedding = embeddings[i];
+      const prefix = 'noteId' in chunk ? EMBEDDING_NOTE_CHUNK_PREFIX : EMBEDDING_CHAT_CHUNK_PREFIX;
+      if (embedding && embedding.length > 0) {
+        await localforage.setItem(`${prefix}${chunk.id}`, embedding);
+        if ('noteId' in chunk) notesUpdated++; else chatsUpdated++;
+      } else {
+        console.warn(`Failed to generate embedding for chunk ${chunk.id} during update.`);
+        if ('noteId' in chunk) notesFailed++; else chatsFailed++;
+      }
+    }
+  }
+
 
   console.log(`Missing embedding update finished. Notes updated: ${notesUpdated}, Chats updated: ${chatsUpdated}, Notes failed: ${notesFailed}, Chats failed: ${chatsFailed}`);
 

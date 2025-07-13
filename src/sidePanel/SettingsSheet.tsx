@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { HybridRankedChunk } from '@/src/background/retrieverUtils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { type Config } from "@/src/types/config";
 import { themes as appThemes, type Theme as AppTheme } from './Themes';
@@ -72,6 +73,8 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   const [isLoadingSearch, setIsLoadingSearch] = React.useState(false);
   const [searchError, setSearchError] = React.useState<string | null>(null);
   const sheetContentRef = React.useRef<HTMLDivElement>(null);
+  const [embeddingProgress, setEmbeddingProgress] = useState({ processed: 0, total: 0 });
+  const [embeddingStatus, setEmbeddingStatus] = useState<'idle' | 'rebuilding' | 'updating'>('idle');
 
   const parseModelNameForDisplay = (modelString: string): string => {
     if (!modelString || modelString === 'Not Set') {
@@ -213,6 +216,32 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     const debounceTimeout = setTimeout(performSearch, 500);
     return () => clearTimeout(debounceTimeout);
   }, [searchQuery]);
+
+  const updateEmbeddingProgress = (processed: number, total: number, operation: 'rebuild' | 'update') => {
+    setEmbeddingStatus(operation === 'rebuild' ? 'rebuilding' : 'updating');
+    setEmbeddingProgress({ processed, total });
+
+    if (processed === total) {
+      setTimeout(() => {
+        setEmbeddingStatus('idle');
+        setEmbeddingProgress({ processed: 0, total: 0 });
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+      if (message.type === 'EMBEDDING_PROGRESS') {
+        const { processed, total, operation } = message.payload;
+        updateEmbeddingProgress(processed, total, operation);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(messageListener);
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
+  }, []);
 
   const sectionPaddingX = 'px-8';
   const handleConfigClick = () => { setSettingsMode(true); onOpenChange(false); };
@@ -377,6 +406,15 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     <p className="text-xs text-[var(--text)]/70 mt-3">
                       Current Model: {parseModelNameForDisplay(selectedEmbeddingModelDisplay) || 'None'}
                     </p>
+                    {embeddingStatus !== 'idle' && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs text-[var(--text)]/70">
+                          {embeddingStatus === 'rebuilding' ? 'Rebuilding...' : 'Updating...'}
+                          ({embeddingProgress.processed}/{embeddingProgress.total})
+                        </p>
+                        <Progress value={(embeddingProgress.processed / embeddingProgress.total) * 100} className="h-2" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </TooltipProvider>

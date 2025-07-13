@@ -130,7 +130,8 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
  */
 export const generateEmbeddings = async (
   texts: string[],
-  batchSize = 5
+  batchSize = 5,
+  progressCallback?: (processed: number) => void
 ): Promise<number[][]> => {
   if (!embeddingServiceConfig.apiUrl || !embeddingServiceConfig.model) {
     console.error(
@@ -143,18 +144,18 @@ export const generateEmbeddings = async (
     return [];
   }
 
-  const allEmbeddings: (number[] | null)[] = new Array(texts.length).fill(null); // Use null as placeholder for pending
+  const allEmbeddings: (number[] | null)[] = new Array(texts.length).fill(null);
+  let processedCount = 0;
+  const totalCount = texts.length;
 
-  for (let i = 0; i < texts.length; i += batchSize) {
+  for (let i = 0; i < totalCount; i += batchSize) {
     const batchTexts = texts.slice(i, i + batchSize);
     const batchPromises = batchTexts.map((text, batchIndex) => {
-      // If the API supports batch inputs directly, that would be more efficient.
-      // This implementation uses concurrent calls to the single text embedding function.
       return generateEmbedding(text)
         .then(embedding => ({ embedding, originalIndex: i + batchIndex }))
         .catch(error => {
           console.error(`Error processing text at index ${i + batchIndex} in batch:`, error);
-          return { embedding: [], originalIndex: i + batchIndex }; // Ensure an empty array for failure
+          return { embedding: [], originalIndex: i + batchIndex };
         });
     });
 
@@ -164,19 +165,20 @@ export const generateEmbeddings = async (
         allEmbeddings[result.originalIndex] = result.embedding;
       }
     } catch (batchError) {
-      // This catch block might be redundant if individual promises handle their errors,
-      // but it's a safeguard for Promise.all itself failing, though unlikely with individual catches.
       console.error('Error processing a batch of embeddings:', batchError);
-      // Mark all items in this batch as failed if Promise.all itself throws (shouldn't happen with individual catches)
       for (let j = 0; j < batchTexts.length; j++) {
-        if (allEmbeddings[i + j] === null) { // Only if not already set by a successful promise
+        if (allEmbeddings[i + j] === null) {
           allEmbeddings[i + j] = [];
         }
+      }
+    } finally {
+      processedCount += batchTexts.length;
+      if (progressCallback) {
+        progressCallback(batchTexts.length);
       }
     }
   }
 
-  // Replace any remaining nulls (if any error path missed them, though unlikely) with empty arrays
   return allEmbeddings.map(emb => emb === null ? [] : emb);
 };
 
