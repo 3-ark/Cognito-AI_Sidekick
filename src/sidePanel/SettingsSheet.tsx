@@ -335,38 +335,38 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   </div>
                   {/* Index Management Buttons */}
                   <div className="pt-4 border-t border-[var(--text)]/10">
-                    <div className="flex justify-between items-center mb-2">
-                      <Label className="text-base font-medium text-foreground opacity-80">Embedding Management</Label>
+                    <div className="flex justify-between items-center">
+                      <Label className="text-base font-medium text-foreground opacity-80">Embeddings</Label>
+                      <div className="flex space-x-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleRebuildEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-95 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
+                              <FiRefreshCw className="h-3 w-3" />
+                              <span className="truncate">Rebuild</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
+                            <p>Rebuild Embeddings</p>
+                            <p className="text-xs opacity-80">Last: {embeddingsLastRebuild}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleUpdateEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-95 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
+                              <FiZap className="h-3 w-3" />
+                              <span className="truncate">Update</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
+                            <p>Update Embeddings</p>
+                            <p className="text-xs opacity-80">Last: {embeddingsLastUpdate}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
-                    <p className="text-xs text-[var(--text)]/70 mb-3">
+                    <p className="text-xs text-[var(--text)]/70 mt-3">
                       Current Model: {parseModelNameForDisplay(selectedEmbeddingModelDisplay) || 'None'}
                     </p>
-                    <div className="flex space-x-4"> {/* Adjusted spacing */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" onClick={handleRebuildEmbeddings} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                            <FiRefreshCw className="h-3 w-3" />
-                            <span className="truncate ml-1.5">Rebuild</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
-                          <p>Rebuild Embeddings</p>
-                          <p className="text-xs opacity-80">Last: {embeddingsLastRebuild}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" onClick={handleUpdateEmbeddings} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
-                            <FiZap className="h-3 w-3" />
-                            <span className="truncate ml-1.5">Update</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className={sharedTooltipContentStyle}>
-                          <p>Update Embeddings</p>
-                          <p className="text-xs opacity-80">Last: {embeddingsLastUpdate}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
                   </div>
                 </div>
               </TooltipProvider>
