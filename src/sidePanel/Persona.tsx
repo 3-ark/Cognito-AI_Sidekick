@@ -138,7 +138,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
                   placeholder="You are a helpful assistant..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="text-sm border-none focus-visible:ring-0 max-h-48 min-h-[64px] overflow-y-auto focus-visible:ring-offset-0"
+                  className="text-sm border-none focus-visible:ring-0 max-h-40 min-h-[64px] overflow-y-auto focus-visible:ring-offset-0"
                   autosize={true}
                   onWheel={(e) => {
                   // Prevent the event from bubbling up to parent containers
