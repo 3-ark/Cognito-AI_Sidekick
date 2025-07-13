@@ -18,9 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useConfig } from './ConfigContext';
-import { cn } from "@/src/background/util";
 import { Textarea } from "@/components/ui/textarea";
-import { AvatarUpload } from './AvatarUpload'; // Assuming this is still relevant for popover
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import { FiSave, FiXCircle } from 'react-icons/fi'; // Added new icons
 
@@ -115,7 +113,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
               </Button>
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
             </div>
-            <div className="flex-1 space-y-1.5">
+            <div className="flex-1 ml-4 space-y-2">
                 <Label htmlFor="persona-popover-name" className="text-xs font-medium text-[var(--text)]/90">Name</Label>
                 <Input
                     id="persona-popover-name"
@@ -129,14 +127,14 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
         </div>
 
         <div>
-            <Label htmlFor="persona-popover-prompt" className="text-xs mb-1 font-medium text-[var(--text)]/90">System Prompt</Label>
+            <Label htmlFor="persona-popover-prompt" className="text-xs mb-2 font-medium text-[var(--text)]/90">Persona Instruction</Label>
             <div className="rounded-md border bg-[var(--input-background)] border-[var(--text)]/20 thin-scrollbar p-1">
               <Textarea
                   id="persona-popover-prompt"
                   placeholder="You are a helpful assistant..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="text-sm border-none focus-visible:ring-0 max-h-48 min-h-[100px] overflow-y-auto focus-visible:ring-offset-0"
+                  className="text-sm border-none focus-visible:ring-0 max-h-48 min-h-[64px] overflow-y-auto focus-visible:ring-offset-0"
                   autosize={true}
                   onWheel={(e) => {
                   // Prevent the event from bubbling up to parent containers
