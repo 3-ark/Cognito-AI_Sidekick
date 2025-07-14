@@ -77,9 +77,6 @@ class SearchService {
       // Apply pre-cleaning steps for all languages before language-specific tokenization
       processedText = nlpUtils.string.removeHTMLTags(processedText);
       processedText = nlpUtils.string.removeExtraSpaces(processedText);
-      // removePunctuation might be too aggressive for CJK languages if not handled carefully
-      // For now, we'll rely on wink-nlp's tokenizer for punctuation with English-like text
-      // and keep existing CJK logic which doesn't explicitly remove punctuation before segmentation.
 
       if (processedText.trim().length === 0) return [];
 
@@ -87,7 +84,7 @@ class SearchService {
       const firstChar = processedText.trim().charAt(0);
       const code = firstChar.charCodeAt(0);
 
-      // Handle Japanese and Korean with TinySegmenter
+      // Handle CJK languages
       if ((code >= 0x3040 && code <= 0x30FF) || (code >= 0x31F0 && code <= 0x31FF)) { // Japanese
         return this.tinySegmenter.segment(processedText);
       } else if (code >= 0xAC00 && code <= 0xD7A3) { // Korean
@@ -95,6 +92,7 @@ class SearchService {
       }
       // For other languages (e.g., English) use wink-nlp
       else {
+        processedText = nlpUtils.string.removePunctuations(processedText);
         // Apply lowercasing for non-CJK text
         if (nlpUtils && nlpUtils.string && typeof nlpUtils.string.lowerCase === 'function') {
           try {
@@ -117,9 +115,9 @@ class SearchService {
 
         nlp.readDoc(processedText)
           .tokens()
-          // Keep all 'word' type tokens, do not filter by stopWordFlag
-          .filter((t) => (t.out(its.type) === 'word')) 
-          .each((t) => tokens.push((t.out(its.negationFlag)) ? '!' + t.out(its.stem) : t.out(its.stem)));
+          // Filter out stop words
+          .filter((t) => (t.out(its.type) === 'word' && !t.out(its.stopWordFlag)))
+          .each((t) => tokens.push((t.out(its.negationFlag)) ? '!' + t.out(its.lemma) : t.out(its.lemma)));
         return tokens;
       }
     };

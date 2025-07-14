@@ -14,7 +14,7 @@ import {
   getAllChatMessages as getAllChatMessagesFromStorage,
   saveChatMessage, // May need a more targeted way
 } from './chatHistoryStorage';
-import { chunkNoteContent, chunkChatMessageTurns } from './chunkingUtils';
+import { chunkNoteContent, chunkChatMessageTurns, preprocessForEmbeddings } from './chunkingUtils';
 import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils';
 import { NoteChunk, ChatChunk, ChatMessageInputForChunking } from '../types/chunkTypes';
 import storage from './storageUtil';
@@ -43,8 +43,14 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
   const allNotes = await getAllNotesFromSystem();
   const allChats = await getAllChatMessagesFromStorage();
 
-  totalChunksToProcess += allNotes.reduce((acc, note) => acc + chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags }).length, 0);
-  totalChunksToProcess += allChats.reduce((acc, chat) => acc + chunkChatMessageTurns({ id: chat.id, title: chat.title, turns: chat.turns }).length, 0);
+  allNotes.forEach(note => {
+    const noteChunks = chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags });
+    totalChunksToProcess += noteChunks.filter(chunk => preprocessForEmbeddings(chunk.content).length > 0).length;
+  });
+  allChats.forEach(chat => {
+    const chatChunks = chunkChatMessageTurns({ id: chat.id, title: chat.title, turns: chat.turns });
+    totalChunksToProcess += chatChunks.filter(chunk => preprocessForEmbeddings(chunk.content).length > 0).length;
+  });
 
   const progressCallback = (processed: number, total: number) => {
     chrome.runtime.sendMessage({
@@ -85,11 +91,12 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
         for (const chunk of noteChunks) await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
 
         if (noteChunks.length > 0) {
-          const chunkContents = noteChunks.map(chunk => chunk.content);
+          const chunksWithContent = noteChunks.filter(c => preprocessForEmbeddings(c.content).length > 0);
+          const chunkContents = chunksWithContent.map(chunk => preprocessForEmbeddings(chunk.content));
           const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback, processedChunks, totalChunksToProcess);
-          processedChunks += noteChunks.length;
-          for (let i = 0; i < noteChunks.length; i++) {
-            const chunk = noteChunks[i];
+          processedChunks += chunksWithContent.length;
+          for (let i = 0; i < chunksWithContent.length; i++) {
+            const chunk = chunksWithContent[i];
             const embedding = embeddings[i];
             if (embedding && embedding.length > 0) {
               await localforage.setItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`, embedding);
@@ -138,11 +145,12 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
         for (const chunk of chatChunks) await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
 
         if (chatChunks.length > 0) {
-          const chunkContents = chatChunks.map(chunk => chunk.content);
+          const chunksWithContent = chatChunks.filter(c => preprocessForEmbeddings(c.content).length > 0);
+          const chunkContents = chunksWithContent.map(chunk => preprocessForEmbeddings(chunk.content));
           const embeddings = await generateEmbeddings(chunkContents, 5, progressCallback, processedChunks, totalChunksToProcess);
-          processedChunks += chatChunks.length;
-          for (let i = 0; i < chatChunks.length; i++) {
-            const chunk = chatChunks[i];
+          processedChunks += chunksWithContent.length;
+          for (let i = 0; i < chunksWithContent.length; i++) {
+            const chunk = chunksWithContent[i];
             const embedding = embeddings[i];
             if (embedding && embedding.length > 0) {
               await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
@@ -223,11 +231,12 @@ export const updateMissingEmbeddings = async (): Promise<{ notesUpdated: number,
     }
   }
 
-  totalChunksToProcess = chunksToEmbed.length;
+  const chunksWithContent = chunksToEmbed.filter(c => preprocessForEmbeddings(c.content).length > 0);
+  totalChunksToProcess = chunksWithContent.length;
 
   if (totalChunksToProcess > 0) {
     console.log(`Found ${totalChunksToProcess} chunks missing embeddings. Generating...`);
-    const chunkContents = chunksToEmbed.map(c => c.content);
+    const chunkContents = chunksWithContent.map(c => preprocessForEmbeddings(c.content));
     const embeddings = await generateEmbeddings(chunkContents, 5, (processed, total) => {
       chrome.runtime.sendMessage({
         type: 'EMBEDDING_PROGRESS',
@@ -239,20 +248,22 @@ export const updateMissingEmbeddings = async (): Promise<{ notesUpdated: number,
       });
     }, 0, totalChunksToProcess);
 
-    for (let i = 0; i < chunksToEmbed.length; i++) {
-      const chunk = chunksToEmbed[i];
+    for (let i = 0; i < chunksWithContent.length; i++) {
+      const chunk = chunksWithContent[i];
       const embedding = embeddings[i];
-      const prefix = 'noteId' in chunk ? EMBEDDING_NOTE_CHUNK_PREFIX : EMBEDDING_CHAT_CHUNK_PREFIX;
+      const isNoteChunk = 'headingPath' in chunk || 'originalUrl' in chunk;
+      const prefix = isNoteChunk ? EMBEDDING_NOTE_CHUNK_PREFIX : EMBEDDING_CHAT_CHUNK_PREFIX;
+      
       if (embedding && embedding.length > 0) {
         await localforage.setItem(`${prefix}${chunk.id}`, embedding);
-        if ('noteId' in chunk) {
+        if (isNoteChunk) {
           notesUpdated++;
         } else {
           chatsUpdated++;
         }
       } else {
         console.warn(`Failed to generate embedding for chunk ${chunk.id} during update.`);
-        if ('noteId' in chunk) {
+        if (isNoteChunk) {
           notesFailed++;
         } else {
           chatsFailed++;
