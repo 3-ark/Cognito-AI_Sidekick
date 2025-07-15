@@ -94,7 +94,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
         <div className="space-y-1">
           <h4 className="font-medium leading-none text-[var(--text)]">{isEditing ? "Edit Persona" : "Add New Persona"}</h4>
           <p className="text-sm text-[var(--text)]/70">
-            {isEditing ? "Modify the details of this persona." : "Create a new persona for your chats."}
+            {isEditing ? `Modify the details of ${initialName}.` : "Create a new persona for your chats."}
           </p>
         </div>
         

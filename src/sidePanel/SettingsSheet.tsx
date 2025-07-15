@@ -255,7 +255,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
       <SheetContent variant="themedPanel" side="left" className={cn("p-0 border-r-0", "w-[22.857rem] sm:w-[27.143rem]", "flex flex-col h-full max-h-screen", "[&>button]:hidden", "settings-drawer-content", "overflow-y-auto")} style={{ height: '100dvh' }} ref={sheetContentRef} onOpenAutoFocus={(e) => { e.preventDefault(); sheetContentRef.current?.focus({ preventScroll: true }); }}>
         <AnimatedBackground />
         <div className={cn("flex flex-col flex-1 overflow-y-auto settings-drawer-body", "no-scrollbar")}>
-          <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-4")}>
+          <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-5")}>
             <div className="relative mt-5">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text)] opacity-50" />
               <Input type="text" placeholder="Search your notes and chat history..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
@@ -363,7 +363,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     </Button>
                   </div>
                   {/* Index Management Buttons */}
-                  <div className="pt-4 border-t border-[var(--text)]/10">
+                  <div className="pt-5 border-t border-[var(--text)]/10">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
                         <Tooltip>
@@ -403,7 +403,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         </Tooltip>
                       </div>
                     </div>
-                    <p className="text-xs text-[var(--text)]/70 mt-3">
+                    <p className="text-xs font-['Space_Mono',_monospace] text-[var(--text)]/70 mt-3">
                       Current Model: {parseModelNameForDisplay(selectedEmbeddingModelDisplay) || 'None'}
                     </p>
                     {embeddingStatus !== 'idle' && (
@@ -437,7 +437,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     </SheetTitle>
                     <SheetDescription asChild>
                         <span
-                            className="px-2 py-0 text-xs text-white flex items-center justify-center"
+                            className="px-3 py-0 text-xs text-white flex items-center justify-center"
                             style={{ backgroundColor: 'var(--link)', color: 'white' }}
                         >
                             v{APP_VERSION}
