@@ -489,7 +489,7 @@ const Cognito = () => {
                     onReload={onReload}
                     onEditTurn={handleEditTurn}
                   />
-            {turns.length === 0 && !config?.chatMode && config && (
+            {turns.length === 0 && !config?.chatMode && config && !message && !retrieverQuery && (
               <ActionButtons config={config} updateConfig={updateConfig} />
             )}
             {config?.chatMode === "page" && (
