@@ -231,19 +231,18 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         <DialogFooter className="flex flex-row justify-end space-x-2 px-6 mb-4 py-2">
           <Button
             variant="outline-subtle"
-            className="w-24"
             size="sm"
             onClick={() => onOpenChange(false)}
           >
-            Cancel            
+            Cancel
           </Button>
           <Button
             variant="outline-subtle"
-            className="w-24 bg-[var(--active)] text-[var(--text)]"
+            className="bg-[var(--active)] text-[var(--text)]"
             size="sm"
             onClick={handleSave}
           >
-            Save            
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -572,8 +571,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
-                        <IoPerson  className="mr-auto h-4 w-4" />
-                        Your Profile
+                        <IoPerson  className="h-4 w-4" />
+                        <span>Your Profile</span>
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
@@ -589,8 +588,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={() => setChangelogOpen(true)}
                       >
-                        <VscRocket className="mr-auto h-4 w-4" />
-                        What's New
+                        <VscRocket className="h-4 w-4" />
+                        <span>What's New</span>
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
@@ -606,8 +605,8 @@ const handleChangelogClose = () => {
                             "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                           )}
                         >
-                        <FiChevronLeft className="mr-auto h-4 w-4" />
-                          Export Chat
+                        <FiChevronLeft className="h-4 w-4" />
+                          <span>Export Chat</span>
                         </DropdownMenuPrimitive.SubTrigger>
                         <DropdownMenuPrimitive.Portal>
                           <DropdownMenuPrimitive.SubContent
@@ -619,32 +618,32 @@ const handleChangelogClose = () => {
                             alignOffset={-5}
                           >
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadMarkdown}
                             >
-                            <BsFiletypeMd className="mr-auto h-4 w-4" />
-                              .md
+                            <BsFiletypeMd className="h-4 w-4" />
+                              <span>.md</span>
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadText}
                             >
-                            <IoTextOutline className="mr-auto h-4 w-4" />
-                              .txt
+                            <IoTextOutline className="h-4 w-4" />
+                              <span>.txt</span>
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadJson}
                             >
-                            <TbJson className="mr-auto h-4 w-4" />
-                              .json
+                            <TbJson className="h-4 w-4" />
+                              <span>.json</span>
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadImage}
                             >
-                            <IoImageOutline className="mr-auto h-4 w-4" />
-                              .png
+                            <IoImageOutline className="h-4 w-4" />
+                              <span>.png</span>
                             </DropdownMenuPrimitive.Item>
                           </DropdownMenuPrimitive.SubContent>
                         </DropdownMenuPrimitive.Portal>
@@ -709,8 +708,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={onAddNewNoteRequest}
                       >
-                        <GoPlus className="mr-auto h-4 w-4" />
-                        Create Note
+                        <GoPlus className="h-4 w-4" />
+                        <span>Create Note</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onImportNoteRequest && (
@@ -722,8 +721,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={onImportNoteRequest}
                       >
-                        <FiUpload className="mr-auto h-4 w-4" />
-                        Import Note
+                        <FiUpload className="h-4 w-4" />
+                        <span>Import Note</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onSelectNotesRequest && (
@@ -735,8 +734,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={onSelectNotesRequest}
                       >
-                        <IoCheckmarkCircleOutline className="mr-auto h-4 w-4" /> 
-                        Select Notes
+                        <IoCheckmarkCircleOutline className="h-4 w-4" /> 
+                        <span>Select Notes</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                   </DropdownMenuPrimitive.Content>
