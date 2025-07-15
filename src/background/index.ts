@@ -288,14 +288,14 @@ chrome.runtime.onConnect.addListener(port => {
 
     let tabListenersActive = false;
 
-    const handleTabActivated = async (activeInfo: chrome.tabs.TabActiveInfo) => {
+    const handleTabActivated = async (activeInfo: chrome.tabs.OnActivatedInfo) => {
       const tab = await chrome.tabs.get(activeInfo.tabId);
       if (tab?.url && !tab.url.startsWith('chrome')) {
         injectContentScript(activeInfo.tabId);
       }
     };
 
-    const handleTabUpdated = async (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
+    const handleTabUpdated = async (tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo, tab: chrome.tabs.Tab) => {
       if (tab?.url && changeInfo.status === 'complete' && !tab.url.startsWith('chrome')) {
         injectContentScript(tabId);
       }

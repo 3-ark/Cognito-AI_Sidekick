@@ -104,7 +104,7 @@ const Cognito = () => {
 
     checkAndInject();
 
-    const handleTabActivated = (activeInfo: chrome.tabs.TabActiveInfo) => {
+    const handleTabActivated = (activeInfo: chrome.tabs.OnActivatedInfo) => {
       chrome.tabs.get(activeInfo.tabId, (tab) => {
         if (chrome.runtime.lastError) {
           console.warn(`[Cognito ] Error getting tab info on activation: ${chrome.runtime.lastError.message}`);
@@ -114,7 +114,7 @@ const Cognito = () => {
       });
     };
 
-    const handleTabUpdated = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
+    const handleTabUpdated = (tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo, tab: chrome.tabs.Tab) => {
       if (tab.active && (changeInfo.status === 'complete' || (changeInfo.url && tab.status === 'complete'))) {
          checkAndInject();
       }
