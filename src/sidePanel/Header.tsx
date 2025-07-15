@@ -217,7 +217,9 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             <Textarea
               id="userprofile"
               value={currentUserProfile}
-              minRows={3}
+              minRows={5}
+              maxRows={8}
+              autosize
               onChange={(e) => setCurrentUserProfile(e.target.value)}              
               className={cn(
                 "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
