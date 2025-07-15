@@ -231,18 +231,19 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         <DialogFooter className="flex flex-row justify-end space-x-2 px-6 mb-4 py-2">
           <Button
             variant="outline-subtle"
+            className="w-24"
             size="sm"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            Cancel            
           </Button>
           <Button
             variant="outline-subtle"
-            className="bg-[var(--active)] text-[var(--text)]"
+            className="w-24 bg-[var(--active)] text-[var(--text)]"
             size="sm"
             onClick={handleSave}
           >
-            Save
+            Save            
           </Button>
         </DialogFooter>
       </DialogContent>
