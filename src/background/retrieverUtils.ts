@@ -27,42 +27,69 @@ import type { Note } from '../types/noteTypes'; // Import type Note
  * @param parentType The type of the parent ('note' or 'chat').
  * @returns A promise that resolves to an array of objects, each containing a chunkId and its text.
  */
-export async function getChunkTextsForParent(
-  parentId: string,
-  parentType: 'note' | 'chat'
-): Promise<Array<{ chunkId: string; chunkText: string }>> {
-  const chunkTexts: Array<{ chunkId: string; chunkText: string }> = [];
-  if (!parentId || !parentType) {
-    console.warn('[getChunkTextsForParent] parentId or parentType is missing.');
-    return chunkTexts;
+
+
+/**
+ * Fetches all chunk texts for a given list of parent documents (notes or chats) in a single pass.
+ * @param parentIds An array of objects, each with a parentId and parentType.
+ * @returns A promise that resolves to a map where keys are parentIds and values are arrays of chunk objects.
+ */
+export async function getChunkTextsForParents(
+  parentIds: Array<{ parentId: string; parentType: 'note' | 'chat' }>
+): Promise<Map<string, Array<{ chunkId: string; chunkText: string }>>> {
+  const results = new Map<string, Array<{ chunkId: string; chunkText: string }>>();
+  if (!parentIds || parentIds.length === 0) {
+    return results;
   }
 
-  const prefix = parentType === 'note' ? NOTE_CHUNK_TEXT_PREFIX : CHAT_CHUNK_TEXT_PREFIX;
-  
+  // Initialize the map with empty arrays for each requested parentId
+  parentIds.forEach(({ parentId }) => {
+    results.set(parentId, []);
+  });
+
   try {
     const keys = await localforage.keys();
-    // Construct the specific starting string we expect for this parent's chunk texts
-    const expectedKeyStart = `${prefix}${parentType}chunk_${parentId}_`;
-    
-    const relevantKeys = keys.filter(key => 
-      key.startsWith(expectedKeyStart)
-    );
+    const noteChunkPrefix = NOTE_CHUNK_TEXT_PREFIX;
+    const chatChunkPrefix = CHAT_CHUNK_TEXT_PREFIX;
 
-    for (const key of relevantKeys) {
-      const chunkText = await localforage.getItem<string>(key);
-      if (typeof chunkText === 'string') {
-        // The key is `notechunktext_<chunkId>` or `chatchunktext_<chunkId>`
-        // The actual chunkId is the part after the prefix.
-        const chunkId = key.substring(prefix.length);
-        chunkTexts.push({ chunkId, chunkText });
+    // Create a quick lookup for parent info
+    const parentIdMap = new Map(parentIds.map(p => [p.parentId, p.parentType]));
+
+    for (const key of keys) {
+      let parentType: 'note' | 'chat' | undefined;
+      let chunkId: string | undefined;
+      let prefix: string | undefined;
+
+      if (key.startsWith(noteChunkPrefix)) {
+        parentType = 'note';
+        prefix = noteChunkPrefix;
+      } else if (key.startsWith(chatChunkPrefix)) {
+        parentType = 'chat';
+        prefix = chatChunkPrefix;
       } else {
-        console.warn(`[getChunkTextsForParent] No valid text found for key: ${key}`);
+        continue; // Not a chunk text key
+      }
+      
+      chunkId = key.substring(prefix.length);
+      const parsed = parseChunkId(chunkId); // Assuming parseChunkId can get parentId from chunkId
+
+      if (parsed && parentIdMap.has(parsed.parentId) && parentIdMap.get(parsed.parentId) === parentType) {
+        const chunkText = await localforage.getItem<string>(key);
+        if (typeof chunkText === 'string') {
+          const parentChunks = results.get(parsed.parentId);
+          if (parentChunks) {
+            parentChunks.push({ chunkId, chunkText });
+          }
+        } else {
+          console.warn(`[getChunkTextsForParents] No valid text found for key: ${key}`);
+        }
       }
     }
   } catch (error) {
-    console.error(`[getChunkTextsForParent] Error fetching chunk texts for parent ${parentId} (${parentType}):`, error);
+    console.error(`[getChunkTextsForParents] Error fetching chunk texts for multiple parents:`, error);
   }
-  return chunkTexts;
+
+  return results;
 }
 
 /**
@@ -170,21 +197,29 @@ export async function getHybridRankedChunks(
   }
 
   // --- Step 4: Prepare Chunks from BM25 Results ---
-  // This will hold chunkId, parentId, parentType, and the *parent's* BM25 score
   const bm25DerivedChunks: Array<{ chunkId: string; parentId: string; parentType: 'note' | 'chat'; bm25Score: number }> = [];
-  if (bm25Weight > 0) {
-    for (const [parentId, parentBm25Score] of bm25ParentResults) {
-      const parsedParentId = parseChunkIdFromParent(parentId); // Helper to determine type from parent ID
-      if (!parsedParentId) continue;
+  if (bm25Weight > 0 && bm25ParentResults.length > 0) {
+    const parentIdsForBM25 = bm25ParentResults.map(([parentId, _]) => {
+      const parsed = parseChunkIdFromParent(parentId);
+      return parsed ? { parentId: parsed.id, parentType: parsed.type } : null;
+    }).filter((p): p is { parentId: string; parentType: 'note' | 'chat' } => p !== null);
 
-      const chunksFromParent = await getChunkTextsForParent(parsedParentId.id, parsedParentId.type);
-      for (const chunk of chunksFromParent) {
-        bm25DerivedChunks.push({
-          chunkId: chunk.chunkId,
-          parentId: parsedParentId.id,
-          parentType: parsedParentId.type,
-          bm25Score: parentBm25Score, // Assign parent's score to each of its chunks
-        });
+    const allChunksForParents = await getChunkTextsForParents(parentIdsForBM25);
+
+    for (const [parentId, parentBm25Score] of bm25ParentResults) {
+      const chunksFromParent = allChunksForParents.get(parentId);
+      if (chunksFromParent) {
+        const parsedParentId = parseChunkIdFromParent(parentId); // We know this will parse from above filter
+        if (!parsedParentId) continue;
+
+        for (const chunk of chunksFromParent) {
+          bm25DerivedChunks.push({
+            chunkId: chunk.chunkId,
+            parentId: parsedParentId.id,
+            parentType: parsedParentId.type,
+            bm25Score: parentBm25Score,
+          });
+        }
       }
     }
   }

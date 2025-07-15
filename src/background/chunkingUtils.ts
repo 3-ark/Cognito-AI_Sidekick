@@ -362,6 +362,27 @@ export function chunkNoteContent(noteInput: NoteInputForChunking): NoteChunk[] {
 }
 
 /**
+ * Performs light cleaning on text intended for embedding.
+ * Currently, this function is a placeholder for any future light cleaning steps.
+ * The primary goal is to preserve as much semantic content as possible,
+ * so we avoid aggressive cleaning like stop word removal or stemming.
+ * @param text The text to clean.
+ * @returns The cleaned text.
+ */
+export function preprocessForEmbeddings(text: string): string {
+  let nlpUtils: any;
+  nlpUtils = require('wink-nlp-utils');
+
+  let cleanedText = nlpUtils.string.removeHTMLTags(text);
+  // Remove Markdown syntax
+  // cleanedText = cleanedText.replace(/([_*~`#\[\]()>.-])/g, '');
+  // Trim whitespace
+  cleanedText = nlpUtils.string.removeExtraSpaces(cleanedText);
+
+  return cleanedText;
+}
+
+/**
  * Splits chat message turns into individual chunks.
  *
  * Each turn's content (if not empty and meets `MIN_CHUNK_CHARS`) becomes a
