@@ -228,20 +228,21 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             />
           </div>
         </div>
-        <DialogFooter className="flex justify-end space-x-2 px-6 py-2">
+        <DialogFooter className="flex flex-row justify-end space-x-2 px-6 mb-4 py-2">
           <Button
-            variant="outline-subtle" // Use new variant
-            size="sm" // Standardize size
+            variant="outline-subtle"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
-            variant="active-bordered" // Use new variant
-            size="sm" // Standardize size
+            variant="outline-subtle"
+            className="bg-[var(--active)] text-[var(--text)]"
+            size="sm"
             onClick={handleSave}
           >
-            Save Changes
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
