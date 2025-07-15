@@ -188,7 +188,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         variant="themedPanel"
         className="max-w-xs"
       >
-        <DialogHeader className="px-6 py-4 border-b border-[var(--text)]/10">
+        <DialogHeader className="px-6 py-4 border-b border-[var(--text)]/20">
           <DialogTitle className="text-lg font-semibold text-[var(--text)]">Edit Profile</DialogTitle>
           <DialogDescription className="text-sm text-[var(--text)] opacity-80">
             Set your display name and profile information. (For chat and export purposes)
@@ -224,7 +224,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             />
           </div>
         </div>
-        <DialogFooter className="px-6 py-4 border-t border-[var(--text)]/10">
+        <DialogFooter className="px-6 py-4 border-t border-[var(--text)]/20">
           <Button
             variant="outline-subtle" // Use new variant
             size="sm" // Standardize size

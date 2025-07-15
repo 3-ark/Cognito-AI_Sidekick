@@ -26,7 +26,7 @@ const ConnectionSection: FC<ConnectionProps> = ({
   Component,
   link,
 }) => (
-  (<div className="px-4 py-3 border-b border-[var(--text)]/10 last:border-b-0">
+  (<div className="px-4 py-3 border-b border-[var(--text)]/20 last:border-b-0">
     <div className="flex items-center justify-between mb-2">
       <h4 className="text-base font-medium capitalize text-foreground">
         {title}
@@ -58,7 +58,7 @@ export const Connect: FC = () => {
       value="connect"
       className={cn(
         "bg-[var(--input-background)]",
-        "border-[var(--text)]/10",
+        "border-[var(--text)]/20",
         "rounded-xl",
         "shadow-md",
         "transition-all duration-150 ease-in-out", 

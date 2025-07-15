@@ -72,7 +72,7 @@ export const TtsSettings = () => {
       value="tts-settings"
       className={cn(
         "bg-[var(--input-background)]",
-        "border-[var(--text)]/10",
+        "border-[var(--text)]/20",
         "rounded-xl",
         "shadow-md",
         "transition-all duration-150 ease-in-out",

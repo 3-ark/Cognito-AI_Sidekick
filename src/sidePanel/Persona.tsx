@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/src/background/util';
 import {
   Dialog,
   DialogContent,
@@ -124,7 +125,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
                 placeholder="Persona Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-8 text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] rounded-md"
+                className={cn("h-7 text-sm bg-[var(--input-background)] border-[var(--text)]/20 focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)] rounded-md")}
                 disabled={isEditing && (initialName === 'Ein' || initialName === 'Default')}
               />
             </div>
@@ -138,7 +139,7 @@ export const PersonaEditPopover: React.FC<PersonaEditPopoverProps> = ({
                   placeholder="You are a helpful assistant..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="text-sm border-none focus-visible:ring-0 max-h-40 min-h-[64px] overflow-y-auto focus-visible:ring-offset-0"
+                  className="text-sm focus-visible:ring-0 max-h-40 min-h-[64px] overflow-y-auto focus-visible:ring-offset-0"
                   autosize={true}
                   onWheel={(e) => {
                   // Prevent the event from bubbling up to parent containers

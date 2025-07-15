@@ -38,7 +38,7 @@ export const PageContext = () => {
     <AccordionItem
       value="page-context"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 rounded-xl shadow-md",
+        "bg-[var(--input-background)] border-[var(--text)]/20 rounded-xl shadow-md",
         "overflow-hidden",
         "transition-all duration-150 ease-in-out",
         "hover:border-[var(--active)] hover:brightness-105"

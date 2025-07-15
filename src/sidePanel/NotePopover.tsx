@@ -216,7 +216,7 @@ export const NotePopover = () => {
             <p>Chat Controls</p>
           </TooltipContent>
         </Tooltip>
-      <PopoverContent className="w-[80vw] p-4 bg-[var(--bg)] border-[var(--text)]/10 shadow-lg rounded-md" side="top" align="end" sideOffset={5}>
+      <PopoverContent className="w-[80vw] p-4 bg-[var(--bg)] border-[var(--text)]/20 shadow-lg rounded-md" side="top" align="end" sideOffset={5}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="use-note-switch" className="text-[var(--text)] font-medium cursor-pointer">
@@ -247,7 +247,7 @@ export const NotePopover = () => {
                 placeholder="Title (optional)"
                 value={popoverTitle}
                 onChange={(e) => setPopoverTitle(e.target.value)}
-                className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
               />
             </div>
             <div>  
@@ -256,7 +256,7 @@ export const NotePopover = () => {
                 value={editableNote}
                 onChange={(e) => setEditableNote(e.target.value)}
                 placeholder="Persistent notes for the AI..."
-                className="mt-2 min-h-[25vh] max-h-[55vh] overflow-y-auto bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
+                className="mt-2 min-h-[25vh] max-h-[55vh] overflow-y-auto bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
               />
             </div>
             <div>
@@ -266,7 +266,7 @@ export const NotePopover = () => {
                 placeholder="Tags (comma-separated)"
                 value={popoverTags}
                 onChange={(e) => setPopoverTags(e.target.value)}
-                className="mt-2 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                className="mt-2 bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
               />
             </div>
             <div className="flex justify-between items-center">

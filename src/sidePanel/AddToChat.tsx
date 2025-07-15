@@ -65,7 +65,7 @@ export const AddToChat = () => {
           align="end"
           sideOffset={5}
           className={cn(
-            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]/10 font-semibold rounded-md shadow-lg",
+            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]/20 font-semibold rounded-md shadow-lg",
             "min-w-[80px] z-50"
           )}
         >

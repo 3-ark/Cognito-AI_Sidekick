@@ -258,7 +258,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
           <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-5")}>
             <div className="relative mt-5">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text)] opacity-50" />
-              <Input type="text" placeholder="Search your notes and chat history..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
+              <Input type="text" placeholder="Search your notes and chat history..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] h-8 placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
             </div>
             {isLoadingSearch && <div className="text-center text-[var(--text)] opacity-70">Searching...</div>}
             {searchError && <div className="text-center text-red-500">{searchError}</div>}
@@ -266,7 +266,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               <ScrollArea className="h-[200px] rounded-md border border-[var(--text)]/20 p-2 bg-[var(--bg)]/30">
                 <div className="space-y-2">
                   {searchResults.map((result) => (
-                    <div key={result.chunkId} className="p-2 rounded-md bg-[var(--bg)]/50 border border-[var(--text)]/10">
+                    <div key={result.chunkId} className="p-2 rounded-md bg-[var(--bg)]/50 border border-[var(--text)]/20">
                       <div className="text-xs text-[var(--text)] opacity-70">{result.parentType === 'note' ? 'Note' : 'Chat'} - Score: {result.hybridScore.toFixed(2)}</div>
                       <div className="font-medium text-sm text-[var(--text)] truncate" title={result.parentTitle}>{result.parentTitle}</div>
                       <p className="text-xs text-[var(--text)] opacity-80 line-clamp-2" title={result.chunkText}>{result.chunkText}</p>
@@ -350,21 +350,21 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               </div>
             </div>
             {/* Memory Section - direct child of space-y-5 container */}
-            <div className="py-5 border-t border-[var(--text)]/10">
+            <div className="py-5 border-t border-[var(--text)]/20">
               <TooltipProvider>
                 <div className="space-y-5">
                   <div className="flex space-x-4"> {/* Adjusted spacing */}
-                    <Button variant="outline" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
+                    <Button variant="outline" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/20", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
                       <RiChatHistoryLine className="h-3 w-3 mr-1.5" />
                       <span className="text-xs">History</span>
                     </Button>
-                    <Button variant="outline" onClick={handleNoteSystemClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/10", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
+                    <Button variant="outline" onClick={handleNoteSystemClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/20", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
                       <FiFileText className="h-3 w-3 mr-1.5" />
                       <span className="text-xs">Notes</span>
                     </Button>
                   </div>
                   {/* Index Management Buttons */}
-                  <div className="pt-5 border-t border-[var(--text)]/10">
+                  <div className="pt-5 border-t border-[var(--text)]/20">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
                         <Tooltip>

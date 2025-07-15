@@ -126,7 +126,7 @@ export const RagSettings = () => {
     <AccordionItem
       value="rag-settings"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/10 shadow-md",
+        "bg-[var(--input-background)] border-[var(--text)]/20 shadow-md",
         "transition-all duration-150 ease-in-out",
         "hover:border-[var(--active)] hover:brightness-105"
       )}
@@ -373,7 +373,7 @@ export const RagSettings = () => {
             </div>
 
             {/* Embedding Model Selector - MOVED HERE */}
-            <div className="space-y-3 pt-4 border-t border-[var(--text)]/10">
+            <div className="space-y-3 pt-4 border-t border-[var(--text)]/20">
               <div className="flex justify-between items-center">
                 <Label htmlFor="embedding-model-select-rag" className="text-base font-medium text-foreground">Embedding Model</Label>
                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" className="text-[var(--text)]/70 hover:text-[var(--text)]"><FiHelpCircle /></Button></TooltipTrigger><TooltipContent side="top" className="max-w-sm border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md"><p>For best results, choose a model designed for embeddings. If using a custom model not listed, consider renaming it to include 'embed' for model discovery here.</p></TooltipContent></Tooltip>
@@ -395,7 +395,7 @@ export const RagSettings = () => {
             </div>
 
             {/* Embedding Mode Selector */}
-            <div className="space-y-3 pt-4 border-t border-[var(--text)]/10">
+            <div className="space-y-3 pt-4 border-t border-[var(--text)]/20">
               <div className="flex justify-between items-center">
                 <Label htmlFor="embedding-mode-select" className="text-base font-medium text-foreground">
                   Embedding Generation

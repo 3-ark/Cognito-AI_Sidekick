@@ -147,7 +147,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
     <div
       ref={itemRef}
       className={cn(
-        "px-2 border-b border-[var(--text)]/10 rounded-none hover:shadow-lg transition-shadow w-full",
+        "px-2 border-b border-[var(--text)]/20 rounded-none hover:shadow-lg transition-shadow w-full",
         isSelected && "bg-[var(--active)]/10" // Highlight if selected
       )}
       onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
@@ -179,7 +179,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
                     <LuEllipsis />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/10 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
+                <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/20 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
                   <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); onEdit(note); setIsActionPopoverOpen(false); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
                   <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); handleDownload(); setIsActionPopoverOpen(false); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
                   <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onDelete(note.id); setIsActionPopoverOpen(false); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
@@ -1069,7 +1069,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       </ScrollArea>
 
       {isSelectionModeActive && (
-        <div className="sticky bottom-0 z-10 p-2 bg-[var(--bg)] border-t border-[var(--text)]/10 shadow-md">
+        <div className="sticky bottom-0 z-10 p-2 bg-[var(--bg)] border-t border-[var(--text)]/20 shadow-md">
           {selectedNoteIds.length > 0 && (
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[var(--text)]">
@@ -1136,7 +1136,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       }}>
         <DialogContent 
           className={cn(
-            "bg-[var(--bg)] border-[var(--text)]/10 w-[90vw] max-w-3xl text-[var(--text)] overflow-hidden",
+            "bg-[var(--bg)] border-[var(--text)]/20 w-[90vw] max-w-3xl text-[var(--text)] overflow-hidden",
             "flex flex-col max-h-[85vh]",
             "p-6"
           )}
@@ -1155,7 +1155,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               placeholder="Note Title (optional)"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+              className="bg-[var(--input-bg)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
             />
             </div>
 
@@ -1164,7 +1164,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)} className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Edit Content</Button>
                 </div>
-                <div className="h-full border rounded-md border-[var(--text)]/10 bg-[var(--input-bg)]">
+                <div className="h-full border rounded-md border-[var(--text)]/20 bg-[var(--input-bg)]">
                   <VirtualizedContent
                     content={noteContent}
                     textClassName="text-[var(--text)]"
@@ -1177,7 +1177,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
                   minRows={5}
-                  className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] resize-none focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                  className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-bg)] border-[var(--text)]/20 text-[var(--text)] resize-none focus-visible:ring-1 focus-visible:ring-[var(--active)]"
                 />
             )}
             <div>
@@ -1187,7 +1187,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               onChange={(e) => {
                 setNoteTags(e.target.value);
               }}
-              className="bg-[var(--input-bg)] border-[var(--text)]/10 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+              className="bg-[var(--input-bg)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
             />
             </div>
           </div>

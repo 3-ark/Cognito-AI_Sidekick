@@ -46,7 +46,7 @@ export const AvatarUpload = ({ personaName }: { personaName: string }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="p-0 rounded-full w-8 h-8 overflow-hidden border border-[var(--text)]/10"
+                className="p-0 rounded-full w-8 h-8 overflow-hidden border border-[var(--text)]/20"
               >
                 <img
                   src={currentAvatar}
@@ -62,7 +62,7 @@ export const AvatarUpload = ({ personaName }: { personaName: string }) => {
         </Tooltip>
       </TooltipProvider>
       <PopoverContent
-        className="w-64 p-4 bg-[var(--bg)] border border-[var(--text)]/10"
+        className="w-64 p-4 bg-[var(--bg)] border border-[var(--text)]/20"
         align="start"
       >
         <div className="flex flex-col gap-3">
