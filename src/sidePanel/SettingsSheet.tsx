@@ -243,7 +243,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     };
   }, []);
 
-  const sectionPaddingX = 'px-8';
+  const sectionPaddingX = 'px-6';
   const handleConfigClick = () => { setSettingsMode(true); onOpenChange(false); };
   const handleHistoryClick = () => { setHistoryMode(true); onOpenChange(false); };
   const handleNoteSystemClick = () => { setNoteSystemMode(true); onOpenChange(false); };
@@ -376,7 +376,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         </Tooltip>
                         <Label className="text-base font-medium text-foreground opacity-80">Embeddings</Label>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-3 items-center">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="outline" size="sm" onClick={handleRebuildEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-80 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
