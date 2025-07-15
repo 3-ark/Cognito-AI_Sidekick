@@ -315,7 +315,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   </SelectContent>
                 </Select>
 
-                <PersonaEditPopover
+                <div className="ml-4"> <PersonaEditPopover
                   isEditing
                   personaName={currentPersona}
                   initialPrompt={currentPersonaPrompt}
@@ -325,7 +325,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label="Edit selected persona">
                       <FiEdit2 />
                     </Button>
-                  }
+                  } 
                 />
                 <PersonaEditPopover
                   onSave={handleSavePersona}
@@ -346,6 +346,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     }
                   />
                 )}
+                </div>
               </div>
             </div>
             {/* Memory Section - direct child of space-y-5 container */}
