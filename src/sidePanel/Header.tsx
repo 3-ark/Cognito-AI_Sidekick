@@ -24,6 +24,7 @@ import { Changelog } from './components/Changelog/Changelog';
 import { ModelSelection } from './ModelSelection';
 import { useUpdateModels } from './hooks/useUpdateModels';
 import { VscRocket } from "react-icons/vsc";
+import { Textarea } from '@/components/ui/textarea';
 
 
 function getStatusText(mode: ChatMode, status: ChatStatus): string {
@@ -188,13 +189,13 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         variant="themedPanel"
         className="max-w-xs"
       >
-        <DialogHeader className="px-6 py-4 border-b border-[var(--text)]/20">
+        <DialogHeader className="px-6 py-2">
           <DialogTitle className="text-lg font-semibold text-[var(--text)]">Edit Profile</DialogTitle>
           <DialogDescription className="text-sm text-[var(--text)] opacity-80">
-            Set your display name and profile information. (For chat and export purposes)
+            Set your display name and profile information.
           </DialogDescription>
         </DialogHeader>
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="username" className="text-sm font-medium text-[var(--text)] opacity-90">
               Username
@@ -213,18 +214,21 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             <Label htmlFor="userprofile" className="text-sm font-medium text-[var(--text)] opacity-90">
               User Profile
             </Label>
-            <Input
+            <Textarea
               id="userprofile"
               value={currentUserProfile}
+              minRows={3}
               onChange={(e) => setCurrentUserProfile(e.target.value)}              
               className={cn(
                 "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
                 "hover:border-[var(--active)] hover:brightness-98",
+                "border-[var(--text)]/20",
+                "bg-[var(--input-background)]"
               )}
             />
           </div>
         </div>
-        <DialogFooter className="px-6 py-4 border-t border-[var(--text)]/20">
+        <DialogFooter className="flex justify-end space-x-2 px-6 py-2">
           <Button
             variant="outline-subtle" // Use new variant
             size="sm" // Standardize size

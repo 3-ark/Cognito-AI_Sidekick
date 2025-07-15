@@ -1155,7 +1155,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               placeholder="Note Title (optional)"
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="bg-[var(--input-bg)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+              className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
             />
             </div>
 
@@ -1164,7 +1164,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)} className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Edit Content</Button>
                 </div>
-                <div className="h-full border rounded-md border-[var(--text)]/20 bg-[var(--input-bg)]">
+                <div className="h-full border rounded-md border-[var(--text)]/20 bg-[var(--input-background)]">
                   <VirtualizedContent
                     content={noteContent}
                     textClassName="text-[var(--text)]"
@@ -1177,7 +1177,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
                   minRows={5}
-                  className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-bg)] border-[var(--text)]/20 text-[var(--text)] resize-none focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                  className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] resize-none focus-visible:ring-1 focus-visible:ring-[var(--active)]"
                 />
             )}
             <div>
@@ -1187,7 +1187,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
               onChange={(e) => {
                 setNoteTags(e.target.value);
               }}
-              className="bg-[var(--input-bg)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+              className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
             />
             </div>
           </div>
