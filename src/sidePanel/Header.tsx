@@ -207,6 +207,8 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
               className={cn(
                 "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
                 "hover:border-[var(--active)] hover:brightness-98",
+                "break-words whitespace-pre-wrap",
+                "rounded-md border border-[var(--text)]/20 bg-[var(--input-background)]",
               )}
             />
           </div>
@@ -225,12 +227,13 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
                 "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
                 "hover:border-[var(--active)] hover:brightness-98",
                 "border-[var(--text)]/20",
-                "bg-[var(--input-background)]"
+                "bg-[var(--input-background)]",
+                "rounded-md",
               )}
             />
           </div>
         </div>
-        <DialogFooter className="flex flex-row justify-end space-x-2 px-6 mb-4 py-2">
+        <DialogFooter className="flex flex-row justify-end space-x-2 px-6 mb-2 py-2">
           <Button
             variant="outline-subtle"
             size="sm"

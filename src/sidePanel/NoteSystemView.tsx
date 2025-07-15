@@ -1031,7 +1031,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         accept=".txt,.md,.html,.htm,.pdf"
         multiple
       />
-      <div className="p-0">
+      <div className="pb-3">
         <div className="relative">
           <Input
             type="text"

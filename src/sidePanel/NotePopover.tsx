@@ -216,7 +216,7 @@ export const NotePopover = () => {
             <p>Chat Controls</p>
           </TooltipContent>
         </Tooltip>
-      <PopoverContent className="w-[80vw] p-4 bg-[var(--bg)] border-[var(--text)]/20 shadow-lg rounded-md" side="top" align="end" sideOffset={5}>
+      <PopoverContent className="w-[90vw] p-4 bg-[var(--bg)] border-[var(--text)]/20 shadow-lg rounded-md" side="top" align="end" sideOffset={5}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="use-note-switch" className="text-[var(--text)] font-medium cursor-pointer">

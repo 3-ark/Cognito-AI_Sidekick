@@ -30,9 +30,9 @@ function Textarea({
         maxRows={maxRows}
         style={style}
         className={cn(
-          "flex w-full bg-transparent placeholder:text-muted-foreground",
+          "flex w-full placeholder:text-muted-foreground break-words whitespace-pre-wrap",
           "focus-visible:border-ring focus-visible:ring-ring/50",
-          "field-sizing-content text-sm md:text-sm transition-[color,box-shadow] outline-none focus-visible:ring-[3px]",
+          "text-sm md:text-sm transition-[color,box-shadow] outline-none focus-visible:ring-[3px]",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "thin-scrollbar",
           className
@@ -46,7 +46,7 @@ function Textarea({
     <textarea
       data-slot="textarea-default"
       className={cn(
-        "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "border-[var(--text)]/20 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
         className
       )}
       {...props}
