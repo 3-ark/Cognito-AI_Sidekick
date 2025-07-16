@@ -51,7 +51,7 @@ export interface ChatChunk {
 /** Maximum characters allowed in a single chunk. Text blocks larger than this will be split. */
 const MAX_CHUNK_CHARS = 2000;
 /** Minimum character length for any chunk. Chunks smaller than this will be merged or discarded. */
-const MIN_CHUNK_CHARS = 50;
+const MIN_CHUNK_CHARS = 150;
 
 
 // --- Main Chunking Functions ---
@@ -219,8 +219,47 @@ export function chunkNoteContent(noteInput: NoteInputForChunking): NoteChunk[] {
       }
     }
   }
+  // 5. POST-PROCESSING: Clean up and merge small, dangling chunks
+  const finalChunks: NoteChunk[] = [];
+  let i = 0;
+  while (i < chunks.length) {
+    const currentChunk = chunks[i];
 
-  return chunks;
+    // Check if the current chunk is too small AND there is a next chunk to merge with
+    if (
+      currentChunk.charCount < MIN_CHUNK_CHARS &&
+      (i + 1) < chunks.length
+    ) {
+      const nextChunk = chunks[i + 1];
+
+      // Condition for merging:
+      // 1. The combined content doesn't exceed the max chunk size.
+      // 2. They belong to the same heading path, ensuring they are from the same logical section.
+      const currentHeading = JSON.stringify(currentChunk.headingPath || []);
+      const nextHeading = JSON.stringify(nextChunk.headingPath || []);
+
+      if (
+        (currentChunk.content.length + nextChunk.content.length + 2) <= MAX_CHUNK_CHARS &&
+        currentHeading === nextHeading
+      ) {
+        // Prepend the small chunk's content to the next chunk
+        nextChunk.content = currentChunk.content + "\n\n" + nextChunk.content;
+        nextChunk.charCount = nextChunk.content.length;
+        
+        // We effectively skip the current small chunk, as its content is now in the next one.
+        // The next chunk will be processed/pushed in the next iteration.
+        i++;
+        continue;
+      }
+    }
+
+    // If the chunk is not small or cannot be merged, add it to our final list
+    finalChunks.push(currentChunk);
+    i++;
+  }
+
+  return finalChunks;
+
 }
 
 /**
