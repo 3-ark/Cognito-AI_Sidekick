@@ -96,8 +96,8 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
       title: chatToSaveToStorage.title,
       turns: chatToSaveToStorage.turns.map(turn => ({ // Ensure turn structure matches input type
         role: turn.role,
-        content: turn.content,
-        timestamp: turn.timestamp,
+        content: turn.content || '', // Ensure content is not undefined
+        timestamp: turn.timestamp, // Keep as number, chunkingUtils expects string but will convert
       })),
     };
     const currentChunks: ChatChunk[] = chunkChatMessageTurns(chatInputForChunking);
@@ -208,6 +208,23 @@ export const deleteChatMessage = async (fullChatId: string): Promise<void> => {
   await localforage.removeItem(fullChatId);
   await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   console.log('Chat message and its embedding deleted from system:', fullChatId);
+
+  // Also, find and remove all associated chunk texts and embeddings
+  const allKeys = await localforage.keys();
+  const chunkTextKeysToDelete = allKeys.filter(key =>
+    key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(fullChatId)
+  );
+  const chunkEmbeddingKeysToDelete = allKeys.filter(key =>
+    key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(fullChatId)
+  );
+
+  for (const key of chunkTextKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  for (const key of chunkEmbeddingKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  console.log(`Deleted ${chunkTextKeysToDelete.length} text chunks and ${chunkEmbeddingKeysToDelete.length} embedding chunks for chat ${fullChatId}.`);
 };
 
 /**
@@ -217,19 +234,27 @@ export const deleteAllChatMessages = async (): Promise<void> => {
   const keys = await localforage.keys();
   const chatKeysToDelete: string[] = [];
   const embeddingKeysToDelete: string[] = [];
+  const chunkTextKeysToDelete: string[] = [];
+  const chunkEmbeddingKeysToDelete: string[] = [];
 
   for (const key of keys) {
     if (key.startsWith(CHAT_STORAGE_PREFIX)) {
       chatKeysToDelete.push(key);
     } else if (key.startsWith(EMBEDDING_CHAT_PREFIX)) {
       embeddingKeysToDelete.push(key);
+    } else if (key.startsWith(CHAT_CHUNK_TEXT_PREFIX)) {
+      chunkTextKeysToDelete.push(key);
+    } else if (key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX)) {
+      chunkEmbeddingKeysToDelete.push(key);
     }
   }
 
   await Promise.all(chatKeysToDelete.map(key => localforage.removeItem(key)));
   await Promise.all(embeddingKeysToDelete.map(key => localforage.removeItem(key)));
+  await Promise.all(chunkTextKeysToDelete.map(key => localforage.removeItem(key)));
+  await Promise.all(chunkEmbeddingKeysToDelete.map(key => localforage.removeItem(key)));
   
-  console.log('All chat messages and their embeddings deleted from system.');
+  console.log('All chat messages, their embeddings, and all associated chunks deleted from system.');
   await rebuildFullIndex(); // <-- This ensures the index is rebuilt after bulk delete
 };
 

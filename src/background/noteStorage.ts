@@ -195,10 +195,27 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
  * Deletes a note and its embedding from localforage by its ID.
  */
 export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
-  await localforage.removeItem(noteId); 
-  await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`); 
+  await localforage.removeItem(noteId);
+  await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
   console.log('Note and its embedding deleted from system:', noteId);
   await removeNoteFromIndex(noteId); // <-- Ensure index is updated
+
+  // Also, find and remove all associated chunk texts and embeddings
+  const allKeys = await localforage.keys();
+  const chunkTextKeysToDelete = allKeys.filter(key =>
+    key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(noteId)
+  );
+  const chunkEmbeddingKeysToDelete = allKeys.filter(key =>
+    key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(noteId)
+  );
+
+  for (const key of chunkTextKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  for (const key of chunkEmbeddingKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  console.log(`Deleted ${chunkTextKeysToDelete.length} text chunks and ${chunkEmbeddingKeysToDelete.length} embedding chunks for note ${noteId}.`);
 };
 
 /**
@@ -208,12 +225,18 @@ export const deleteAllNotesFromSystem = async (): Promise<void> => {
   const keys = await localforage.keys();
   const noteKeysToDelete: string[] = [];
   const embeddingKeysToDelete: string[] = [];
+  const chunkTextKeysToDelete: string[] = [];
+  const chunkEmbeddingKeysToDelete: string[] = [];
 
   for (const key of keys) {
     if (key.startsWith(NOTE_STORAGE_PREFIX)) {
       noteKeysToDelete.push(key);
     } else if (key.startsWith(EMBEDDING_NOTE_PREFIX)) {
       embeddingKeysToDelete.push(key);
+    } else if (key.startsWith(NOTE_CHUNK_TEXT_PREFIX)) {
+      chunkTextKeysToDelete.push(key);
+    } else if (key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX)) {
+      chunkEmbeddingKeysToDelete.push(key);
     }
   }
 
@@ -223,7 +246,13 @@ export const deleteAllNotesFromSystem = async (): Promise<void> => {
   for (const key of embeddingKeysToDelete) {
     await localforage.removeItem(key);
   }
-  console.log('All notes and their embeddings deleted from system.');
+  for (const key of chunkTextKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  for (const key of chunkEmbeddingKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  console.log('All notes, their embeddings, and all associated chunks deleted from system.');
   await rebuildFullIndex(); // <-- Rebuild index after bulk delete
 };
 

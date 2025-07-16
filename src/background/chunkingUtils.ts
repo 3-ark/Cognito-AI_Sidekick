@@ -1,121 +1,72 @@
 /**
  * @file Provides utility functions for splitting note and chat message content into manageable chunks.
+ * This version uses a structure-aware approach to preserve tables, lists, and code blocks.
  */
 
-import {
-  NoteInputForChunking,
-  NoteChunk,
-  ChatMessageInputForChunking,
-  ChatChunk,
-} from '../types/chunkTypes';
+// --- Type Definitions (for a self-contained snippet) ---
+
+export interface NoteInputForChunking {
+  id: string;
+  content: string;
+  title?: string;
+  url?: string;
+  tags?: string[];
+}
+
+export interface NoteChunk {
+  id: string;
+  parentId: string;
+  content: string;
+  charCount: number;
+  headingPath?: string[];
+  originalUrl?: string;
+  originalTags?: string[];
+  parentTitle?: string;
+}
+
+export interface ChatMessageInputForChunking {
+  id: string;
+  title?: string;
+  turns: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: string;
+  }>;
+}
+
+export interface ChatChunk {
+  id: string;
+  parentId: string;
+  turnIndex: number;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  charCount: number;
+  parentTitle?: string;
+}
+
 
 // --- Constants ---
-/** Maximum characters allowed in a paragraph before attempting to sub-split it. */
-const MAX_PARAGRAPH_CHARS = 1500;
-/** Target character length for sub-chunks created from overly long paragraphs/sentences. */
-const TARGET_SUB_CHUNK_CHARS = 500;
-/** Minimum character length for any chunk. Chunks smaller than this may be merged or discarded. */
+
+/** Maximum characters allowed in a single chunk. Text blocks larger than this will be split. */
+const MAX_CHUNK_CHARS = 2000;
+/** Minimum character length for any chunk. Chunks smaller than this will be merged or discarded. */
 const MIN_CHUNK_CHARS = 50;
-/** Number of characters to overlap between consecutive sub-chunks to maintain context. */
-const OVERLAP_CHARS = 50;
 
-// --- Helper Functions ---
-
-/**
- * Splits a long text by sentences.
- * A simple heuristic is used: looks for sentence-ending punctuation (.!?)
- * followed by whitespace and an uppercase letter, or a newline.
- * @param text The text to split.
- * @returns An array of sentences.
- */
-function splitTextBySentences(text: string): string[] {
-  if (!text) return [];
-  // Regex to split by common sentence terminators followed by whitespace and an uppercase letter,
-  // or by a newline character.
-  // It also handles cases where there might be multiple spaces or no space after the terminator.
-  const sentenceEndRegex = /(?<=[.!?])(?:\s+(?=[A-Z])|\s*\n+)/g;
-  let sentences = text.split(sentenceEndRegex).map(s => s.trim()).filter(s => s.length > 0);
-
-  // Further refine: if a "sentence" doesn't end with punctuation, it might be a fragment.
-  // Try to merge it with the next one if the next one starts with a lowercase letter (unless it's a list item).
-  // This is a basic heuristic.
-  const refinedSentences: string[] = [];
-  let i = 0;
-  while (i < sentences.length) {
-    let currentSentence = sentences[i];
-    if (i + 1 < sentences.length &&
-        !/[.!?]$/.test(currentSentence) && // Current doesn't end with punctuation
-        /^[a-z]/.test(sentences[i+1]) && // Next starts with lowercase
-        !/^\s*[-*+]/.test(sentences[i+1]) // Next is not a list item
-    ) {
-      currentSentence += ' ' + sentences[i+1];
-      i++; // Skip next sentence as it's merged
-    }
-    refinedSentences.push(currentSentence);
-    i++;
-  }
-  return refinedSentences.filter(s => s.length > 0);
-}
-
-
-/**
- * Splits a single piece of text into fixed-length segments with overlap.
- * @param text The text to split.
- * @param maxLength The maximum length of each segment.
- * @param overlap The number of characters to overlap between segments.
- * @returns An array of text segments.
- */
-function splitTextWithOverlap(text: string, maxLength: number, overlap: number): string[] {
-  const chunks: string[] = [];
-  if (text.length <= maxLength) {
-    if (text.length >= MIN_CHUNK_CHARS) {
-      chunks.push(text);
-    }
-    return chunks;
-  }
-
-  let startIndex = 0;
-  while (startIndex < text.length) {
-    const endIndex = Math.min(startIndex + maxLength, text.length);
-    let chunk = text.substring(startIndex, endIndex);
-
-    if (chunk.length < MIN_CHUNK_CHARS && chunks.length > 0) {
-      // If the remaining chunk is too small, try to append it to the previous one
-      // if it doesn't make the previous one too large.
-      const lastChunk = chunks[chunks.length - 1];
-      if (lastChunk.length + chunk.length <= maxLength + overlap) { // Allow some flexibility
-        chunks[chunks.length - 1] += chunk;
-        startIndex = endIndex; // Move past this small chunk
-        continue;
-      }
-    }
-    
-    if (chunk.length >= MIN_CHUNK_CHARS) {
-         chunks.push(chunk);
-    } else if (chunks.length === 0 && chunk.length > 0) {
-        // If it's the only chunk and it's too small but not empty, keep it.
-        chunks.push(chunk);
-    }
-
-
-    if (endIndex === text.length) {
-      break; // Reached the end of the text
-    }
-    startIndex += (maxLength - overlap);
-    if (startIndex >= text.length) break; // Ensure we don't go into an infinite loop if overlap is too large
-  }
-  return chunks.filter(c => c.length > 0);
-}
 
 // --- Main Chunking Functions ---
 
 /**
- * Splits note content into manageable chunks.
+ * Splits note content into manageable, semantically coherent chunks.
  *
- * Prioritizes splitting by Markdown headings (H1-H6). Within sections defined by
- * headings (or the whole content if no headings), it splits by paragraphs.
- * Long paragraphs are further split by sentences, and very long sentences are
- * split into fixed-length segments with overlap.
+ * This function employs a structure-aware, multi-stage strategy:
+ * 1.  **Extraction:** It first identifies and extracts "atomic" structures that should not be split,
+ *     such as Markdown tables, multi-line lists, and fenced code blocks. These are replaced with unique placeholders.
+ * 2.  **Structure Chunking:** Each extracted atomic structure becomes its own complete chunk. This preserves
+ *     their integrity (e.g., tables are not shredded).
+ * 3.  **Hierarchical Text Chunking:** The remaining text is then processed. It's first split by Markdown
+ *     headings (H1-H6) to maintain the document's outline. Within each section, paragraphs are intelligently
+ *     grouped together to form contextually rich chunks.
  *
  * @param noteInput - The note data to be chunked.
  * @returns An array of `NoteChunk` objects.
@@ -125,36 +76,51 @@ export function chunkNoteContent(noteInput: NoteInputForChunking): NoteChunk[] {
   const chunks: NoteChunk[] = [];
   let chunkIndex = 0;
 
-  if (!content || content.trim().length < MIN_CHUNK_CHARS) {
-    if (content && content.trim().length > 0) { // Keep if there's some content, even if small
-       chunks.push({
+  // 1. PRE-PROCESSING: Clean up input content
+  let processedContent = (content || '').replace(/<!--[\s\S]*?-->/g, '').trim(); // Remove HTML comments
+
+  if (processedContent.length < MIN_CHUNK_CHARS) {
+    if (processedContent.length > 0) {
+      chunks.push({
         id: `notechunk_${parentId}_${chunkIndex++}`,
         parentId,
-        content: content.trim(),
-        charCount: content.trim().length,
-        headingPath: [],
-        originalUrl,
-        originalTags,
-        parentTitle,
+        content: processedContent,
+        charCount: processedContent.length,
+        parentTitle, originalUrl, originalTags,
       });
     }
     return chunks;
   }
 
-  // Regex to find Markdown headings (H1-H6)
-  // It captures the heading level (number of #), the heading text, and the content after it until the next heading or end of string.
-  const headingRegex = /^(#{1,6})\s+(.+?)\s*$/gm;
-  let lastIndex = 0;
-  let match;
-  const sections: Array<{ text: string; headingPath: string[] }> = [];
-  let currentHeadingPath: string[] = [];
+  // 2. EXTRACTION: Define and extract atomic structures
+  const specialStructures = [
+    { name: 'CODE_BLOCK', regex: /```[\s\S]*?```/g },
+    // Regex for a full markdown table. It looks for at least one line with pipes and a header separator line.
+    { name: 'TABLE', regex: /((?:\|.*\|[ \t]*\r?\n)+(?:\|\s*:?-+:?\s*\|[ \t\r\n]*)+)/g },
+    // Regex for a multi-line list (bulleted or numbered)
+    { name: 'LIST', regex: /((?:(?:^|\n)\s*(?:[*\-+]|\d+\.)\s.*)+)/g },
+  ];
 
-  // First, split by H1, then H2, etc., to build a path. This is complex.
-  // Simpler approach: split by any heading, content before first heading is top level.
+  const extractedContent: { [key: string]: string } = {};
+  let placeholderIndex = 0;
+
+  for (const structure of specialStructures) {
+    processedContent = processedContent.replace(structure.regex, (match) => {
+      const key = `__PLACEHOLDER_${structure.name}_${placeholderIndex++}__`;
+      extractedContent[key] = match.trim();
+      // Add newlines to ensure separation from surrounding text
+      return `\n\n${key}\n\n`;
+    });
+  }
+
+  // 3. HIERARCHICAL SPLITTING BY HEADINGS
+  const headingRegex = /^(#{1,6})\s+(.+?)\s*$/gm;
+  const sections: Array<{ text: string; headingPath: string[] }> = [];
+  let lastIndex = 0;
   
-  let contentRemainder = content;
   const headingMatches: Array<{level: number, text: string, startIndex: number}> = [];
-  while((match = headingRegex.exec(content)) !== null) {
+  let match;
+  while((match = headingRegex.exec(processedContent)) !== null) {
     headingMatches.push({
         level: match[1].length,
         text: match[2].trim(),
@@ -163,230 +129,119 @@ export function chunkNoteContent(noteInput: NoteInputForChunking): NoteChunk[] {
   }
 
   if (headingMatches.length === 0) {
-    // No headings, treat the whole content as one section
-    sections.push({ text: content, headingPath: [] });
+    sections.push({ text: processedContent, headingPath: [] });
   } else {
+    let currentHeadingPath: string[] = [];
     // Content before the first heading
     if (headingMatches[0].startIndex > 0) {
       sections.push({
-        text: content.substring(0, headingMatches[0].startIndex).trim(),
+        text: processedContent.substring(0, headingMatches[0].startIndex).trim(),
         headingPath: [],
       });
     }
-
     // Process content between headings
     for (let i = 0; i < headingMatches.length; i++) {
       const currentMatch = headingMatches[i];
       const nextMatch = headingMatches[i+1];
       
-      const sectionStartIndex = currentMatch.startIndex + content.substring(currentMatch.startIndex).indexOf(currentMatch.text) + currentMatch.text.length;
-      // Find the start of content for this heading, skipping the heading line itself
-      let sectionContentStart = content.indexOf('\n', currentMatch.startIndex);
-      if (sectionContentStart === -1) sectionContentStart = currentMatch.startIndex + currentMatch.text.length + currentMatch.level +1; // Approx
-      else sectionContentStart +=1;
+      let sectionContentStart = processedContent.indexOf('\n', currentMatch.startIndex);
+      if (sectionContentStart === -1) sectionContentStart = currentMatch.startIndex + currentMatch.text.length + currentMatch.level + 1;
+      else sectionContentStart += 1;
 
-
-      const sectionEndIndex = nextMatch ? nextMatch.startIndex : content.length;
-      const sectionText = content.substring(sectionContentStart, sectionEndIndex).trim();
+      const sectionEndIndex = nextMatch ? nextMatch.startIndex : processedContent.length;
+      const sectionText = processedContent.substring(sectionContentStart, sectionEndIndex).trim();
       
-      // Update currentHeadingPath based on level
-      // This is a simplified way to manage heading hierarchy. A proper stack-based approach would be more robust for deep nesting.
-      currentHeadingPath = currentHeadingPath.slice(0, currentMatch.level -1);
+      // Update heading path based on level
+      currentHeadingPath = currentHeadingPath.slice(0, currentMatch.level - 1);
       currentHeadingPath.push(currentMatch.text);
 
       if (sectionText.length > 0) {
         sections.push({
           text: sectionText,
-          headingPath: [...currentHeadingPath], // Copy path
+          headingPath: [...currentHeadingPath],
         });
       }
     }
   }
 
-
-  // Process each section (either whole content or content under a heading)
+  // 4. CHUNKING WITHIN SECTIONS
   for (const section of sections) {
-    const paragraphs = section.text.split(/\n\s*\n+/).map(p => p.trim()).filter(p => p.length > 0);
+    // Split section text by our placeholders, keeping the placeholders as delimiters
+    const segments = section.text.split(/(__PLACEHOLDER_\w+_\d+__)/g).filter(s => s.trim());
 
-    for (const paragraph of paragraphs) {
-      if (paragraph.length < MIN_CHUNK_CHARS && chunks.length > 0) {
-         // If paragraph is too small, try to merge with the previous chunk from THIS section
-         const lastChunk = chunks[chunks.length -1];
-         // Ensure it's from the same heading path and doesn't become too large
-         if (JSON.stringify(lastChunk.headingPath) === JSON.stringify(section.headingPath) && 
-             (lastChunk.content.length + paragraph.length + 1) <= MAX_PARAGRAPH_CHARS) {
-            lastChunk.content += "\n" + paragraph;
-            lastChunk.charCount = lastChunk.content.length;
-            continue;
-         }
-      }
-
-
-      if (paragraph.length <= MAX_PARAGRAPH_CHARS) {
-        if (paragraph.length >= MIN_CHUNK_CHARS) {
+    for (const segment of segments) {
+      if (segment.startsWith('__PLACEHOLDER_')) {
+        // This is an atomic structure (table, list, etc.)
+        const content = extractedContent[segment];
+        if (content && content.length >= MIN_CHUNK_CHARS) {
           chunks.push({
             id: `notechunk_${parentId}_${chunkIndex++}`,
             parentId,
-            content: paragraph,
-            charCount: paragraph.length,
+            content,
+            charCount: content.length,
             headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
-            originalUrl,
-            originalTags,
-            parentTitle,
+            parentTitle, originalUrl, originalTags,
           });
-        } else if (paragraph.length > 0 && chunks.length === 0 && sections.length === 1 && paragraphs.length === 1) {
-            // If it's the only piece of content and very small, keep it
-             chunks.push({
-                id: `notechunk_${parentId}_${chunkIndex++}`,
-                parentId,
-                content: paragraph,
-                charCount: paragraph.length,
-                headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
-                originalUrl,
-                originalTags,
-                parentTitle,
-            });
         }
       } else {
-        // Paragraph is too long, split by sentences
-        const sentences = splitTextBySentences(paragraph);
-        let sentenceBuffer = "";
+        // This is regular text, apply paragraph grouping
+        const paragraphs = segment.split(/\n\s*\n+/).map(p => p.trim()).filter(p => p);
+        let paragraphBuffer = "";
 
-        for (const sentence of sentences) {
-          if (sentence.length <= TARGET_SUB_CHUNK_CHARS) {
-            if ((sentenceBuffer + sentence).length <= TARGET_SUB_CHUNK_CHARS || sentenceBuffer.length < MIN_CHUNK_CHARS ) {
-                 sentenceBuffer += (sentenceBuffer ? " " : "") + sentence;
-            } else {
-                if (sentenceBuffer.length >= MIN_CHUNK_CHARS) {
-                    chunks.push({
-                        id: `notechunk_${parentId}_${chunkIndex++}`,
-                        parentId,
-                        content: sentenceBuffer,
-                        charCount: sentenceBuffer.length,
-                        headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
-                        originalUrl,
-                        originalTags,
-                        parentTitle,
-                    });
-                }
-                sentenceBuffer = sentence; // Start new buffer with current sentence
-            }
+        for (const para of paragraphs) {
+          if (paragraphBuffer && (paragraphBuffer.length + para.length + 2) > MAX_CHUNK_CHARS) {
+            // Buffer is full, push it as a chunk
+            chunks.push({
+              id: `notechunk_${parentId}_${chunkIndex++}`,
+              parentId,
+              content: paragraphBuffer,
+              charCount: paragraphBuffer.length,
+              headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
+              parentTitle, originalUrl, originalTags,
+            });
+            paragraphBuffer = para; // Start new buffer
           } else {
-            // Sentence is still too long, flush buffer first
-            if (sentenceBuffer.length >= MIN_CHUNK_CHARS) {
-                 chunks.push({
-                    id: `notechunk_${parentId}_${chunkIndex++}`,
-                    parentId,
-                    content: sentenceBuffer,
-                    charCount: sentenceBuffer.length,
-                    headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
-                    originalUrl,
-                    originalTags,
-                    parentTitle,
-                });
-            }
-            sentenceBuffer = ""; // Reset buffer
-
-            // Split this very long sentence with overlap
-            const subChunks = splitTextWithOverlap(sentence, TARGET_SUB_CHUNK_CHARS, OVERLAP_CHARS);
-            for (const subChunk of subChunks) {
-              if (subChunk.length >= MIN_CHUNK_CHARS) {
-                chunks.push({
-                  id: `notechunk_${parentId}_${chunkIndex++}`,
-                  parentId,
-                  content: subChunk,
-                  charCount: subChunk.length,
-                  headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
-                  originalUrl,
-                  originalTags,
-                  parentTitle,
-                });
-              }
-            }
+            // Add to buffer
+            paragraphBuffer += (paragraphBuffer ? "\n\n" : "") + para;
           }
         }
-        // Add any remaining content in sentenceBuffer
-        if (sentenceBuffer.length >= MIN_CHUNK_CHARS) {
+        // Push any remaining content in the buffer
+        if (paragraphBuffer.length >= MIN_CHUNK_CHARS) {
           chunks.push({
             id: `notechunk_${parentId}_${chunkIndex++}`,
             parentId,
-            content: sentenceBuffer,
-            charCount: sentenceBuffer.length,
+            content: paragraphBuffer,
+            charCount: paragraphBuffer.length,
             headingPath: section.headingPath.length > 0 ? [...section.headingPath] : undefined,
-            originalUrl,
-            originalTags,
-            parentTitle,
+            parentTitle, originalUrl, originalTags,
           });
         }
       }
     }
   }
-  
-  // Final pass to handle very small trailing chunks.
-  // If the last chunk is too small, try to merge it with the second to last.
-  // If it cannot be merged (e.g., makes the second to last too large, or there's only one chunk),
-  // and it's still too small, it should be removed, unless it's the *only* chunk resulting
-  // from the entire processing of a small original input (which is handled by initial checks).
-  if (chunks.length > 0) {
-    const lastChunkIndex = chunks.length - 1;
-    if (chunks[lastChunkIndex].content.length < MIN_CHUNK_CHARS) {
-      if (chunks.length > 1) { // If there's more than one chunk, try to merge
-        const secondLastChunkIndex = lastChunkIndex - 1;
-        // Check if merging is feasible (doesn't exceed max paragraph size for the combined content)
-        // and ensure they are from the same logical section if possible (implicit here, as it's just sequential chunks)
-        if ((chunks[secondLastChunkIndex].content.length + chunks[lastChunkIndex].content.length + 1) <= MAX_PARAGRAPH_CHARS) {
-          chunks[secondLastChunkIndex].content += "\n" + chunks[lastChunkIndex].content;
-          chunks[secondLastChunkIndex].charCount = chunks[secondLastChunkIndex].content.length;
-          chunks.pop(); // Remove the merged small last chunk
-        } else {
-          // Cannot merge, so discard the small last chunk as it doesn't meet MIN_CHUNK_CHARS
-          chunks.pop();
-        }
-      } else {
-        // Only one chunk remains, and it's smaller than MIN_CHUNK_CHARS.
-        // This case should ideally be covered by the initial check:
-        // `if (!content || content.trim().length < MIN_CHUNK_CHARS)`
-        // which keeps a single small chunk if it's the *entire* original content.
-        // If processing somehow resulted in a single chunk that's too small (e.g. after filtering all else),
-        // it should be discarded to adhere to MIN_CHUNK_CHARS for derived chunks.
-        // However, the initial check `if (content && content.trim().length > 0)` inside the very first `if`
-        // block of `chunkNoteContent` already ensures that if the *entire input* is small but non-empty,
-        // it's preserved. So, if we end up here with one tiny chunk, it's likely a remnant that should go.
-        chunks.pop();
-      }
-    }
-  }
-
 
   return chunks;
 }
 
 /**
  * Performs light cleaning on text intended for embedding.
- * Currently, this function is a placeholder for any future light cleaning steps.
- * The primary goal is to preserve as much semantic content as possible,
- * so we avoid aggressive cleaning like stop word removal or stemming.
  * @param text The text to clean.
  * @returns The cleaned text.
  */
 export function preprocessForEmbeddings(text: string): string {
-  let nlpUtils: any;
-  nlpUtils = require('wink-nlp-utils');
-
-  let cleanedText = nlpUtils.string.removeHTMLTags(text);
-  // Remove Markdown syntax
-  // cleanedText = cleanedText.replace(/([_*~`#\[\]()>.-])/g, '');
-  // Trim whitespace
-  cleanedText = nlpUtils.string.removeExtraSpaces(cleanedText);
-
+  let cleanedText = text;
+  // Remove Markdown image links and simple tags, but keep the alt text
+  cleanedText = cleanedText.replace(/!\[(.*?)\]\(.*?\)/g, '$1');
+  // Remove other markdown syntax
+  cleanedText = cleanedText.replace(/([_*~`#()>.-])/g, '');
+  // Remove extra whitespace
+  cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
   return cleanedText;
 }
 
 /**
  * Splits chat message turns into individual chunks.
- *
- * Each turn's content (if not empty and meets `MIN_CHUNK_CHARS`) becomes a
- * separate chunk. Individual chat turns are not sub-split further by this function.
+ * Each turn's content becomes a separate chunk.
  *
  * @param chatInput - The chat message data to be chunked.
  * @returns An array of `ChatChunk` objects.
