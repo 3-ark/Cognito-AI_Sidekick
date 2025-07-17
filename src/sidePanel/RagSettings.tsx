@@ -113,7 +113,7 @@ export const RagSettings = () => {
   const bm25TopK = config.rag?.bm25?.topK ?? 50;
 
   // Semantic search specific
-  const semanticThreshold = config.rag?.semantic_threshold ?? 0.6;
+  const semanticThreshold = config.rag?.semantic_threshold ?? 0.1;
   const semanticTopK = config.rag?.semantic_top_k ?? 50;
 
   // Hybrid search & general
@@ -281,7 +281,7 @@ export const RagSettings = () => {
                 className="w-full h-8"
               />
               <p className="text-xs text-[var(--text)]/70">
-                Ignore semantic results below this similarity. Default: 0.6
+                Ignore semantic results below this similarity. Default: 0.1
               </p>
             </div>
 

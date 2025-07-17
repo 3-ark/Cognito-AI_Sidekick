@@ -1,12 +1,12 @@
 import localforage from 'localforage';
 import { rebuildFullIndex, removeChatMessageFromIndex } from './searchUtils';
-import { ChatChunk, ChatMessageInputForChunking } from '../types/chunkTypes'; // Added ChatChunk and ChatMessageInputForChunking
-import { chunkChatMessageTurns } from './chunkingUtils'; // Added
-import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils'; // Added
-import storage from './storageUtil'; // Added for config access
-import { Config } from '../types/config'; // Added for config type
+import { ChatChunk, ChatMessageInputForChunking, ChatChunkingResult } from '../types/chunkTypes'; // Ensure ChatChunkingResult is imported
+import { chunkChatMessageTurns } from './chunkingUtils';
+import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils';
+import storage from './storageUtil';
+import { Config } from '../types/config';
 
-// Interfaces
+// --- INTERFACES ---
 export interface MessageTurn {
   role: 'user' | 'assistant' | 'tool';
   status: 'complete' | 'streaming' | 'error' | 'cancelled' | 'awaiting_tool_results';
@@ -41,32 +41,31 @@ export interface ChatMessageWithEmbedding extends ChatMessage {
   embedding?: number[];
 }
 
-// Constants
+// --- CONSTANTS ---
 export const CHAT_STORAGE_PREFIX = 'chat_';
-export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_'; // Used for whole chat embeddings
+export const EMBEDDING_CHAT_PREFIX = 'embedding_chat_';
 export const EMBEDDING_CHAT_CHUNK_PREFIX = 'embedding_chatchunk_';
-export const CHAT_CHUNK_TEXT_PREFIX = 'chatchunktext_'; // For storing text of chat chunks
+export const CHAT_CHUNK_TEXT_PREFIX = 'chatchunktext_';
+// NEW: Constant for the parent-to-chunk index
+export const CHAT_CHUNK_INDEX_PREFIX = 'chat-chunk-index:';
 
-// Utility Functions
+// --- UTILITY FUNCTIONS ---
 export const generateChatId = (): string => `${CHAT_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 /**
- * Saves a new chat message or updates an existing one in localforage.
- * Embedding is saved separately.
+ * Saves a new chat message or updates an existing one.
+ * This function now also handles chunking and saving the parent-to-chunk index.
  */
 export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage, 'id' | 'last_updated'>> & { id?: string; turns: MessageTurn[]; embedding?: number[] }): Promise<ChatMessage> => {
   const now = Date.now();
   const chatId = chatMessageData.id || generateChatId();
-  
-  // Ensure the ID starts with the prefix if it's provided but doesn't have it
   const fullChatId = chatId.startsWith(CHAT_STORAGE_PREFIX) ? chatId : `${CHAT_STORAGE_PREFIX}${chatId.replace(/^chat_/, '')}`;
 
-
-  const chatToSaveToStorage: ChatMessage = { // This is the object that will be returned and indexed
+  const chatToSaveToStorage: ChatMessage = {
     id: fullChatId,
     title: chatMessageData.title || `Chat - ${new Date(now).toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
     turns: chatMessageData.turns,
-    last_updated: now, // This will be the source of truth for last_updated for new chats
+    last_updated: now,
     model: chatMessageData.model,
     chatMode: chatMessageData.chatMode,
     noteContentUsed: chatMessageData.noteContentUsed,
@@ -76,110 +75,92 @@ export const saveChatMessage = async (chatMessageData: Partial<Omit<ChatMessage,
 
   await localforage.setItem(fullChatId, chatToSaveToStorage);
 
-  // This "whole chat" embedding might be legacy or used by features other than chunk-based RAG.
   if (chatMessageData.embedding && chatMessageData.embedding.length > 0) {
     await localforage.setItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`, chatMessageData.embedding);
   } else {
     await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   }
 
-  // --- New Chunking and Embedding Logic for Chat Messages ---
   try {
-    // Load config to check embeddingMode
     const configStr: string | null = await storage.getItem('config');
     const config: Config | null = configStr ? JSON.parse(configStr) : null;
     const embeddingMode = config?.rag?.embeddingMode ?? 'manual';
 
-    // 1. Prepare input for chunking (always do this)
     const chatInputForChunking: ChatMessageInputForChunking = {
       id: chatToSaveToStorage.id,
       title: chatToSaveToStorage.title,
-      turns: chatToSaveToStorage.turns.map(turn => ({ // Ensure turn structure matches input type
+      turns: chatToSaveToStorage.turns.map(turn => ({
         role: turn.role,
-        content: turn.content || '', // Ensure content is not undefined
-        timestamp: turn.timestamp, // Keep as number, chunkingUtils expects string but will convert
+        content: turn.content || '',
+        timestamp: turn.timestamp,
       })),
     };
-    const currentChunks: ChatChunk[] = chunkChatMessageTurns(chatInputForChunking);
-    const currentChunkIds = new Set(currentChunks.map(chunk => chunk.id));
+    
+    const { chunks: currentChunks, chunkIds } = chunkChatMessageTurns(chatInputForChunking);
+    const currentChunkIdsSet = new Set(chunkIds);
     const allStorageKeys = await localforage.keys();
 
-    // 2. Clean up stale chat chunk texts and embeddings
     const oldChunkTextKeys = allStorageKeys.filter(key =>
-      key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(chatToSaveToStorage.id) // Check parentId
+      key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(chatToSaveToStorage.id)
     );
     const oldChunkEmbeddingKeys = allStorageKeys.filter(key =>
-      key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(chatToSaveToStorage.id) // Check parentId
+      key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(chatToSaveToStorage.id)
     );
 
     for (const oldKey of oldChunkTextKeys) {
-      // Extract chunkId from key: chatchunktext_<parentId>_<turnIndex>_<timestamp>_<role>
-      // A simple check is if the currentChunkIds (which are full chunk IDs) does not contain the ID derived from oldKey
       const chunkId = oldKey.substring(CHAT_CHUNK_TEXT_PREFIX.length);
-      if (!currentChunkIds.has(chunkId)) {
+      if (!currentChunkIdsSet.has(chunkId)) {
         await localforage.removeItem(oldKey);
         await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunkId}`);
-        console.log(`Removed stale chat chunk text and embedding for chunk ID: ${chunkId}`);
       }
     }
      for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
         const chunkId = oldEmbeddingKey.substring(EMBEDDING_CHAT_CHUNK_PREFIX.length);
-        if (!currentChunkIds.has(chunkId)) {
+        if (!currentChunkIdsSet.has(chunkId)) {
             await localforage.removeItem(oldEmbeddingKey);
-            console.log(`Removed stale chat chunk embedding (orphan check) for chunk ID: ${chunkId}`);
         }
     }
 
-
-    // 3. Save texts for current chat chunks
     for (const chunk of currentChunks) {
       await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
     }
 
-    // 4. Generate and save embeddings for current chat chunks (conditional on embeddingMode)
+    // NEW: Save the parent-to-chunk index
+    await localforage.setItem(`${CHAT_CHUNK_INDEX_PREFIX}${chatToSaveToStorage.id}`, chunkIds);
+
     if (embeddingMode === 'automatic') {
       if (currentChunks.length > 0) {
-        // Ensure embedding service is configured before proceeding
         try {
             await ensureEmbeddingServiceConfigured();
+            if (config?.rag?.embedding_model) {
+                const chunkContents = currentChunks.map(chunk => chunk.content);
+                const embeddings = await generateEmbeddings(chunkContents);
+                for (let i = 0; i < currentChunks.length; i++) {
+                    const chunk = currentChunks[i];
+                    const embedding = embeddings[i];
+                    if (embedding && embedding.length > 0) {
+                        await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
+                    } else {
+                        await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`);
+                    }
+                }
+            }
         } catch (configError) {
             console.warn(`Embedding service not configured. Skipping automatic embedding for chat ${chatToSaveToStorage.id}. Error: ${configError}`);
         }
-
-        if (config?.rag?.embedding_model) { // Check if service is configured
-            const chunkContents = currentChunks.map(chunk => chunk.content);
-            const embeddings = await generateEmbeddings(chunkContents);
-
-            for (let i = 0; i < currentChunks.length; i++) {
-                const chunk = currentChunks[i];
-                const embedding = embeddings[i];
-                if (embedding && embedding.length > 0) {
-                    await localforage.setItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`, embedding);
-                } else {
-                    console.warn(`Failed to generate embedding for chat chunk ${chunk.id}. It will not be saved.`);
-                    await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunk.id}`);
-                }
-            }
-            console.log(`Automatically processed and saved ${currentChunks.length} chunk embeddings for chat ${chatToSaveToStorage.id}`);
-        } else {
-            console.log(`Automatic embedding skipped for chat ${chatToSaveToStorage.id} as embedding service is not fully configured.`);
-        }
       }
-    } else {
-      console.log(`Manual embedding mode: Skipped embedding generation for chat ${chatToSaveToStorage.id}. Chunks saved without embeddings.`);
     }
-    console.log(`Processed and saved ${currentChunks.length} chunk texts for chat ${chatToSaveToStorage.id}. Embedding mode: ${embeddingMode}`);
+    console.log(`Processed and saved ${currentChunks.length} chunk texts and index for chat ${chatToSaveToStorage.id}.`);
   } catch (error) {
     console.error(`Error during chunking or conditional embedding generation for chat ${chatToSaveToStorage.id}:`, error);
-    // Allow chat saving to succeed even if chunk processing fails.
   }
-  // --- End of New Chunking and Embedding Logic ---
   
   return chatToSaveToStorage; 
 };
 
 /**
  * Fetches all chat messages from localforage and their embeddings.
+ * (This function is unchanged)
  */
 export const getAllChatMessages = async (): Promise<ChatMessageWithEmbedding[]> => {
   const keys = await localforage.keys();
@@ -197,19 +178,22 @@ export const getAllChatMessages = async (): Promise<ChatMessageWithEmbedding[]> 
 };
 
 /**
- * Deletes a chat message and its embedding from localforage by its ID.
- * The ID provided should be the full key (e.g., "chat_12345").
+ * Deletes a chat message and all its associated data (embedding, chunks, index).
  */
 export const deleteChatMessage = async (fullChatId: string): Promise<void> => {
   if (!fullChatId.startsWith(CHAT_STORAGE_PREFIX)) {
-    console.warn(`deleteChatMessage called with an ID that does not have the correct prefix: ${fullChatId}. Attempting to delete anyway.`);
+    console.warn(`deleteChatMessage called with an ID that does not have the correct prefix: ${fullChatId}.`);
   }
-  await removeChatMessageFromIndex(fullChatId); // <-- This must be present!
+  
+  // 1. Remove from main search index
+  await removeChatMessageFromIndex(fullChatId);
+  
+  // 2. Remove the core chat object, its whole-chat embedding, and its parent-to-chunk index
   await localforage.removeItem(fullChatId);
   await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
-  console.log('Chat message and its embedding deleted from system:', fullChatId);
-
-  // Also, find and remove all associated chunk texts and embeddings
+  await localforage.removeItem(`${CHAT_CHUNK_INDEX_PREFIX}${fullChatId}`);
+  
+  // 3. Find and remove all associated chunk texts and chunk embeddings
   const allKeys = await localforage.keys();
   const chunkTextKeysToDelete = allKeys.filter(key =>
     key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(fullChatId)
@@ -224,47 +208,42 @@ export const deleteChatMessage = async (fullChatId: string): Promise<void> => {
   for (const key of chunkEmbeddingKeysToDelete) {
     await localforage.removeItem(key);
   }
-  console.log(`Deleted ${chunkTextKeysToDelete.length} text chunks and ${chunkEmbeddingKeysToDelete.length} embedding chunks for chat ${fullChatId}.`);
+  
+  console.log(`Deleted chat ${fullChatId} and all associated data.`);
 };
 
 /**
- * Deletes all chat messages and their embeddings from localforage.
+ * Deletes all chat messages and their associated data from localforage.
  */
 export const deleteAllChatMessages = async (): Promise<void> => {
   const keys = await localforage.keys();
-  const chatKeysToDelete: string[] = [];
-  const embeddingKeysToDelete: string[] = [];
-  const chunkTextKeysToDelete: string[] = [];
-  const chunkEmbeddingKeysToDelete: string[] = [];
+  const keysToDelete: string[] = [];
 
   for (const key of keys) {
-    if (key.startsWith(CHAT_STORAGE_PREFIX)) {
-      chatKeysToDelete.push(key);
-    } else if (key.startsWith(EMBEDDING_CHAT_PREFIX)) {
-      embeddingKeysToDelete.push(key);
-    } else if (key.startsWith(CHAT_CHUNK_TEXT_PREFIX)) {
-      chunkTextKeysToDelete.push(key);
-    } else if (key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX)) {
-      chunkEmbeddingKeysToDelete.push(key);
+    if (
+      key.startsWith(CHAT_STORAGE_PREFIX) ||
+      key.startsWith(EMBEDDING_CHAT_PREFIX) ||
+      key.startsWith(CHAT_CHUNK_TEXT_PREFIX) ||
+      key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) ||
+      key.startsWith(CHAT_CHUNK_INDEX_PREFIX) // Include the index prefix
+    ) {
+      keysToDelete.push(key);
     }
   }
 
-  await Promise.all(chatKeysToDelete.map(key => localforage.removeItem(key)));
-  await Promise.all(embeddingKeysToDelete.map(key => localforage.removeItem(key)));
-  await Promise.all(chunkTextKeysToDelete.map(key => localforage.removeItem(key)));
-  await Promise.all(chunkEmbeddingKeysToDelete.map(key => localforage.removeItem(key)));
+  await Promise.all(keysToDelete.map(key => localforage.removeItem(key)));
   
-  console.log('All chat messages, their embeddings, and all associated chunks deleted from system.');
-  await rebuildFullIndex(); // <-- This ensures the index is rebuilt after bulk delete
+  console.log('All chat messages and associated data deleted.');
+  await rebuildFullIndex();
 };
 
 /**
  * Gets a single chat message by ID, including its embedding.
- * The ID provided should be the full key (e.g., "chat_12345").
+ * (This function is unchanged)
  */
 export const getChatMessageById = async (fullChatId: string): Promise<ChatMessageWithEmbedding | null> => {
   if (!fullChatId.startsWith(CHAT_STORAGE_PREFIX)) {
-    console.warn(`getChatMessageById called with an ID that does not have the correct prefix: ${fullChatId}. Attempting to fetch anyway.`);
+    console.warn(`getChatMessageById called with an ID that does not have the correct prefix: ${fullChatId}.`);
   }
   const rawChat = await localforage.getItem<ChatMessage>(fullChatId);
   if (!rawChat) {

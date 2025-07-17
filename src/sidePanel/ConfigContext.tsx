@@ -91,7 +91,7 @@ const defaultConfig: Config = {
       topK: 50, // Moved and updated default
     },
     embedding_model: 'text-embedding-3-small',
-    semantic_threshold: 0.6,
+    semantic_threshold: 0.1,
     semantic_top_k: 50, // For initial semantic fetch
     final_top_k: 10, // For final results after reranking
     bm25_weight: 0.5,

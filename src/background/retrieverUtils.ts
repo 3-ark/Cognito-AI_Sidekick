@@ -22,72 +22,64 @@ import { findSimilarChunks, parseChunkId } from './semanticSearchUtils';
 import type { Note } from '../types/noteTypes'; // Import type Note
 
 /**
- * Fetches all chunk texts for a given parent document (note or chat).
- * @param parentId The ID of the parent note or chat.
- * @param parentType The type of the parent ('note' or 'chat').
- * @returns A promise that resolves to an array of objects, each containing a chunkId and its text.
- */
-
-
-/**
- * Fetches all chunk texts for a given list of parent documents (notes or chats) in a single pass.
- * @param parentIds An array of objects, each with a parentId and parentType.
+ * Fetches all chunk texts for a given list of parent documents using a parent-to-chunk index.
+ * This is highly performant as it avoids scanning the entire database.
+ * @param parentItems An array of objects, each with a parentId and parentType.
  * @returns A promise that resolves to a map where keys are parentIds and values are arrays of chunk objects.
  */
 export async function getChunkTextsForParents(
-  parentIds: Array<{ parentId: string; parentType: 'note' | 'chat' }>
+  parentItems: Array<{ parentId: string; parentType: 'note' | 'chat' }>
 ): Promise<Map<string, Array<{ chunkId: string; chunkText: string }>>> {
   const results = new Map<string, Array<{ chunkId: string; chunkText: string }>>();
-  if (!parentIds || parentIds.length === 0) {
+  if (!parentItems || parentItems.length === 0) {
     return results;
   }
 
-  // Initialize the map with empty arrays for each requested parentId
-  parentIds.forEach(({ parentId }) => {
-    results.set(parentId, []);
-  });
-
-  try {
-    const keys = await localforage.keys();
-    const noteChunkPrefix = NOTE_CHUNK_TEXT_PREFIX;
-    const chatChunkPrefix = CHAT_CHUNK_TEXT_PREFIX;
-
-    // Create a quick lookup for parent info
-    const parentIdMap = new Map(parentIds.map(p => [p.parentId, p.parentType]));
-
-    for (const key of keys) {
-      let parentType: 'note' | 'chat' | undefined;
-      let chunkId: string | undefined;
-      let prefix: string | undefined;
-
-      if (key.startsWith(noteChunkPrefix)) {
-        parentType = 'note';
-        prefix = noteChunkPrefix;
-      } else if (key.startsWith(chatChunkPrefix)) {
-        parentType = 'chat';
-        prefix = chatChunkPrefix;
-      } else {
-        continue; // Not a chunk text key
-      }
+  // Process all parents in parallel for maximum speed
+  await Promise.all(parentItems.map(async ({ parentId, parentType }) => {
+    // Define the keys for the index and the chunk texts based on parent type
+    const indexKey = parentType === 'note' 
+      ? `note-chunk-index:${parentId}` 
+      : `chat-chunk-index:${parentId}`;
       
-      chunkId = key.substring(prefix.length);
-      const parsed = parseChunkId(chunkId); // Assuming parseChunkId can get parentId from chunkId
+    const textPrefix = parentType === 'note' 
+      ? NOTE_CHUNK_TEXT_PREFIX 
+      : CHAT_CHUNK_TEXT_PREFIX;
 
-      if (parsed && parentIdMap.has(parsed.parentId) && parentIdMap.get(parsed.parentId) === parentType) {
-        const chunkText = await localforage.getItem<string>(key);
-        if (typeof chunkText === 'string') {
-          const parentChunks = results.get(parsed.parentId);
-          if (parentChunks) {
-            parentChunks.push({ chunkId, chunkText });
-          }
+    try {
+      // 1. Fetch the list of chunk IDs directly from the index. This is very fast.
+      const chunkIds = await localforage.getItem<string[]>(indexKey);
+
+      if (!chunkIds || chunkIds.length === 0) {
+        results.set(parentId, []); // No chunks found for this parent
+        return;
+      }
+
+      // 2. Create the full keys for all chunk texts
+      const chunkTextKeys = chunkIds.map(chunkId => `${textPrefix}${chunkId}`);
+
+      // 3. Fetch all chunk texts for this parent in a single parallel batch
+      const chunkTexts = await Promise.all(
+        chunkTextKeys.map(key => localforage.getItem<string>(key))
+      );
+
+      // 4. Assemble the results for this parent
+      const parentChunks: Array<{ chunkId: string; chunkText: string }> = [];
+      for (let i = 0; i < chunkIds.length; i++) {
+        const text = chunkTexts[i];
+        if (typeof text === 'string') {
+          parentChunks.push({ chunkId: chunkIds[i], chunkText: text });
         } else {
-          console.warn(`[getChunkTextsForParents] No valid text found for key: ${key}`);
+          console.warn(`[getChunkTextsForParents] Could not find text for chunk ${chunkIds[i]} of parent ${parentId}`);
         }
       }
+      results.set(parentId, parentChunks);
+
+    } catch (error) {
+      console.error(`[getChunkTextsForParents] Error fetching chunks for parent ${parentId}:`, error);
+      results.set(parentId, []); // Ensure an entry exists even on error
     }
-  } catch (error) {
-    console.error(`[getChunkTextsForParents] Error fetching chunk texts for multiple parents:`, error);
-  }
+  }));
 
   return results;
 }
@@ -195,35 +187,54 @@ export async function getHybridRankedChunks(
   if (bm25Weight > 0) { // Only perform BM25 if it has a weight
      bm25ParentResults = await bm25Search(query, bm25TopKParents);
   }
+// --- !!! ADD THIS DEBUGGING BLOCK !!! ---
+console.log("--- BM25 DEBUG ---");
+console.log("Raw BM25 Results:", JSON.parse(JSON.stringify(bm25ParentResults)));
+const parentIdsForBM25_debug = bm25ParentResults.map(([parentId, _]) => {
+    const parsed = parseChunkIdFromParent(parentId);
+    return parsed ? { parentId: parsed.id, parentType: parsed.type } : null;
+}).filter((p): p is { parentId: string; parentType: 'note' | 'chat' } => p !== null);
+console.log("Parent IDs passed to getChunkTextsForParents:", parentIdsForBM25_debug);
+console.log("--- END BM25 DEBUG ---");
+// --- END OF DEBUGGING BLOCK ---
 
-  // --- Step 4: Prepare Chunks from BM25 Results ---
+
+  // --- Step 4: Prepare Chunks from BM25 Results (Corrected) ---
   const bm25DerivedChunks: Array<{ chunkId: string; parentId: string; parentType: 'note' | 'chat'; bm25Score: number }> = [];
   if (bm25Weight > 0 && bm25ParentResults.length > 0) {
-    const parentIdsForBM25 = bm25ParentResults.map(([parentId, _]) => {
-      const parsed = parseChunkIdFromParent(parentId);
-      return parsed ? { parentId: parsed.id, parentType: parsed.type } : null;
-    }).filter((p): p is { parentId: string; parentType: 'note' | 'chat' } => p !== null);
+  // This part is correct: it creates a list of objects with UN-PREFIXED parent IDs.
+  const parentIdsForBM25 = bm25ParentResults.map(([fullParentId, _]) => {
+    const parsed = parseChunkIdFromParent(fullParentId);
+    return parsed ? { parentId: parsed.id, parentType: parsed.type } : null;
+  }).filter((p): p is { parentId: string; parentType: 'note' | 'chat' } => p !== null);
+  
+  // This is also correct: it fetches chunks and returns a map keyed by UN-PREFIXED parent IDs.
+  const allChunksForParents = await getChunkTextsForParents(parentIdsForBM25);
 
-    const allChunksForParents = await getChunkTextsForParents(parentIdsForBM25);
+  // --- THIS IS THE CORRECTED LOOP ---
+  // Now, associate the BM25 score of a parent with all of its chunks.
+  for (const [fullParentId, parentBm25Score] of bm25ParentResults) {
+    // First, parse the full ID to get the clean ID and type.
+    const parsedParent = parseChunkIdFromParent(fullParentId);
+    if (!parsedParent) {
+      continue; // Skip if the ID format is unexpected.
+    }
 
-    for (const [parentId, parentBm25Score] of bm25ParentResults) {
-      const chunksFromParent = allChunksForParents.get(parentId);
-      if (chunksFromParent) {
-        const parsedParentId = parseChunkIdFromParent(parentId); // We know this will parse from above filter
-        if (!parsedParentId) continue;
-
-        for (const chunk of chunksFromParent) {
-          bm25DerivedChunks.push({
-            chunkId: chunk.chunkId,
-            parentId: parsedParentId.id,
-            parentType: parsedParentId.type,
-            bm25Score: parentBm25Score,
-          });
-        }
+    // Use the CLEAN, UN-PREFIXED ID for the map lookup. This is the fix.
+    const chunksFromParent = allChunksForParents.get(parsedParent.id);
+    
+    if (chunksFromParent) {
+      for (const chunk of chunksFromParent) {
+        bm25DerivedChunks.push({
+          chunkId: chunk.chunkId,
+          parentId: parsedParent.id,     // Use the clean ID for consistency.
+          parentType: parsedParent.type,
+          bm25Score: parentBm25Score,    // Assign the parent's score to the chunk.
+        });
       }
     }
   }
-  
+}  
   // --- Step 5: Normalize Scores ---
   // Normalize semantic scores
   const semanticScoresToNormalize = semanticChunks.map(c => ({ id: c.chunkId, score: c.semanticScore }));
@@ -292,37 +303,81 @@ export async function getHybridRankedChunks(
   hybridScoredChunks.sort((a, b) => b.hybridScore - a.hybridScore);
   const topHybridChunks = hybridScoredChunks.slice(0, finalTopK);
 
-  // --- Step 8: Fetch Chunk Texts & Metadata ---
+// --- Step 8: Fetch Chunk Texts & Metadata (Optimized for Performance) ---
+
+  // If there are no chunks after ranking, return early.
+  if (topHybridChunks.length === 0) {
+    return [];
+  }
+
+  // 1. GATHER ALL IDENTIFIERS NEEDED FOR FETCHING
+  // This avoids fetching the same parent document multiple times if several of its chunks are in the top results.
+  const noteParentIds = new Set<string>();
+  const chatParentIds = new Set<string>();
+  
+  topHybridChunks.forEach(chunk => {
+    if (chunk.parentType === 'note') {
+      noteParentIds.add(chunk.parentId);
+    } else {
+      chatParentIds.add(chunk.parentId);
+    }
+  });
+
+  const textKeys = topHybridChunks.map(c => 
+    c.parentType === 'note' 
+      ? `${NOTE_CHUNK_TEXT_PREFIX}${c.chunkId}` 
+      : `${CHAT_CHUNK_TEXT_PREFIX}${c.chunkId}`
+  );
+
+  // 2. FETCH ALL DATA IN PARALLEL using Promise.all
+  // This is significantly faster than awaiting each fetch inside a loop.
+  const [
+    chunkTexts,
+    noteParents,
+    chatParents
+  ] = await Promise.all([
+    Promise.all(textKeys.map(key => localforage.getItem<string>(key))),
+    Promise.all(Array.from(noteParentIds).map(id => getNoteByIdFromSystem(id))),
+    Promise.all(Array.from(chatParentIds).map(id => getChatMessageById(id)))
+  ]);
+
+  // 3. CREATE FAST-ACCESS LOOKUP MAPS for the fetched parent data
+  // This provides O(1) access to parent data in the final assembly loop.
+  const noteParentMap = new Map(
+    noteParents.filter((p): p is Note => p !== null).map(p => [p.id, p])
+  );
+  const chatParentMap = new Map(
+    chatParents.filter((p): p is ChatMessage => p !== null).map(p => [p.id, p])
+  );
+
+  // 4. ASSEMBLE THE FINAL RESULTS
+  // This loop is now very fast as all data is already in memory.
   const finalResults: HybridRankedChunk[] = [];
-  for (const hybridChunk of topHybridChunks) {
-    let chunkText: string | null = null;
-    const textKey = hybridChunk.parentType === 'note' 
-      ? `${NOTE_CHUNK_TEXT_PREFIX}${hybridChunk.chunkId}` 
-      : `${CHAT_CHUNK_TEXT_PREFIX}${hybridChunk.chunkId}`;
-    
-    chunkText = await localforage.getItem<string>(textKey);
+  for (let i = 0; i < topHybridChunks.length; i++) {
+    const hybridChunk = topHybridChunks[i];
+    const chunkText = chunkTexts[i];
 
     if (typeof chunkText !== 'string') {
       console.warn(`[getHybridRankedChunks] Could not fetch text for chunk ${hybridChunk.chunkId}. Skipping.`);
       continue;
     }
 
-    let parentData: Note | ChatMessage | null = null;
+    let parentData: Note | ChatMessage | undefined;
     let parentTitle: string | undefined;
     let originalUrl: string | undefined;
     let originalTags: string[] | undefined;
 
     if (hybridChunk.parentType === 'note') {
-      parentData = await getNoteByIdFromSystem(hybridChunk.parentId);
+      parentData = noteParentMap.get(hybridChunk.parentId);
       if (parentData) {
-        parentTitle = (parentData as Note).title;
-        originalUrl = (parentData as Note).url;
-        originalTags = (parentData as Note).tags;
+        parentTitle = parentData.title;
+        originalUrl = parentData.url;
+        originalTags = parentData.tags;
       }
     } else { // 'chat'
-      parentData = await getChatMessageById(hybridChunk.parentId);
+      parentData = chatParentMap.get(hybridChunk.parentId);
       if (parentData) {
-        parentTitle = (parentData as ChatMessage).title || `Chat on ${new Date((parentData as ChatMessage).last_updated).toLocaleDateString()}`;
+        parentTitle = parentData.title || `Chat on ${new Date(parentData.last_updated).toLocaleDateString()}`;
       }
     }
     
@@ -335,31 +390,36 @@ export async function getHybridRankedChunks(
       parentType: hybridChunk.parentType,
       hybridScore: hybridChunk.hybridScore,
       chunkText: chunkText,
-      parentTitle: parentTitle || (parentData as any)?.title || 'Unknown Title',
+      parentTitle: parentTitle || 'Unknown Title',
       originalUrl,
       originalTags,
+      // Use optional chaining for safety in case parsing fails or properties don't exist
       role: parsedChunkIdDetails?.role,
       timestamp: parsedChunkIdDetails?.timestamp,
-      headingPath: parsedChunkIdDetails?.headingPath, // This might not be directly in parseChunkId, adjust if needed
+      headingPath: parsedChunkIdDetails?.headingPath,
       normalizedSemanticScore: hybridChunk.normalizedSemanticScore,
       normalizedBm25Score: hybridChunk.normalizedBm25Score,
     });
   }
+
   return finalResults;
 }
-
 // Helper to parse parent ID and determine type (Note: BM25 search returns parent IDs)
-// Parent IDs from BM25 are like "note_xxxx" or "chat_yyyy"
+// Parent IDs from BM25 are like "note:xxxx" or "chat:yyyy"
 function parseChunkIdFromParent(parentIdFromBM25: string): { id: string; type: 'note' | 'chat' } | null {
-  if (parentIdFromBM25.startsWith(NOTE_STORAGE_PREFIX.replace(/:$/, ''))) { // remove trailing colon if present for comparison
+  const notePrefix = NOTE_STORAGE_PREFIX; // e.g., 'note:'
+  const chatPrefix = CHAT_STORAGE_PREFIX; // e.g., 'chat:'
+
+  if (parentIdFromBM25.startsWith(notePrefix)) {
+    // Return the type and the ID *without* the prefix
     return { id: parentIdFromBM25, type: 'note' };
-  } else if (parentIdFromBM25.startsWith(CHAT_STORAGE_PREFIX.replace(/:$/, ''))) {
+  } else if (parentIdFromBM25.startsWith(CHAT_STORAGE_PREFIX)) {
     return { id: parentIdFromBM25, type: 'chat' };
   }
+    
   console.warn(`[parseChunkIdFromParent] Could not determine type for parent ID: ${parentIdFromBM25}`);
   return null;
 }
-
 /**
  * Formats the hybrid ranked chunks for display or use by an LLM.
  * @param rankedChunks An array of HybridRankedChunk objects.

@@ -90,3 +90,19 @@ export interface ChatChunk {
   /** The title of the parent chat session, if available. */
   parentTitle?: string;
 }
+
+/**
+ * The result of chunking a note, containing both the chunks and a list of their IDs for indexing.
+ */
+export interface NoteChunkingResult {
+  chunks: NoteChunk[];
+  chunkIds: string[];
+}
+
+/**
+ * The result of chunking a chat message, containing both the chunks and a list of their IDs for indexing.
+ */
+export interface ChatChunkingResult {
+  chunks: ChatChunk[];
+  chunkIds: string[];
+}
