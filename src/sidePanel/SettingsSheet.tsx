@@ -258,7 +258,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
           <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-5")}>
             <div className="relative mt-5">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text)] opacity-50" />
-              <Input type="text" placeholder="Search your notes and chat history..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] h-8 placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
+              <Input type="text" placeholder="Search your notes and chat history..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl shadow-sm border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] h-8 placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
             </div>
             {isLoadingSearch && <div className="text-center text-[var(--text)] opacity-70">Searching...</div>}
             {searchError && <div className="text-center text-red-500">{searchError}</div>}
