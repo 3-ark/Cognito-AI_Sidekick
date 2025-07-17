@@ -1,8 +1,8 @@
 Find the latest release and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
-## [3.8.10] - 2024-07-16
+## [3.8.11] - 2024-07-17
 
-* optimize chunking, storage clean
+* Much faster searching
 
 *Note: 1. You have to use the same embedding model for your embedding and query.*
       *2. Current BM25 have a very good support for Latin languages, Cyrillic, Korean, Arabic, and Devanagari are fairly supported, Japanese should have a similar performance with Latin languages. For embedding, you have to use your favorite embedding models, this is the most important for the performance.*
