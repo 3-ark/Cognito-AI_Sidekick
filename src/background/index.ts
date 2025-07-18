@@ -478,34 +478,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // GET_BM25_SEARCH_RESULTS handler (Now GET_HYBRID_SEARCH_RESULTS)
-  if (message.type === 'GET_BM25_SEARCH_RESULTS' && message.payload) { // Keeping type for compatibility, or change to GET_HYBRID_SEARCH_RESULTS
-    const { query } = message.payload; // topK is now handled by config within getHybridRankedChunks
+  if (message.type === 'GET_BM25_SEARCH_RESULTS' && message.payload) {
+    const { query } = message.payload;
     (async () => {
       try {
-        // Fetch latest config from storage
         const configStr: string | null = await storage.getItem('config');
         const config: Config | null = configStr ? JSON.parse(configStr) : null;
 
         if (!config) {
           throw new Error("Configuration not found. Cannot perform hybrid search.");
         }
-        
-        console.log(`[Background] Performing hybrid search for query: "${query}" with config:`, config.rag);
+
         const hybridChunks = await getHybridRankedChunks(query, config);
         
-        if (!hybridChunks || hybridChunks.length === 0) {
-          sendResponse({ success: true, results: "No relevant documents found using hybrid search." });
-          return;
-        }
-        
-        const formattedResults = formatResultsForLLM(hybridChunks);
-        sendResponse({ success: true, results: formattedResults });
+        sendResponse({ success: true, results: hybridChunks });
+
       } catch (error: any) {
         console.error('[Background] Error getting hybrid search results:', error);
-        sendResponse({ success: false, error: error.message });
+        sendResponse({ success: false, error: error.message, results: [] });
       }
     })();
-    return true; // Indicates asynchronous response
+    return true;
   }
 
   // SAVE_CHAT_REQUEST handler

@@ -10,6 +10,59 @@ import { useTools } from './useTools';
 import type { LLMToolCall } from './useTools';
 import type { Note } from '../../types/noteTypes';
 import * as pdfjsLib from 'pdfjs-dist';
+import type { HybridRankedChunk } from 'src/background/retrieverUtils';
+
+// --- NEW HELPER FUNCTION FOR RAG RESULTS ---
+/**
+ * Builds a clean prompt context and a separate sources string from retriever chunks.
+ * @param retrieverChunks - Chunks from your notes/chats.
+ * @returns An object with `promptContext` for the LLM and `sourcesString` for appending later.
+ */
+const buildPromptFromRetrieverChunks = (
+  retrieverChunks: HybridRankedChunk[]
+): { promptContext: string; sourcesString: string } => {
+  if (!retrieverChunks || retrieverChunks.length === 0) {
+    return { promptContext: "", sourcesString: "" };
+  }
+
+  let promptContext = "Use the following search results to answer. Cite sources using the provided footnote markers (e.g., [^1], [^2]) where appropriate. Do NOT include a 'Sources' or 'Footnotes' section at the end of your response; this will be added automatically.\n\n";
+  let sourcesString = "### Sources\n";
+  let citationCounter = 1;
+
+  const chunksBySource = new Map<string, HybridRankedChunk[]>();
+  const sourceInfoMap = new Map<string, { citationNum: number; chunk: HybridRankedChunk }>();
+
+  for (const chunk of retrieverChunks) {
+    const sourceKey = chunk.parentId;
+    if (!chunksBySource.has(sourceKey)) {
+      chunksBySource.set(sourceKey, []);
+      sourceInfoMap.set(sourceKey, { citationNum: citationCounter++, chunk });
+    }
+    chunksBySource.get(sourceKey)!.push(chunk);
+  }
+
+  const sortedSourceInfo = Array.from(sourceInfoMap.entries()).sort((a, b) => a[1].citationNum - b[1].citationNum);
+
+  for (const [sourceKey, { citationNum, chunk }] of sortedSourceInfo) {
+    const sourceType = chunk.parentType === 'note' ? 'Note' : 'Chat';
+    const title = chunk.parentTitle || 'Untitled';
+    
+    promptContext += `### Source [${citationNum}]: ${sourceType}: "${title}"\n`;
+    const chunks = chunksBySource.get(sourceKey)!;
+    for (const c of chunks) {
+      promptContext += `${c.chunkText}\n\n`;
+    }
+
+    sourcesString += `[^${citationNum}]: ${sourceType}: "${title}"`;
+    if (chunk.parentType === 'note' && chunk.originalUrl) {
+      sourcesString += ` (URL: ${chunk.originalUrl})`;
+    }
+    sourcesString += '\n';
+  }
+
+  return { promptContext, sourcesString };
+};
+
 
 export const robustlyParseLlmResponseForToolCall = (responseText: string): any | null => {
   try {
@@ -128,7 +181,7 @@ const useSendMessage = (
   retrieverQuery: string,
   setTurns: Dispatch<SetStateAction<MessageTurn[]>>,
   setMessage: Dispatch<SetStateAction<string>>,
-  setRetrieverQuery: Dispatch<SetStateAction<string>>, // Added setRetrieverQuery
+  setRetrieverQuery: Dispatch<SetStateAction<string>>,
   setWebContent: Dispatch<SetStateAction<string>>,
   setPageContent: Dispatch<SetStateAction<string>>,
   setLoading: Dispatch<SetStateAction<boolean>>,
@@ -210,7 +263,6 @@ const useSendMessage = (
       setLoading(false);
 
       if (justFinishedLlmToolCallJson) {
-        // Set a timeout to set status to idle if no further assistant message arrives
         if (toolCallTimeout) clearTimeout(toolCallTimeout);
         toolCallTimeout = setTimeout(() => {
           setChatStatus('idle');
@@ -265,43 +317,50 @@ const useSendMessage = (
 
   const onSend = async (overridedMessage?: string) => {
     const callId = Date.now();
-    console.log(`[${callId}] useSendMessage: onSend triggered. Retriever query: "${retrieverQuery}"`);
+    console.log(`[${callId}] useSendMessage: onSend triggered.`);
 
     const originalMessageFromInput = overridedMessage || "";
     let messageForLLM = originalMessageFromInput.trim();
-    let retrieverResultsContext = "";
+    
+    let sourcesStringForAppending = ""; // This will hold the final footnote definitions
 
     if (retrieverQuery && retrieverQuery.trim() !== "") {
-      setChatStatus('searching'); // Indicate that we are fetching retriever results
+      setChatStatus('searching');
       try {
-        console.log(`[${callId}] useSendMessage: Performing BM25 search for query: "${retrieverQuery}"`);
-        const results = await new Promise<string>((resolve, reject) => {
+        console.log(`[${callId}] Performing hybrid search for query: "${retrieverQuery}"`);
+        
+        const response = await new Promise<{ success: boolean; results?: HybridRankedChunk[]; error?: string }>((resolve, reject) => {
           chrome.runtime.sendMessage(
-            { type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery, topK: config?.rag?.bm25?.topK } }, // will use hybrid search if RAG is added in the future
-            (response) => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
-              } else if (response.error) {
-                reject(new Error(response.error));
-              } else {
-                resolve(response.results);
-              }
+            { type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery } },
+            (res) => {
+              if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+              else resolve(res);
             }
           );
         });
-        retrieverResultsContext = results;
-        console.log(`[${callId}] useSendMessage: BM25 search results received. Length: ${retrieverResultsContext.length}`);
-      } catch (error: any) {
-        console.error(`[${callId}] useSendMessage: Error fetching BM25 search results:`, error);
-        messageForLLM = `(Error fetching search results: ${error.message})\n${messageForLLM}`;
-      }
-      // Clear the retriever query from UI after processing, regardless of success or failure
-      setRetrieverQuery('');
-      setChatStatus('thinking'); // Back to thinking after search
-    }
 
-    if (retrieverResultsContext) {
-      messageForLLM = `${retrieverResultsContext}\n\n---\n\n${messageForLLM}`;
+        // We now check ONLY for success. If successful, we process the results.
+        // If not successful, we throw the error from the response.
+        if (response.success) {
+          // The `results` property might be an empty array, which is a valid success case.
+          const chunks = response.results || [];
+          const { promptContext, sourcesString } = buildPromptFromRetrieverChunks(chunks);
+          
+          if (promptContext) {
+            messageForLLM = `${promptContext}\n\n---\n\n${messageForLLM}`;
+            sourcesStringForAppending = sourcesString; // Save the sources to append after the LLM responds
+          }
+        } else {
+          // This path is taken if response.success is false.
+          throw new Error(response.error || "Unknown search error from background script.");
+        }
+
+      } catch (error: any) {
+        console.error(`[${callId}] Error fetching search results:`, error);
+        messageForLLM = `(I tried to search my knowledge base but got an error: ${error.message})\n${messageForLLM}`;
+      }
+      setRetrieverQuery('');
+      setChatStatus('thinking');
     }
         
     if (selectedNotesForContext && selectedNotesForContext.length > 0) {
@@ -315,21 +374,18 @@ const useSendMessage = (
     console.log(`[${callId}] Message for LLM: "${messageForLLM}"`);
 
     if (!config) {
-      console.log(`[${callId}] useSendMessage: Bailing out: Missing config.`);
+      console.log(`[${callId}] Bailing out: Missing config.`);
       setLoading(false);
       return;
     }
-    // Ensure there's either a message or a (now processed) retriever query that might have produced context
-    if (!messageForLLM.trim() && (!selectedNotesForContext || selectedNotesForContext.length === 0) && !retrieverResultsContext) {
-      console.log(`[${callId}] useSendMessage: Bailing out: Empty message, no notes, and no retriever results.`);
+    if (!messageForLLM.trim() && (!selectedNotesForContext || selectedNotesForContext.length === 0)) {
+      console.log(`[${callId}] Bailing out: Empty message and no context.`);
       setLoading(false);
-      // If retrieverQuery was present but yielded no results, it's already cleared.
-      // setMessage('') is called later, so no need to clear it here if it was already empty.
       return;
     }
 
     if (completionGuard.current !== null) {
-      console.warn(`[${callId}] useSendMessage: Another send operation (ID: ${completionGuard.current}) is already in progress. Aborting previous.`);
+      console.warn(`[${callId}] Aborting previous send operation (ID: ${completionGuard.current}).`);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -338,7 +394,7 @@ const useSendMessage = (
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    console.log(`[${callId}] useSendMessage: Setting loading true.`);
+    console.log(`[${callId}] Setting loading true.`);
     setLoading(true);
     setWebContent('');
     setPageContent('');
@@ -354,7 +410,6 @@ const useSendMessage = (
 
     completionGuard.current = callId;
 
-    // --- URL Detection and Scraping ---
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = originalMessageFromInput.match(urlRegex);
     let scrapedContent = '';
@@ -381,7 +436,7 @@ const useSendMessage = (
     };
     setTurns(prevTurns => [...prevTurns, userTurn]);
     setMessage('');
-    console.log(`[${callId}] useSendMessage: User turn added to state. Original input: "${originalMessageFromInput}"`);
+    console.log(`[${callId}] User turn added to state. Original input: "${originalMessageFromInput}"`);
 
     const assistantTurnPlaceholder: MessageTurn = {
         role: 'assistant',
@@ -390,7 +445,7 @@ const useSendMessage = (
         timestamp: Date.now() + 1 
     };
     setTurns(prevTurns => [...prevTurns, assistantTurnPlaceholder]);
-    console.log(`[${callId}] useSendMessage: Assistant placeholder turn added early.`);
+    console.log(`[${callId}] Assistant placeholder turn added early.`);
 
     let queryForProcessing = messageForLLM;
     let searchRes: string = '';
@@ -399,14 +454,14 @@ const useSendMessage = (
     const performSearch = config?.chatMode === 'web';
     const currentModel = config?.models?.find(m => m.id === config.selectedModel);
     if (!currentModel) {
-      console.error(`[${callId}] useSendMessage: No current model found.`);
+      console.error(`[${callId}] No current model found.`);
       updateAssistantTurn(callId, "Configuration error: No model selected.", true, true);
       return;
     }
     const authHeader = getAuthHeader(config, currentModel);
 
     if (performSearch) {
-      console.log(`[${callId}] useSendMessage: Optimizing query...`);
+      console.log(`[${callId}] Optimizing query...`);
       setChatStatus('thinking');    
       const historyForQueryOptimization= currentTurns.map(turn => ({
         role: turn.role,
@@ -424,11 +479,11 @@ const useSendMessage = (
         if (optimizedQuery && optimizedQuery.trim() && optimizedQuery !== messageForLLM) {
           queryForProcessing = optimizedQuery;
           processedQueryDisplay = `**Optimized query:** "*${queryForProcessing}*"\n\n`;
-          console.log(`[${callId}] useSendMessage: Query optimized to: "${queryForProcessing}"`);
+          console.log(`[${callId}] Query optimized to: "${queryForProcessing}"`);
         } else {
           queryForProcessing = messageForLLM;
           processedQueryDisplay = `**Original query:** "*${queryForProcessing}"\n\n`;
-          console.log(`[${callId}] useSendMessage: Using original query (cleaned): "${queryForProcessing}"`);
+          console.log(`[${callId}] Using original query (cleaned): "${queryForProcessing}"`);
         }
       } catch (optError) {
         console.error(`[${callId}] Query optimization failed:`, optError);
@@ -440,7 +495,7 @@ const useSendMessage = (
     }
 
     if (performSearch) {
-      console.log(`[${callId}] useSendMessage: Performing web search...`);
+      console.log(`[${callId}] Performing web search...`);
       setChatStatus('searching');
 
       try {
@@ -463,7 +518,7 @@ const useSendMessage = (
           return;
         }
       }
-      console.log(`[${callId}] useSendMessage: Web search completed. Length: ${searchRes.length}`);
+      console.log(`[${callId}] Web search completed. Length: ${searchRes.length}`);
       if (processedQueryDisplay) { 
         setTurns(prevTurns => prevTurns.map(t => (t.role === 'assistant' && prevTurns[prevTurns.length -1] === t && t.status !== 'complete' && t.status !== 'error' && t.status !== 'cancelled') ? { ...t, webDisplayContent: processedQueryDisplay } : t));
       }
@@ -486,7 +541,7 @@ const useSendMessage = (
     let pageContentForLlm = '';
     if (config?.chatMode === 'page') {
       let currentPageContent = '';
-      console.log(`[${callId}] useSendMessage: Preparing page content...`);
+      console.log(`[${callId}] Preparing page content...`);
       setChatStatus('reading');      
       try {
         const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -570,8 +625,6 @@ const useSendMessage = (
     if (pageContextString) systemPromptParts.push(pageContextString);
     if (webContextString) systemPromptParts.push(webContextString);
 
-    // Conditionally add tool prompt based on config.useTools
-    // Default to true if config.useTools is undefined (for backward compatibility or initial load)
     const enableTools = config?.useTools === undefined ? true : config.useTools;
 
     if (enableTools && toolDefinitions && toolDefinitions.length > 0) {
@@ -580,7 +633,6 @@ const useSendMessage = (
         description: tool.function.description,
         parameters: tool.function.parameters
       }));
-      // Refined Tool Prompt (Option A)
       const toolsPrompt = `To help you respond, you have access to the tools listed below. Please follow these guidelines carefully when using them:
 
 Tool Use Guidelines:
@@ -601,12 +653,11 @@ ${JSON.stringify(toolDescriptions, null, 2)}
 
     const systemContent = systemPromptParts.join('\n\n').trim();
 
-    console.log(`[${callId}] useSendMessage: System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx (single): ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`);
+    console.log(`[${callId}] System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx (single): ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`);
 
     try {
       setChatStatus('thinking'); 
-      // All requests now use standard streaming.
-      console.log(`[${callId}] useSendMessage: Starting standard streaming.`);
+      console.log(`[${callId}] Starting standard streaming.`);
       const normalizedUrl = normalizeApiEndpoint(config?.customEndpoint);
       const configBody = { stream: true };
         const urlMap: Record<string, string> = {
@@ -629,7 +680,6 @@ ${JSON.stringify(toolDescriptions, null, 2)}
         if (systemContent.trim() !== '') {
           messagesForApiPayload.push({ role: 'system', content: systemContent });
         }
-        // Add history turns and the current user message
         messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage)); 
         messagesForApiPayload.push({ role: 'user', content: messageForLLM });
 
@@ -647,105 +697,114 @@ ${JSON.stringify(toolDescriptions, null, 2)}
             },
           async (part: string, isFinished?: boolean, isError?: boolean, rawResponse?: any) => {
             if (controller.signal.aborted && !isFinished && !isError) {
-              console.log(`[${callId}] processLlmResponse: Aborted during streaming. Update will be handled by onStop or final error.`);
+              console.log(`[${callId}] processLlmResponse: Aborted during streaming.`);
               return;
             }
 
             if (isFinished && !isError) {
               const assistantResponseContent = part;
-              try {
-                const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
-                if (potentialToolCall &&
-                    ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
-                     (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
-                  
-                  const toolName = potentialToolCall.tool_name || potentialToolCall.name;
-                  const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
-                  const stringifiedArguments = JSON.stringify(toolArgumentsObject);
+              const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
+              
+              if (potentialToolCall &&
+                  ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
+                   (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
+                
+                const toolName = potentialToolCall.tool_name || potentialToolCall.name;
+                const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
+                const stringifiedArguments = JSON.stringify(toolArgumentsObject);
 
-                  console.log(`[${callId}] Detected custom tool call:`, toolName);
+                console.log(`[${callId}] Detected custom tool call:`, toolName);
 
-                  const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
-                  
-                  const structuredToolCallsForAssistant: LLMToolCall[] = [{
-                    id: consistentToolCallId,
-                    type: 'function',
-                    function: {
-                      name: toolName,
-                      arguments: stringifiedArguments
-                    }
-                  }];
-                  updateAssistantTurn(callId, assistantResponseContent, true, false, false, structuredToolCallsForAssistant);
-
-                  const executionResult = await executeToolCall({
-                    id: consistentToolCallId,
+                const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
+                
+                const structuredToolCallsForAssistant: LLMToolCall[] = [{
+                  id: consistentToolCallId,
+                  type: 'function',
+                  function: {
                     name: toolName,
                     arguments: stringifiedArguments
-                  });
-
-                  let contentForToolTurn: string;
-                  if (currentModel?.host === 'gemini') {
-                    try {
-                      const parsedResult = JSON.parse(executionResult.result);
-                      contentForToolTurn = JSON.stringify({ result: parsedResult });
-                    } catch (e) {
-                      contentForToolTurn = JSON.stringify({ result: executionResult.result });
-                    }
-                  } else {
-                    contentForToolTurn = executionResult.result;
                   }
+                }];
+                updateAssistantTurn(callId, assistantResponseContent, true, false, false, structuredToolCallsForAssistant);
 
-                  const toolResultTurn: MessageTurn = {
-                  role: 'tool',
-                  tool_call_id: executionResult.toolCallId || `call_${Date.now()}`,
-                  name: executionResult.name,
-                  content: contentForToolTurn,
-                  status: 'complete',
-                  timestamp: Date.now(),
-                  };                  
-                  setTurns(prevTurns => [...prevTurns, toolResultTurn]);
+                const executionResult = await executeToolCall({
+                  id: consistentToolCallId,
+                  name: toolName,
+                  arguments: stringifiedArguments
+                });
 
-                  // @ts-ignore Gemini API buggy requirement
-                  const assistantApiMessageWithToolCall: ApiMessage = {
-                    role: 'assistant',
-                    // content: "",
-                    tool_calls: structuredToolCallsForAssistant
-                  };
-
-                  const toolResultApiMessage = turnToApiMessage(toolResultTurn);
-
-                  const messagesForNextApiCall: ApiMessage[] = [
-                    ...messagesForApiPayload,
-                    assistantApiMessageWithToolCall,
-                    toolResultApiMessage
-                  ];
-                  // @ts-ignore For gemini api buggy requirement  
-                  const finalAssistantPlaceholder: MessageTurn = {
-                      role: 'assistant', 
-                      // content: '',
-                      status: 'streaming', 
-                      timestamp: Date.now() + 1
-                  };
-                  setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
-
-                  console.log(`[${callId}] Sending tool result back to LLM and awaiting final response.`);
-                  await fetchDataAsStream(
-                    url,
-                    { 
-                       ...configBody, model: config?.selectedModel || '', messages: messagesForNextApiCall,
-                       temperature: config?.temperature ?? 0.7, max_tokens: config?.maxTokens ?? 32048,
-                       top_p: config?.topP ?? 1, presence_penalty: config?.presencepenalty ?? 0,
-                    },
-                    (finalPart, finalIsFinished, finalIsError) => {
-                      updateAssistantTurn(callId, finalPart, Boolean(finalIsFinished), Boolean(finalIsError));
-                    },
-                    authHeader, currentModel.host || '', controller.signal
-                  );
-                  return;
+                let contentForToolTurn: string;
+                if (currentModel?.host === 'gemini') {
+                  try {
+                    const parsedResult = JSON.parse(executionResult.result);
+                    contentForToolTurn = JSON.stringify({ result: parsedResult });
+                  } catch (e) {
+                    contentForToolTurn = JSON.stringify({ result: executionResult.result });
+                  }
+                } else {
+                  contentForToolTurn = executionResult.result;
                 }
-              } catch (e) {
+
+                const toolResultTurn: MessageTurn = {
+                role: 'tool',
+                tool_call_id: executionResult.toolCallId || `call_${Date.now()}`,
+                name: executionResult.name,
+                content: contentForToolTurn,
+                status: 'complete',
+                timestamp: Date.now(),
+                };                  
+                setTurns(prevTurns => [...prevTurns, toolResultTurn]);
+
+                const assistantApiMessageWithToolCall: ApiMessage = {
+                  role: 'assistant',
+                  content:'',
+                  tool_calls: structuredToolCallsForAssistant
+                };
+
+                const toolResultApiMessage = turnToApiMessage(toolResultTurn);
+
+                const messagesForNextApiCall: ApiMessage[] = [
+                  ...messagesForApiPayload,
+                  assistantApiMessageWithToolCall,
+                  toolResultApiMessage
+                ];
+                const finalAssistantPlaceholder: MessageTurn = {
+                    role: 'assistant', 
+                    content: '',
+                    status: 'streaming', 
+                    timestamp: Date.now() + 1
+                };
+                setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
+
+                console.log(`[${callId}] Sending tool result back to LLM and awaiting final response.`);
+                await fetchDataAsStream(
+                  url,
+                  { 
+                     ...configBody, model: config?.selectedModel || '', messages: messagesForNextApiCall,
+                     temperature: config?.temperature ?? 0.7, max_tokens: config?.maxTokens ?? 32048,
+                     top_p: config?.topP ?? 1, presence_penalty: config?.presencepenalty ?? 0,
+                  },
+                  (finalPart, finalIsFinished, finalIsError) => {
+                    if (finalIsFinished && !finalIsError) {
+                      let finalAnswerAfterTool = finalPart;
+                      if (sourcesStringForAppending) {
+                        finalAnswerAfterTool += `\n\n---\n\n${sourcesStringForAppending}`;
+                      }
+                      updateAssistantTurn(callId, finalAnswerAfterTool, true, false);
+                    } else {
+                      updateAssistantTurn(callId, finalPart, Boolean(finalIsFinished), Boolean(finalIsError));
+                    }
+                  },
+                  authHeader, currentModel.host || '', controller.signal
+                );
+                return;
+              } else {
+                let finalContent = assistantResponseContent;
+                if (sourcesStringForAppending) {
+                  finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
+                }
+                updateAssistantTurn(callId, finalContent, true, false);
               }
-              updateAssistantTurn(callId, assistantResponseContent, true, false);
             } else {
               updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
             }
@@ -755,7 +814,7 @@ ${JSON.stringify(toolDescriptions, null, 2)}
           controller.signal
           );
         };
-        console.log(`[${callId}] useSendMessage: Initial LLM call (processLlmResponse) INITIATED.`);
+        console.log(`[${callId}] Initial LLM call (processLlmResponse) INITIATED.`);
         await processLlmResponse();
     } catch (error) {
       if (controller.signal.aborted) {
@@ -769,7 +828,7 @@ ${JSON.stringify(toolDescriptions, null, 2)}
             abortControllerRef.current = null;
         }
       } else {
-        console.error(`[${callId}] useSendMessage: Error during send operation:`, error);
+        console.error(`[${callId}] Error during send operation:`, error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         updateAssistantTurn(callId, errorMessage, true, true);
       }
@@ -780,14 +839,14 @@ ${JSON.stringify(toolDescriptions, null, 2)}
   const onStop = () => {
     const currentCallId = completionGuard.current;
     if (currentCallId !== null) {
-      console.log(`[${currentCallId}] useSendMessage: onStop triggered.`);
+      console.log(`[${currentCallId}] onStop triggered.`);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
       updateAssistantTurn(currentCallId, "[Operation cancelled by user]", true, false, true);
     } else {
-      console.log(`[No CallID] useSendMessage: onStop triggered but no operation in progress.`);
+      console.log(`[No CallID] onStop triggered but no operation in progress.`);
       setLoading(false); 
       setChatStatus('idle'); 
     }

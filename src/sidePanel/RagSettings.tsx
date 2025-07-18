@@ -324,7 +324,7 @@ export const RagSettings = () => {
                     </Label>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-sm border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md rounded-md">
-                    <p>Total number of reranked chunks to return after hybrid search. Default: {semanticTopK} (matches Semantic Top K if not set).</p>
+                    <p>Total number of reranked chunks to return after hybrid search. Default: {finalTopK} (matches Semantic Top K if not set).</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -339,7 +339,7 @@ export const RagSettings = () => {
                 className="w-full h-8"
               />
               <p className="text-xs text-[var(--text)]/70">
-                Total reranked chunks to return. Default: {semanticTopK}
+                Total reranked chunks to return. Default: {finalTopK}
               </p>
             </div>
 

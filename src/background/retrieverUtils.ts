@@ -159,7 +159,6 @@ export async function getHybridRankedChunks(
   const semanticThreshold = ragConfig.semantic_threshold ?? 0.1; // Lower threshold for initial semantic fetch
   const bm25TopKParents = bm25Config.topK ?? 10; // How many parent docs to fetch via BM25
   const bm25Weight = ragConfig.bm25_weight ?? 0.5;
-  // Use the new final_top_k, fallback to semantic_top_k, then to a hardcoded default
   const finalTopK = ragConfig.final_top_k ?? ragConfig.semantic_top_k ?? 10; 
 
   // --- Step 1: Get Query Embedding ---
@@ -420,41 +419,75 @@ function parseChunkIdFromParent(parentIdFromBM25: string): { id: string; type: '
   console.warn(`[parseChunkIdFromParent] Could not determine type for parent ID: ${parentIdFromBM25}`);
   return null;
 }
+
 /**
- * Formats the hybrid ranked chunks for display or use by an LLM.
+ * Formats hybrid ranked chunks for an LLM prompt and separately provides the sources string.
+ *
  * @param rankedChunks An array of HybridRankedChunk objects.
- * @returns A string formatted for LLM context.
+ * @returns An object with two properties:
+ *          - `promptContext`: The context part of the prompt for the LLM.
+ *          - `sourcesString`: A pre-formatted markdown string of the sources.
  */
-export function formatResultsForLLM(rankedChunks: HybridRankedChunk[]): string {
+export function formatResultsForLLM(rankedChunks: HybridRankedChunk[]): { promptContext: string; sourcesString: string } {
   if (!rankedChunks || rankedChunks.length === 0) {
-    return "No relevant search results found to provide context.";
+    return {
+      promptContext: "No relevant search results found to provide context.",
+      sourcesString: ""
+    };
   }
 
-  let promptOutput = "Use the following search results to answer. Cite sources using [Source Type: Parent Title, Chunk ID: chunk_id, Score: X.XX] where appropriate:\n\n";
+  // (The grouping logic from before is still correct and necessary)
+  const chunksBySource = new Map<string, HybridRankedChunk[]>();
+  const sourceInfoMap = new Map<string, { citationNum: number; chunk: HybridRankedChunk }>();
+  let citationCounter = 1;
+
+  for (const chunk of rankedChunks) {
+    const sourceKey = chunk.parentId;
+    if (!chunksBySource.has(sourceKey)) {
+      chunksBySource.set(sourceKey, []);
+      sourceInfoMap.set(sourceKey, { citationNum: citationCounter++, chunk });
+    }
+    chunksBySource.get(sourceKey)!.push(chunk);
+  }
+
+  const sortedSourceInfo = Array.from(sourceInfoMap.entries()).sort(
+    (a, b) => a[1].citationNum - b[1].citationNum
+  );
+
+  // --- BUILD THE PROMPT CONTEXT FOR THE LLM ---
+  // Notice we REMOVED the "### Sources" part from here.
+  let promptContext = "Use the following search results to answer. Cite sources using footnotes (e.g., [^1]) where appropriate. Place the footnotes at the end of your response.\n\n";
+
+  for (const [sourceKey, { citationNum }] of sortedSourceInfo) {
+    promptContext += `### [Content Source [^${citationNum}]]\n`;
+    const chunks = chunksBySource.get(sourceKey)!;
+    for (const chunk of chunks) {
+      if (chunk.parentType === 'chat' && chunk.role && chunk.timestamp) {
+        const date = new Date(chunk.timestamp).toLocaleString();
+        promptContext += `(Role: ${chunk.role}, Time: ${date})\n`;
+      }
+      promptContext += `${chunk.chunkText}\n\n`;
+    }
+  }
   
-  rankedChunks.forEach(chunk => {
-    const sourceType = chunk.parentType === 'note' ? 'Note Chunk' : 'Chat Chunk';
-    const title = chunk.parentTitle || 'Untitled Parent';
-    // Ensure score is displayed with a reasonable number of decimal places
-    const scoreStr = chunk.hybridScore.toFixed(2);
+  // --- BUILD THE SOURCES STRING SEPARATELY ---
+  let sourcesString = "";
+  if (sourceInfoMap.size > 0) {
+    sourcesString += "### Sources\n";
+    for (const [_sourceKey, { citationNum, chunk }] of sortedSourceInfo) {
+      const sourceType = chunk.parentType === 'note' ? 'Note' : 'Chat';
+      const title = chunk.parentTitle || 'Untitled Parent';
+      sourcesString += `[^${citationNum}]: ${sourceType}: "${title}"`;
+      if (chunk.parentType === 'note' && chunk.originalUrl) {
+        sourcesString += ` (URL: ${chunk.originalUrl})`;
+      }
+      sourcesString += '\n';
+    }
+  }
 
-    promptOutput += `### [${sourceType} from: ${title}, Chunk ID: ${chunk.chunkId}, Score: ${scoreStr}]\n`;
-    // Include parent URL for notes if available
-    if (chunk.parentType === 'note' && chunk.originalUrl) {
-      promptOutput += `(Source URL: ${chunk.originalUrl})\n`;
-    }
-    // Include heading path for notes if available
-    if (chunk.parentType === 'note' && chunk.headingPath && chunk.headingPath.length > 0) {
-      promptOutput += `(Section: ${chunk.headingPath.join(' > ')})\n`;
-    }
-    // Include role and timestamp for chat chunks if available
-    if (chunk.parentType === 'chat' && chunk.role && chunk.timestamp) {
-      const date = new Date(chunk.timestamp).toLocaleString();
-      promptOutput += `(Role: ${chunk.role}, Time: ${date})\n`;
-    }
-    
-    promptOutput += `${chunk.chunkText}\n\n`;
-  });
-
-  return promptOutput.trim();
+  // Return both parts
+  return {
+    promptContext: promptContext.trim(),
+    sourcesString: sourcesString.trim()
+  };
 }
