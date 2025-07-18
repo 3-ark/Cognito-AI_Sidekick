@@ -30,40 +30,76 @@ export interface ToolResult {
   content: string;
 }
 
-// Helper function to parse arguments (remains here)
+// Helper function to parse arguments
 export const extractAndParseJsonArguments = (argsString: string): any => {
-  try {
-    return JSON.parse(argsString);
-  } catch (e) {
-    // Ignore and try next method
-  }
-
-  const jsonFenceMatch = argsString.match(/```json\n([\s\S]*?)\n```/);
-  if (jsonFenceMatch && jsonFenceMatch[1]) {
-    try {
-      return JSON.parse(jsonFenceMatch[1]);
-    } catch (e) {
-      // Ignore and try next method
+  const strategies = [
+    // Strategy 1: Look for JSON within <tool_call> ... </tool_call> tags first.
+    // This is the most reliable signal for a tool call from many models.
+    (s: string) => {
+      const match = s.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
+      if (match && match[1]) {
+        try {
+          // We found the official tool call, parse the JSON inside it.
+          return JSON.parse(match[1].trim());
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    },
+    // Strategy 2: Look for JSON within ```json ... ``` fences.
+    (s: string) => {
+      const match = s.match(/```json\n([\s\S]*?)\n```/);
+      if (match && match[1]) {
+        try {
+          return JSON.parse(match[1]);
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    },
+    // Strategy 3: Try to parse the entire string as JSON.
+    // This works for clean outputs that are just a single JSON object.
+    (s: string) => {
+      try {
+        return JSON.parse(s);
+      } catch (e) {
+        return null;
+      }
+    },
+    // Strategy 4: Find the first and last brace and try to parse the content.
+    // This is a robust fallback for malformed outputs that still contain a JSON object.
+    (s: string) => {
+      const firstBrace = s.indexOf('{');
+      const lastBrace = s.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        const potentialJson = s.substring(firstBrace, lastBrace + 1);
+        try {
+          return JSON.parse(potentialJson);
+        } catch (e) {
+          // If this fails, it might be because it captured both JSON objects.
+          // We can ignore this error and let other strategies work.
+          return null;
+        }
+      }
+      return null;
     }
-  }
+  ];
 
-  const genericFenceMatch = argsString.match(/```\n([\s\S]*?)\n```/);
-  if (genericFenceMatch && genericFenceMatch[1]) {
-    try {
-      return JSON.parse(genericFenceMatch[1]);
-    } catch (e) {
-      // Ignore and try next method
-    }
-  }
-
-  const firstBrace = argsString.indexOf('{');
-  const lastBrace = argsString.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace > firstBrace) {
-    const potentialJson = argsString.substring(firstBrace, lastBrace + 1);
-    try {
-      return JSON.parse(potentialJson);
-    } catch (e) {
-      console.warn('Failed to parse extracted JSON-like string:', potentialJson, e);
+  for (const strategy of strategies) {
+    const parsedJson = strategy(argsString);
+    if (parsedJson) {
+      // **CRITICAL FIX**: After parsing, check if the arguments are nested.
+      // This handles both {"tool_arguments": {...}} and {"arguments": {...}} formats.
+      if (parsedJson.tool_arguments !== undefined) {
+        return parsedJson.tool_arguments;
+      }
+      if (parsedJson.arguments !== undefined) {
+        return parsedJson.arguments;
+      }
+      // If no wrapper key is found, assume the parsed object itself is the arguments.
+      return parsedJson;
     }
   }
 
