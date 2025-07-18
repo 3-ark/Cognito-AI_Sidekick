@@ -186,17 +186,6 @@ export async function getHybridRankedChunks(
   if (bm25Weight > 0) { // Only perform BM25 if it has a weight
      bm25ParentResults = await bm25Search(query, bm25TopKParents);
   }
-// --- !!! ADD THIS DEBUGGING BLOCK !!! ---
-console.log("--- BM25 DEBUG ---");
-console.log("Raw BM25 Results:", JSON.parse(JSON.stringify(bm25ParentResults)));
-const parentIdsForBM25_debug = bm25ParentResults.map(([parentId, _]) => {
-    const parsed = parseChunkIdFromParent(parentId);
-    return parsed ? { parentId: parsed.id, parentType: parsed.type } : null;
-}).filter((p): p is { parentId: string; parentType: 'note' | 'chat' } => p !== null);
-console.log("Parent IDs passed to getChunkTextsForParents:", parentIdsForBM25_debug);
-console.log("--- END BM25 DEBUG ---");
-// --- END OF DEBUGGING BLOCK ---
-
 
   // --- Step 4: Prepare Chunks from BM25 Results (Corrected) ---
   const bm25DerivedChunks: Array<{ chunkId: string; parentId: string; parentType: 'note' | 'chat'; bm25Score: number }> = [];
