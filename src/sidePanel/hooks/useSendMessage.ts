@@ -392,64 +392,57 @@ ${JSON.stringify(toolDescriptions, null, 2)}
       messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage));
       messagesForApiPayload.push({ role: 'user', content: messageForLLM });
 
-      await fetchDataAsStream(
-        url,
-        { stream: true, model: config.selectedModel || '', messages: messagesForApiPayload, temperature: config.temperature ?? 0.7, max_tokens: config.maxTokens ?? 32048, top_p: config.topP ?? 1, presence_penalty: config.presencepenalty ?? 0 },
-        async (part, isFinished, isError) => {
-          if (controller.signal.aborted && !isFinished && !isError) return;
-
-          if (isFinished && !isError) {
-            const assistantResponseContent = part;
-            const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
-            if (potentialToolCall && ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') || (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
-              const toolName = potentialToolCall.tool_name || potentialToolCall.name;
-              const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
-              const stringifiedArguments = JSON.stringify(toolArgumentsObject);
-              const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
-              const structuredToolCalls: LLMToolCall[] = [{ id: consistentToolCallId, type: 'function', function: { name: toolName, arguments: stringifiedArguments } }];
-              
-              setTurns(prevTurns => {
-                const lastTurn = prevTurns[prevTurns.length - 1];
-                return [...prevTurns.slice(0, -1), { ...lastTurn, content: assistantResponseContent, status: 'complete', tool_calls: structuredToolCalls }];
-              });
-
-              const executionResult = await executeToolCall({ id: consistentToolCallId, name: toolName, arguments: stringifiedArguments });
-              const toolResultTurn: MessageTurn = { role: 'tool', tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, name: executionResult.name, content: executionResult.result, status: 'complete', timestamp: Date.now() };
-              setTurns(prevTurns => [...prevTurns, toolResultTurn]);
-
-              const assistantApiMessageWithToolCall: ApiMessage = { role: 'assistant', content: assistantResponseContent, tool_calls: structuredToolCalls };
-              const toolResultApiMessage = turnToApiMessage(toolResultTurn);
-              const messagesForNextApiCall: ApiMessage[] = [...messagesForApiPayload, assistantApiMessageWithToolCall, toolResultApiMessage];
-              
-              const finalAssistantPlaceholder: MessageTurn = { role: 'assistant', content: '', status: 'streaming', timestamp: Date.now() + 1 };
-              setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
-
-              await fetchDataAsStream(
-                url,
-                { stream: true, model: config.selectedModel || '', messages: messagesForNextApiCall, temperature: config.temperature ?? 0.7, max_tokens: config.maxTokens ?? 32048, top_p: config.topP ?? 1, presence_penalty: config.presencepenalty ?? 0 },
-                (finalPart, finalIsFinished, finalIsError) => {
-                  if (finalIsFinished && !finalIsError) {
-                    let finalAnswerAfterTool = finalPart;
-                    if (sourcesStringForAppending) finalAnswerAfterTool += `\n\n---\n\n${sourcesStringForAppending}`;
-                    updateAssistantTurn(callId, finalAnswerAfterTool, true, false);
-                  } else {
-                    updateAssistantTurn(callId, finalPart, Boolean(finalIsFinished), Boolean(finalIsError));
-                  }
-                },
-                authHeader, currentModel.host || '', controller.signal
-              );
-              return;
+      const processLlmResponse = async (currentMessages: ApiMessage[]) => {
+        if (controller.signal.aborted) return;
+  
+        await fetchDataAsStream(
+          url,
+          { stream: true, model: config.selectedModel || '', messages: currentMessages, temperature: config.temperature ?? 0.7, max_tokens: config.maxTokens ?? 32048, top_p: config.topP ?? 1, presence_penalty: config.presencepenalty ?? 0 },
+          async (part, isFinished, isError) => {
+            if (controller.signal.aborted && !isFinished && !isError) return;
+  
+            if (isFinished && !isError) {
+              const assistantResponseContent = part;
+              const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
+  
+              if (potentialToolCall && ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') || (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
+                const toolName = potentialToolCall.tool_name || potentialToolCall.name;
+                const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
+                const stringifiedArguments = JSON.stringify(toolArgumentsObject);
+                const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
+                const structuredToolCalls: LLMToolCall[] = [{ id: consistentToolCallId, type: 'function', function: { name: toolName, arguments: stringifiedArguments } }];
+  
+                setTurns(prevTurns => {
+                  const lastTurn = prevTurns[prevTurns.length - 1];
+                  return [...prevTurns.slice(0, -1), { ...lastTurn, content: assistantResponseContent, status: 'complete', tool_calls: structuredToolCalls }];
+                });
+  
+                const executionResult = await executeToolCall({ id: consistentToolCallId, name: toolName, arguments: stringifiedArguments });
+                const toolResultTurn: MessageTurn = { role: 'tool', tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, name: executionResult.name, content: executionResult.result, status: 'complete', timestamp: Date.now() };
+                setTurns(prevTurns => [...prevTurns, toolResultTurn]);
+  
+                const assistantApiMessageWithToolCall: ApiMessage = { role: 'assistant', content: assistantResponseContent, tool_calls: structuredToolCalls };
+                const toolResultApiMessage = turnToApiMessage(toolResultTurn);
+                const messagesForNextApiCall: ApiMessage[] = [...currentMessages, assistantApiMessageWithToolCall, toolResultApiMessage];
+  
+                const finalAssistantPlaceholder: MessageTurn = { role: 'assistant', content: '', status: 'streaming', timestamp: Date.now() + 1 };
+                setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
+  
+                await processLlmResponse(messagesForNextApiCall); // Recursive call
+              } else {
+                let finalContent = assistantResponseContent;
+                if (sourcesStringForAppending) finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
+                updateAssistantTurn(callId, finalContent, true, false);
+              }
             } else {
-              let finalContent = assistantResponseContent;
-              if (sourcesStringForAppending) finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
-              updateAssistantTurn(callId, finalContent, true, false);
+              updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
             }
-          } else {
-            updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
-          }
-        },
-        authHeader, currentModel.host || '', controller.signal
-      );
+          },
+          authHeader, currentModel.host || '', controller.signal
+        );
+      };
+  
+      await processLlmResponse(messagesForApiPayload);
     } catch (error) {
       if (!controller.signal.aborted) {
         console.error(`[${callId}] Error during send operation:`, error);
