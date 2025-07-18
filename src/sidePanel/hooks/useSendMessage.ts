@@ -13,11 +13,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import type { HybridRankedChunk } from 'src/background/retrieverUtils';
 
 // --- NEW HELPER FUNCTION FOR RAG RESULTS ---
-/**
- * Builds a clean prompt context and a separate sources string from retriever chunks.
- * @param retrieverChunks - Chunks from your notes/chats.
- * @returns An object with `promptContext` for the LLM and `sourcesString` for appending later.
- */
 const buildPromptFromRetrieverChunks = (
   retrieverChunks: HybridRankedChunk[]
 ): { promptContext: string; sourcesString: string } => {
@@ -111,59 +106,30 @@ interface ApiMessage {
   content: string | null;
   name?: string;
   tool_call_id?: string;
-  tool_calls?: {
-    id: string;
-    type: 'function';
-    function: {
-      name: string;
-      arguments: string;
-    };
-  }[];
+  tool_calls?: LLMToolCall[];
 }
 
 export const getAuthHeader = (config: Config, currentModel: Model) => {
-  if (currentModel?.host === 'groq' && config.groqApiKey) {
-    return { Authorization: `Bearer ${config.groqApiKey}` };
-  }
-  if (currentModel?.host === 'gemini' && config.geminiApiKey) {
-    return { Authorization: `Bearer ${config.geminiApiKey}` };
-  }
-  if (currentModel?.host === 'openai' && config.openAiApiKey) {
-    return { Authorization: `Bearer ${config.openAiApiKey}` };
-  }
-  if (currentModel?.host === 'openrouter' && config.openRouterApiKey) {
-    return { Authorization: `Bearer ${config.openRouterApiKey}` };
-  }
-  if (currentModel?.host === 'custom' && config.customApiKey) {
-    return { Authorization: `Bearer ${config.customApiKey}` };
-  }
+  if (currentModel?.host === 'groq' && config.groqApiKey) return { Authorization: `Bearer ${config.groqApiKey}` };
+  if (currentModel?.host === 'gemini' && config.geminiApiKey) return { Authorization: `Bearer ${config.geminiApiKey}` };
+  if (currentModel?.host === 'openai' && config.openAiApiKey) return { Authorization: `Bearer ${config.openAiApiKey}` };
+  if (currentModel?.host === 'openrouter' && config.openRouterApiKey) return { Authorization: `Bearer ${config.openRouterApiKey}` };
+  if (currentModel?.host === 'custom' && config.customApiKey) return { Authorization: `Bearer ${config.customApiKey}` };
   return undefined;
 };
 
 async function extractTextFromPdf(pdfUrl: string, callId?: number): Promise<string> {
   try {
-    console.log(`[${callId || 'PDF'}] Attempting to fetch PDF from URL: ${pdfUrl}`);
     const response = await fetch(pdfUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
     const arrayBuffer = await response.arrayBuffer();
-    console.log(`[${callId || 'PDF'}] PDF fetched, size: ${arrayBuffer.byteLength} bytes. Parsing...`);
-
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    console.log(`[${callId || 'PDF'}] PDF parsed. Number of pages: ${pdf.numPages}`);
-    
     let fullText = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => ('str' in item ? item.str : '')).join(' ');
-      fullText += pageText + '\n\n';
-      if (i % 10 === 0 || i === pdf.numPages) {
-        console.log(`[${callId || 'PDF'}] Extracted text from page ${i}/${pdf.numPages}`);
-      }
+      fullText += textContent.items.map(item => ('str' in item ? item.str : '')).join(' ') + '\n\n';
     }
-    console.log(`[${callId || 'PDF'}] PDF text extraction complete. Total length: ${fullText.length}`);
     return fullText.trim();
   } catch (error) {
     console.error(`[${callId || 'PDF'}] Error extracting text from PDF (${pdfUrl}):`, error);
@@ -191,8 +157,6 @@ const useSendMessage = (
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toolDefinitions, executeToolCall } = useTools();
 
-  let toolCallTimeout: NodeJS.Timeout | null = null;
-
   const updateAssistantTurn = (
     callId: number | null,
     update: string,
@@ -202,437 +166,197 @@ const useSendMessage = (
     toolCallsPayload?: LLMToolCall[]
   ) => {
     if (completionGuard.current !== callId && !isFinished && !isError && !isCancelled) {
-      if (completionGuard.current !== null) {
-        console.warn(`[${callId}] updateAssistantTurn: Guard mismatch (current: ${completionGuard.current}), skipping non-final update.`);
-      }
+      if (completionGuard.current !== null) console.warn(`[${callId}] updateAssistantTurn: Guard mismatch (current: ${completionGuard.current}), skipping non-final update.`);
       return;
     }
-    if (completionGuard.current === null && callId !== null) {
-        if ((update === "" && isFinished && !isError && !isCancelled) ||
-            (isError && (update.includes("Operation cancelled by user") || update.includes("Streaming operation cancelled")))) {
-            console.log(`[${callId}] updateAssistantTurn: Signal received after operation already finalized. Preserving existing state.`);
-            setLoading(false);
-            setChatStatus('idle');
-            return;
-        }
-    }
-
     setTurns(prevTurns => {
       if (prevTurns.length === 0 || prevTurns[prevTurns.length - 1].role !== 'assistant') {
-        console.warn(`[${callId}] updateAssistantTurn: No assistant turn found or last turn is not assistant.`);
-        if (isError) {
-          const errorTurn: MessageTurn = {
-            role: 'assistant',
-            content: `Error: ${update || 'Unknown operation error'}`,
-            status: 'error',
-            timestamp: Date.now(),
-            ...(toolCallsPayload && { tool_calls: toolCallsPayload })
-          };
-          return [...prevTurns, errorTurn];
-        }
+        if (isError) return [...prevTurns, { role: 'assistant', content: `Error: ${update || 'Unknown operation error'}`, status: 'error', timestamp: Date.now(), ...(toolCallsPayload && { tool_calls: toolCallsPayload }) }];
         return prevTurns;
       }
       const lastTurn = prevTurns[prevTurns.length - 1];
-      
       const updatedStatus = (isError === true) ? 'error' : (isCancelled === true) ? 'cancelled' : (isFinished ? 'complete' : 'streaming');
-      let finalContentForTurn: string;
-      
-      if (isCancelled) {
-        const existingContent = lastTurn.content || "";
-        finalContentForTurn = existingContent + (existingContent ? " " : "") + update;
-      } else if (isError) {
-        finalContentForTurn = `Error: ${update || 'Unknown stream/handler error'}`;
-      } else {
-        finalContentForTurn = update; 
-      }
-      
+      let finalContentForTurn = isCancelled ? (lastTurn.content || "") + (lastTurn.content ? " " : "") + update : isError ? `Error: ${update || 'Unknown stream/handler error'}` : update;
       return [...prevTurns.slice(0, -1), { ...lastTurn, content: finalContentForTurn, status: updatedStatus, timestamp: Date.now(), ...(toolCallsPayload && { tool_calls: toolCallsPayload }) }];
     });
 
-    if (isFinished || (isError === true) || (isCancelled === true)) {
-      let justFinishedLlmToolCallJson = false;
-      if (isFinished && !isError && !isCancelled) {
-        const potentialToolCall = robustlyParseLlmResponseForToolCall(update);
-        if (potentialToolCall &&
-            ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
-             (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
-          justFinishedLlmToolCallJson = true;
-        }
-      }
-
+    if (isFinished || isError || isCancelled) {
       setLoading(false);
-
-      if (justFinishedLlmToolCallJson) {
-        if (toolCallTimeout) clearTimeout(toolCallTimeout);
-        toolCallTimeout = setTimeout(() => {
-          setChatStatus('idle');
-          if (completionGuard.current === callId) {
-            completionGuard.current = null;
-            if (abortControllerRef.current) {
-              abortControllerRef.current = null;
-            }
-          }
-        }, 2000);
-      } else {
-        setChatStatus(isError ? 'idle' : isCancelled ? 'idle' : 'done');
-        if (toolCallTimeout) {
-          clearTimeout(toolCallTimeout);
-          toolCallTimeout = null;
-        }
-        if (completionGuard.current === callId) {
-          completionGuard.current = null;
-          if (abortControllerRef.current) {
-              abortControllerRef.current = null;
-          }
-        } else {
-          console.log(`[${callId}] updateAssistantTurn: Guard mismatch or already cleared (current: ${completionGuard.current}). Not clearing guard again.`);
-        }
-      }
+      setChatStatus(isError || isCancelled ? 'idle' : 'done');
+      if (completionGuard.current === callId) completionGuard.current = null;
     }
   };
 
   const turnToApiMessage = (turn: MessageTurn): ApiMessage => {
-    let contentValue: string | null = turn.content || '';
-
-    if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
-      // contentValue = "";
-    }
-
-    const apiMsg: ApiMessage = {
-      role: turn.role,
-      content: contentValue
-    };
-
+    const apiMsg: ApiMessage = { role: turn.role, content: turn.content || null };
     if (turn.role === 'tool') {
       if (turn.name) apiMsg.name = turn.name;
       if (turn.tool_call_id) apiMsg.tool_call_id = turn.tool_call_id;
     }
-
     if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
       apiMsg.tool_calls = turn.tool_calls;
     }
-
     return apiMsg;
   };
 
   const onSend = async (overridedMessage?: string) => {
     const callId = Date.now();
-    console.log(`[${callId}] useSendMessage: onSend triggered.`);
+    console.log(`[${callId}] onSend triggered.`);
 
+    if (!config) return console.log(`[${callId}] Bailing out: Missing config.`);
     const originalMessageFromInput = overridedMessage || "";
     let messageForLLM = originalMessageFromInput.trim();
-    
-    let sourcesStringForAppending = ""; // This will hold the final footnote definitions
+    if (!messageForLLM && !selectedNotesForContext?.length && !retrieverQuery) return console.log(`[${callId}] Bailing out: Empty message and no context.`);
 
+    if (completionGuard.current !== null) {
+      console.warn(`[${callId}] Aborting previous send operation (ID: ${completionGuard.current}).`);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    completionGuard.current = callId;
+
+    setLoading(true);
+    setWebContent('');
+    setPageContent('');
+    setMessage('');
+
+    let sourcesStringForAppending = "";
+
+    // --- CONTEXT PREPARATION ---
     if (retrieverQuery && retrieverQuery.trim() !== "") {
       setChatStatus('searching');
       try {
         console.log(`[${callId}] Performing hybrid search for query: "${retrieverQuery}"`);
         
         const response = await new Promise<{ success: boolean; results?: HybridRankedChunk[]; error?: string }>((resolve, reject) => {
-          chrome.runtime.sendMessage(
-            { type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery } },
-            (res) => {
-              if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-              else resolve(res);
-            }
-          );
+          chrome.runtime.sendMessage({ type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery } }, (res) => {
+            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message)); else resolve(res);
+          });
         });
-
-        // We now check ONLY for success. If successful, we process the results.
-        // If not successful, we throw the error from the response.
         if (response.success) {
-          // The `results` property might be an empty array, which is a valid success case.
-          const chunks = response.results || [];
-          const { promptContext, sourcesString } = buildPromptFromRetrieverChunks(chunks);
-          
+          const { promptContext, sourcesString } = buildPromptFromRetrieverChunks(response.results || []);
           if (promptContext) {
             messageForLLM = `${promptContext}\n\n---\n\n${messageForLLM}`;
-            sourcesStringForAppending = sourcesString; // Save the sources to append after the LLM responds
+            sourcesStringForAppending = sourcesString;
           }
-        } else {
-          // This path is taken if response.success is false.
-          throw new Error(response.error || "Unknown search error from background script.");
-        }
-
+        } else throw new Error(response.error || "Unknown search error.");
       } catch (error: any) {
-        console.error(`[${callId}] Error fetching search results:`, error);
         messageForLLM = `(I tried to search my knowledge base but got an error: ${error.message})\n${messageForLLM}`;
       }
       setRetrieverQuery('');
-      setChatStatus('thinking');
     }
-        
-    if (selectedNotesForContext && selectedNotesForContext.length > 0) {
-      const notesDetails = selectedNotesForContext.map(note => {
-        return `\n\n---\nUser-provided note: "${note.title}"\nContent:\n${note.content}\n---`;
-      }).join('');
-      messageForLLM += notesDetails;
-    }
-
-    console.log(`[${callId}] Original message from input: "${originalMessageFromInput}"`);
+    if (selectedNotesForContext?.length) messageForLLM += selectedNotesForContext.map(note => `\n\n---\nUser-provided note: "${note.title}"\nContent:\n${note.content}\n---`).join('');
+    const urls = originalMessageFromInput.match(/(https?:\/\/[^\s]+)/g);
     console.log(`[${callId}] Message for LLM: "${messageForLLM}"`);
-
-    if (!config) {
-      console.log(`[${callId}] Bailing out: Missing config.`);
-      setLoading(false);
-      return;
-    }
-    if (!messageForLLM.trim() && (!selectedNotesForContext || selectedNotesForContext.length === 0)) {
-      console.log(`[${callId}] Bailing out: Empty message and no context.`);
-      setLoading(false);
-      return;
-    }
-
-    if (completionGuard.current !== null) {
-      console.warn(`[${callId}] Aborting previous send operation (ID: ${completionGuard.current}).`);
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    }
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    console.log(`[${callId}] Setting loading true.`);
-    setLoading(true);
-    setWebContent('');
-    setPageContent('');
-
-    const currentChatMode = config.chatMode as ChatMode || 'chat';
-    if (currentChatMode === 'web') {
-      setChatStatus('searching');
-    } else if (currentChatMode === 'page') {
-      setChatStatus('reading');
-    } else {
-      setChatStatus('thinking');
-    }
-
-    completionGuard.current = callId;
-
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = originalMessageFromInput.match(urlRegex);
     let scrapedContent = '';
-    if (urls && urls.length > 0) {
+    if (urls?.length) {
       setChatStatus('searching');
       try {
-        const scrapedResults = await Promise.all(
-          urls.map(url => scrapeUrlContent(url, controller.signal))
-        );
-        scrapedContent = scrapedResults
-          .map((content, idx) => `Content from [${urls[idx]}]:\n${content}`)
-          .join('\n\n');
-      } catch (e) {
-        scrapedContent = '[Error scraping one or more URLs]';
-      }
-      setChatStatus('thinking');
+        scrapedContent = (await Promise.all(urls.map(url => scrapeUrlContent(url, controller.signal)))).map((content, idx) => `Content from [${urls[idx]}]:\n${content}`).join('\n\n');
+      } catch (e) { scrapedContent = '[Error scraping one or more URLs]'; }
     }
 
-    const userTurn: MessageTurn = {
-      role: 'user',
-      status: 'complete',
-      content: originalMessageFromInput,
-      timestamp: Date.now()
-    };
+    const userTurn: MessageTurn = { role: 'user', status: 'complete', content: originalMessageFromInput, timestamp: Date.now() };
     setTurns(prevTurns => [...prevTurns, userTurn]);
-    setMessage('');
-    console.log(`[${callId}] User turn added to state. Original input: "${originalMessageFromInput}"`);
-
-    const assistantTurnPlaceholder: MessageTurn = {
-        role: 'assistant',
-        content: '',
-        status: 'streaming',
-        timestamp: Date.now() + 1 
-    };
+    const assistantTurnPlaceholder: MessageTurn = { role: 'assistant', content: '', status: 'streaming', timestamp: Date.now() + 1 };
     setTurns(prevTurns => [...prevTurns, assistantTurnPlaceholder]);
-    console.log(`[${callId}] Assistant placeholder turn added early.`);
 
-    let queryForProcessing = messageForLLM;
-    let searchRes: string = '';
-    let processedQueryDisplay = '';
-
-    const performSearch = config?.chatMode === 'web';
-    const currentModel = config?.models?.find(m => m.id === config.selectedModel);
+    const currentModel = config.models?.find(m => m.id === config.selectedModel);
     if (!currentModel) {
-      console.error(`[${callId}] No current model found.`);
       updateAssistantTurn(callId, "Configuration error: No model selected.", true, true);
       return;
     }
     const authHeader = getAuthHeader(config, currentModel);
 
+    let queryForProcessing = messageForLLM;
+    let searchRes: string = '';
+    let processedQueryDisplay = '';
+    const performSearch = config?.chatMode === 'web';
+
     if (performSearch) {
-      console.log(`[${callId}] Optimizing query...`);
-      setChatStatus('thinking');    
-      const historyForQueryOptimization= currentTurns.map(turn => ({
-        role: turn.role,
-        content: turn.content
-      }));
+      setChatStatus('thinking');
+      const historyForQueryOptimization = currentTurns.map(turn => ({ role: turn.role, content: turn.content }));
       try {
-        const optimizedQuery = await processQueryWithAI(
-          messageForLLM,
-          config,
-          currentModel,
-          authHeader, 
-          controller.signal,
-          historyForQueryOptimization
-        );
+        const optimizedQuery = await processQueryWithAI(messageForLLM, config, currentModel, authHeader, controller.signal, historyForQueryOptimization);
         if (optimizedQuery && optimizedQuery.trim() && optimizedQuery !== messageForLLM) {
           queryForProcessing = optimizedQuery;
           processedQueryDisplay = `**Optimized query:** "*${queryForProcessing}*"\n\n`;
-          console.log(`[${callId}] Query optimized to: "${queryForProcessing}"`);
         } else {
           queryForProcessing = messageForLLM;
           processedQueryDisplay = `**Original query:** "*${queryForProcessing}"\n\n`;
-          console.log(`[${callId}] Using original query (cleaned): "${queryForProcessing}"`);
         }
       } catch (optError) {
         console.error(`[${callId}] Query optimization failed:`, optError);
         queryForProcessing = messageForLLM;
         processedQueryDisplay = `**Fallback query:** "*${queryForProcessing}*"\n\n`;
       }
-    } else {
-      queryForProcessing = messageForLLM;
-    }
-
-    if (performSearch) {
-      console.log(`[${callId}] Performing web search...`);
+      
       setChatStatus('searching');
-
       try {
         searchRes = await webSearch(queryForProcessing, config, controller.signal);
-        setChatStatus('thinking');     
-        if (controller.signal.aborted) {
-          console.log(`[${callId}] Web search was aborted (signal check post-await).`);
-          return;
-        }
+        if (controller.signal.aborted) return;
       } catch (searchError: any) {
-        console.error(`[${callId}] Web search failed:`, searchError);
-        if (searchError.name === 'AbortError' || controller.signal.aborted) {
-          console.log(`[${callId}] Web search aborted. onStop handler will finalize UI.`);
-          return;
-        } else {
-          searchRes = '';
-          const errorMessage = `Web Search Failed: ${searchError instanceof Error ? searchError.message : String(searchError)}`;
-          setChatStatus('idle');     
-          updateAssistantTurn(callId, errorMessage, true, true, false);
-          return;
-        }
+        if (searchError.name === 'AbortError' || controller.signal.aborted) return;
+        updateAssistantTurn(callId, `Web Search Failed: ${searchError instanceof Error ? searchError.message : String(searchError)}`, true, true);
+        return;
       }
-      console.log(`[${callId}] Web search completed. Length: ${searchRes.length}`);
-      if (processedQueryDisplay) { 
-        setTurns(prevTurns => prevTurns.map(t => (t.role === 'assistant' && prevTurns[prevTurns.length -1] === t && t.status !== 'complete' && t.status !== 'error' && t.status !== 'cancelled') ? { ...t, webDisplayContent: processedQueryDisplay } : t));
+      if (processedQueryDisplay) {
+        setTurns(prevTurns => prevTurns.map(t => (t.role === 'assistant' && prevTurns[prevTurns.length - 1] === t && t.status !== 'complete') ? { ...t, webDisplayContent: processedQueryDisplay } : t));
       }
     }
-    
-    const messageToUse = queryForProcessing;
-    const webLimit = 1000 * (config?.webLimit || 1);
-    const limitedWebResult = webLimit && typeof searchRes === 'string'
-      ? searchRes.substring(0, webLimit)
-      : searchRes;
-    const webContentForLlm = config?.webLimit === 128 ? searchRes : limitedWebResult;
 
-    const messageForApi: ApiMessage[] = currentTurns
-      .map((turn): ApiMessage => ({
-        content: turn.content || '',
-        role: turn.role
-      }))
-      .concat({ role: 'user', content: messageForLLM });
+    const webLimit = 1000 * (config?.webLimit || 1);
+    const limitedWebResult = webLimit && typeof searchRes === 'string' ? searchRes.substring(0, webLimit) : searchRes;
+    const webContentForLlm = config?.webLimit === 128 ? searchRes : limitedWebResult;
 
     let pageContentForLlm = '';
     if (config?.chatMode === 'page') {
-      let currentPageContent = '';
-      console.log(`[${callId}] Preparing page content...`);
-      setChatStatus('reading');      
+      setChatStatus('reading');
       try {
         const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-        
         if (tab?.url && !tab.url.startsWith('chrome://')) {
           const tabUrl = tab.url;
-          const tabMimeType = (tab as chrome.tabs.Tab & { mimeType?: string }).mimeType;
-          const isPdfUrl = tabUrl.toLowerCase().endsWith('.pdf') ||
-                           (tabMimeType && tabMimeType === 'application/pdf');
-
+          const isPdfUrl = tabUrl.toLowerCase().endsWith('.pdf') || ((tab as any).mimeType === 'application/pdf');
           if (isPdfUrl) {
-            console.log(`[${callId}] Detected PDF URL: ${tabUrl}. Attempting to extract text.`);
-            try {
-              currentPageContent = await extractTextFromPdf(tabUrl, callId);
-              console.log(`[${callId}] Successfully extracted text from PDF. Length: ${currentPageContent.length}`);
-            } catch (pdfError) {
-              console.error(`[${callId}] Failed to extract text from PDF ${tabUrl}:`, pdfError);
-              currentPageContent = `Error extracting PDF content: ${pdfError instanceof Error ? pdfError.message : "Unknown PDF error"}. Falling back.`;
-            }
+            pageContentForLlm = await extractTextFromPdf(tabUrl, callId);
           } else {
-            console.log(`[${callId}] URL is not a PDF. Fetching from storage: ${tabUrl}`);
-            const storedPageString = await storage.getItem('pagestring');
-            currentPageContent = storedPageString || '';
-            console.log(`[${callId}] Retrieved page text content from storage. Length: ${currentPageContent.length}`);
+            pageContentForLlm = await storage.getItem('pagestring') || '';
           }
-        } else {
-          console.log(`[${callId}] Not fetching page content for URL: ${tab?.url} (might be chrome:// or no active tab).`);
         }
       } catch (pageError) {
-        console.error(`[${callId}] Error getting active tab or initial page processing:`, pageError);
-        currentPageContent = `Error accessing page content: ${pageError instanceof Error ? pageError.message : "Unknown error"}`;
+        pageContentForLlm = `Error accessing page content: ${pageError instanceof Error ? pageError.message : "Unknown error"}`;
       }
-
       const charLimit = 1000 * (config?.contextLimit || 1);
-      const safeCurrentPageContent = typeof currentPageContent === 'string' ? currentPageContent : '';
-      const limitedContent = charLimit && safeCurrentPageContent
-        ? safeCurrentPageContent.substring(0, charLimit)
-        : safeCurrentPageContent;
-      pageContentForLlm = config?.contextLimit === 128 ? safeCurrentPageContent : limitedContent;
+      const safeCurrentPageContent = typeof pageContentForLlm === 'string' ? pageContentForLlm : '';
+      pageContentForLlm = charLimit ? safeCurrentPageContent.substring(0, charLimit) : safeCurrentPageContent;
       setPageContent(pageContentForLlm || '');
-      setChatStatus('thinking');     
-      console.log(`[${callId}] Page content prepared for LLM. Length: ${pageContentForLlm?.length}`);
-    } else {
-      setPageContent('');
     }
 
-    const persona = config?.personas?.[config?.persona] || '';
-    const pageContextString = (config?.chatMode === 'page' && pageContentForLlm)
-      ? `Use the following page content for context: ${pageContentForLlm}`
-      : '';
-    const webContextString = (config?.chatMode === 'web' && webContentForLlm)
-      ? `Refer to this web search summary: ${webContentForLlm}`
-      : '';
-    const noteContextString = (config?.useNote && config.noteContent)
-      ? `Refer to this note for context: ${config.noteContent}`
-      : '';
-
-    if (selectedNotesForContext && selectedNotesForContext.length > 0) {
-      console.log(`[${callId}] Notes detected for inclusion in user message (count: ${selectedNotesForContext.length})`);
-    } else {
-    }
+    // --- SYSTEM PROMPT CONSTRUCTION ---
+    const systemPromptParts = [];
+    if (config.personas?.[config.persona]) systemPromptParts.push(config.personas[config.persona]);
     
     let userContextStatement = '';
     const userName = config.userName?.trim();
     const userProfile = config.userProfile?.trim();
-
     if (userName && userName.toLowerCase() !== 'user' && userName !== '') {
       userContextStatement = `You are interacting with a user named "${userName}".`;
-      if (userProfile) {
-        userContextStatement += ` Their provided profile information is: "${userProfile}".`;
-      }
+      if (userProfile) userContextStatement += ` Their provided profile information is: "${userProfile}".`;
     } else if (userProfile) {
       userContextStatement = `You are interacting with a user. Their provided profile information is: "${userProfile}".`;
     }
-
-    const systemPromptParts = [];
-    if (persona) systemPromptParts.push(persona);
     if (userContextStatement) systemPromptParts.push(userContextStatement);
-    if (noteContextString) systemPromptParts.push(noteContextString);
+
+    if (config?.useNote && config.noteContent) systemPromptParts.push(`Refer to this note for context: ${config.noteContent}`);
     if (scrapedContent) systemPromptParts.push(`Use the following scraped content from URLs in the user's message:\n${scrapedContent}`);
-    if (pageContextString) systemPromptParts.push(pageContextString);
-    if (webContextString) systemPromptParts.push(webContextString);
+    if (config?.chatMode === 'page' && pageContentForLlm) systemPromptParts.push(`Use the following page content for context: ${pageContentForLlm}`);
+    if (config?.chatMode === 'web' && webContentForLlm) systemPromptParts.push(`Refer to this web search summary: ${webContentForLlm}`);
 
-    const enableTools = config?.useTools === undefined ? true : config.useTools;
-
-    if (enableTools && toolDefinitions && toolDefinitions.length > 0) {
-      const toolDescriptions = toolDefinitions.map(tool => ({
-        name: tool.function.name,
-        description: tool.function.description,
-        parameters: tool.function.parameters
-      }));
+    const enableTools = config.useTools !== false;
+    if (enableTools && toolDefinitions?.length) {
+      const toolDescriptions = toolDefinitions.map(tool => ({ name: tool.function.name, description: tool.function.description, parameters: tool.function.parameters }));
       const toolsPrompt = `To help you respond, you have access to the tools listed below. Please follow these guidelines carefully when using them:
 
 Tool Use Guidelines:
@@ -650,190 +374,91 @@ ${JSON.stringify(toolDescriptions, null, 2)}
 `;
       systemPromptParts.push("## AVAILABLE TOOLS\n" + toolsPrompt);
     }
-
     const systemContent = systemPromptParts.join('\n\n').trim();
 
-    console.log(`[${callId}] System prompt constructed. Persona: ${!!persona}, UserCtx: ${!!userContextStatement}, NoteCtx (single): ${!!noteContextString}, PageCtx: ${!!pageContextString}, WebCtx: ${!!webContextString}, LinkCtx: ${!!scrapedContent}, Tools: ${toolDefinitions && toolDefinitions.length > 0}`);
-
     try {
-      setChatStatus('thinking'); 
-      console.log(`[${callId}] Starting standard streaming.`);
-      const normalizedUrl = normalizeApiEndpoint(config?.customEndpoint);
-      const configBody = { stream: true };
-        const urlMap: Record<string, string> = {
-          groq: 'https://api.groq.com/openai/v1/chat/completions',
-          ollama: `${config?.ollamaUrl || ''}/api/chat`,
-          gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-          lmStudio: `${config?.lmStudioUrl || ''}/v1/chat/completions`,
-          openai: 'https://api.openai.com/v1/chat/completions',
-          openrouter: 'https://openrouter.ai/api/v1/chat/completions',
-          custom: config?.customEndpoint ? `${normalizedUrl}/v1/chat/completions` : '',
-        };
-        const host = currentModel.host || '';
-        const url = urlMap[host];
+      setChatStatus('thinking');
+      const normalizedUrl = normalizeApiEndpoint(config.customEndpoint);
+      const urlMap: Record<string, string> = {
+        groq: 'https://api.groq.com/openai/v1/chat/completions', ollama: `${config.ollamaUrl || ''}/api/chat`, gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+        lmStudio: `${config.lmStudioUrl || ''}/v1/chat/completions`, openai: 'https://api.openai.com/v1/chat/completions', openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+        custom: config.customEndpoint ? `${normalizedUrl}/v1/chat/completions` : '',
+      };
+      const url = urlMap[currentModel.host || ''];
+      if (!url) throw new Error(`Configuration error: Could not determine API URL for host '${currentModel.host}'.`);
 
-        if (!url) {
-          updateAssistantTurn(callId, `Configuration error: Could not determine API URL for host '${currentModel.host}'.`, true, true);
-          return;
-        }
-        const messagesForApiPayload: ApiMessage[] = [];
-        if (systemContent.trim() !== '') {
-          messagesForApiPayload.push({ role: 'system', content: systemContent });
-        }
-        messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage)); 
-        messagesForApiPayload.push({ role: 'user', content: messageForLLM });
+      const messagesForApiPayload: ApiMessage[] = [];
+      if (systemContent) messagesForApiPayload.push({ role: 'system', content: systemContent });
+      messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage));
+      messagesForApiPayload.push({ role: 'user', content: messageForLLM });
 
-        const processLlmResponse = async () => {
-          await fetchDataAsStream(
-            url,
-            {
-              ...configBody,
-              model: config?.selectedModel || '',
-              messages: messagesForApiPayload,
-              temperature: config?.temperature ?? 0.7,
-              max_tokens: config?.maxTokens ?? 32048,
-              top_p: config?.topP ?? 1,
-              presence_penalty: config?.presencepenalty ?? 0,
-            },
-          async (part: string, isFinished?: boolean, isError?: boolean, rawResponse?: any) => {
-            if (controller.signal.aborted && !isFinished && !isError) {
-              console.log(`[${callId}] processLlmResponse: Aborted during streaming.`);
-              return;
-            }
+      await fetchDataAsStream(
+        url,
+        { stream: true, model: config.selectedModel || '', messages: messagesForApiPayload, temperature: config.temperature ?? 0.7, max_tokens: config.maxTokens ?? 32048, top_p: config.topP ?? 1, presence_penalty: config.presencepenalty ?? 0 },
+        async (part, isFinished, isError) => {
+          if (controller.signal.aborted && !isFinished && !isError) return;
 
-            if (isFinished && !isError) {
-              const assistantResponseContent = part;
-              const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
+          if (isFinished && !isError) {
+            const assistantResponseContent = part;
+            const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
+            if (potentialToolCall && ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') || (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
+              const toolName = potentialToolCall.tool_name || potentialToolCall.name;
+              const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
+              const stringifiedArguments = JSON.stringify(toolArgumentsObject);
+              const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
+              const structuredToolCalls: LLMToolCall[] = [{ id: consistentToolCallId, type: 'function', function: { name: toolName, arguments: stringifiedArguments } }];
               
-              if (potentialToolCall &&
-                  ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') ||
-                   (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
-                
-                const toolName = potentialToolCall.tool_name || potentialToolCall.name;
-                const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
-                const stringifiedArguments = JSON.stringify(toolArgumentsObject);
+              setTurns(prevTurns => {
+                const lastTurn = prevTurns[prevTurns.length - 1];
+                return [...prevTurns.slice(0, -1), { ...lastTurn, content: assistantResponseContent, status: 'complete', tool_calls: structuredToolCalls }];
+              });
 
-                console.log(`[${callId}] Detected custom tool call:`, toolName);
+              const executionResult = await executeToolCall({ id: consistentToolCallId, name: toolName, arguments: stringifiedArguments });
+              const toolResultTurn: MessageTurn = { role: 'tool', tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, name: executionResult.name, content: executionResult.result, status: 'complete', timestamp: Date.now() };
+              setTurns(prevTurns => [...prevTurns, toolResultTurn]);
 
-                const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
-                
-                const structuredToolCallsForAssistant: LLMToolCall[] = [{
-                  id: consistentToolCallId,
-                  type: 'function',
-                  function: {
-                    name: toolName,
-                    arguments: stringifiedArguments
+              const assistantApiMessageWithToolCall: ApiMessage = { role: 'assistant', content: assistantResponseContent, tool_calls: structuredToolCalls };
+              const toolResultApiMessage = turnToApiMessage(toolResultTurn);
+              const messagesForNextApiCall: ApiMessage[] = [...messagesForApiPayload, assistantApiMessageWithToolCall, toolResultApiMessage];
+              
+              const finalAssistantPlaceholder: MessageTurn = { role: 'assistant', content: '', status: 'streaming', timestamp: Date.now() + 1 };
+              setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
+
+              await fetchDataAsStream(
+                url,
+                { stream: true, model: config.selectedModel || '', messages: messagesForNextApiCall, temperature: config.temperature ?? 0.7, max_tokens: config.maxTokens ?? 32048, top_p: config.topP ?? 1, presence_penalty: config.presencepenalty ?? 0 },
+                (finalPart, finalIsFinished, finalIsError) => {
+                  if (finalIsFinished && !finalIsError) {
+                    let finalAnswerAfterTool = finalPart;
+                    if (sourcesStringForAppending) finalAnswerAfterTool += `\n\n---\n\n${sourcesStringForAppending}`;
+                    updateAssistantTurn(callId, finalAnswerAfterTool, true, false);
+                  } else {
+                    updateAssistantTurn(callId, finalPart, Boolean(finalIsFinished), Boolean(finalIsError));
                   }
-                }];
-                updateAssistantTurn(callId, assistantResponseContent, true, false, false, structuredToolCallsForAssistant);
-
-                const executionResult = await executeToolCall({
-                  id: consistentToolCallId,
-                  name: toolName,
-                  arguments: stringifiedArguments
-                });
-
-                let contentForToolTurn: string;
-                if (currentModel?.host === 'gemini') {
-                  try {
-                    const parsedResult = JSON.parse(executionResult.result);
-                    contentForToolTurn = JSON.stringify({ result: parsedResult });
-                  } catch (e) {
-                    contentForToolTurn = JSON.stringify({ result: executionResult.result });
-                  }
-                } else {
-                  contentForToolTurn = executionResult.result;
-                }
-
-                const toolResultTurn: MessageTurn = {
-                role: 'tool',
-                tool_call_id: executionResult.toolCallId || `call_${Date.now()}`,
-                name: executionResult.name,
-                content: contentForToolTurn,
-                status: 'complete',
-                timestamp: Date.now(),
-                };                  
-                setTurns(prevTurns => [...prevTurns, toolResultTurn]);
-
-                const assistantApiMessageWithToolCall: ApiMessage = {
-                  role: 'assistant',
-                  content:'',
-                  tool_calls: structuredToolCallsForAssistant
-                };
-
-                const toolResultApiMessage = turnToApiMessage(toolResultTurn);
-
-                const messagesForNextApiCall: ApiMessage[] = [
-                  ...messagesForApiPayload,
-                  assistantApiMessageWithToolCall,
-                  toolResultApiMessage
-                ];
-                const finalAssistantPlaceholder: MessageTurn = {
-                    role: 'assistant', 
-                    content: '',
-                    status: 'streaming', 
-                    timestamp: Date.now() + 1
-                };
-                setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
-
-                console.log(`[${callId}] Sending tool result back to LLM and awaiting final response.`);
-                await fetchDataAsStream(
-                  url,
-                  { 
-                     ...configBody, model: config?.selectedModel || '', messages: messagesForNextApiCall,
-                     temperature: config?.temperature ?? 0.7, max_tokens: config?.maxTokens ?? 32048,
-                     top_p: config?.topP ?? 1, presence_penalty: config?.presencepenalty ?? 0,
-                  },
-                  (finalPart, finalIsFinished, finalIsError) => {
-                    if (finalIsFinished && !finalIsError) {
-                      let finalAnswerAfterTool = finalPart;
-                      if (sourcesStringForAppending) {
-                        finalAnswerAfterTool += `\n\n---\n\n${sourcesStringForAppending}`;
-                      }
-                      updateAssistantTurn(callId, finalAnswerAfterTool, true, false);
-                    } else {
-                      updateAssistantTurn(callId, finalPart, Boolean(finalIsFinished), Boolean(finalIsError));
-                    }
-                  },
-                  authHeader, currentModel.host || '', controller.signal
-                );
-                return;
-              } else {
-                let finalContent = assistantResponseContent;
-                if (sourcesStringForAppending) {
-                  finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
-                }
-                updateAssistantTurn(callId, finalContent, true, false);
-              }
+                },
+                authHeader, currentModel.host || '', controller.signal
+              );
+              return;
             } else {
-              updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
+              let finalContent = assistantResponseContent;
+              if (sourcesStringForAppending) finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
+              updateAssistantTurn(callId, finalContent, true, false);
             }
-          },
-          authHeader,
-          currentModel.host || '',
-          controller.signal
-          );
-        };
-        console.log(`[${callId}] Initial LLM call (processLlmResponse) INITIATED.`);
-        await processLlmResponse();
+          } else {
+            updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
+          }
+        },
+        authHeader, currentModel.host || '', controller.signal
+      );
     } catch (error) {
-      if (controller.signal.aborted) {
-        console.log(`[${callId}] Send operation was aborted. 'onStop' handler is responsible for UI updates.`);
-        if (isLoading) setLoading(false);
-        setChatStatus('idle');
-        if (completionGuard.current === callId) {
-            completionGuard.current = null;
-        }
-        if (abortControllerRef.current && abortControllerRef.current.signal === controller.signal) {
-            abortControllerRef.current = null;
-        }
-      } else {
+      if (!controller.signal.aborted) {
         console.error(`[${callId}] Error during send operation:`, error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        updateAssistantTurn(callId, errorMessage, true, true);
+        updateAssistantTurn(callId, error instanceof Error ? error.message : String(error), true, true);
+      } else {
+        console.log(`[${callId}] Send operation was aborted.`);
+        updateAssistantTurn(callId, "[Operation cancelled by user]", true, false, true);
       }
     }
-    console.log(`[${callId}] useSendMessage: onSend processing logic completed.`);
   };
 
   const onStop = () => {
@@ -844,13 +469,16 @@ ${JSON.stringify(toolDescriptions, null, 2)}
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
-      updateAssistantTurn(currentCallId, "[Operation cancelled by user]", true, false, true);
+      setTurns(prev => prev.map(t => t.status === 'streaming' ? { ...t, status: 'cancelled', content: (t.content || '') + " [Cancelled]" } : t));
+      setLoading(false);
+      setChatStatus('idle');
+      completionGuard.current = null;
     } else {
-      console.log(`[No CallID] onStop triggered but no operation in progress.`);
-      setLoading(false); 
-      setChatStatus('idle'); 
+      setLoading(false);
+      setChatStatus('idle');
     }
   };
+
   return { onSend, onStop };
 }
 
