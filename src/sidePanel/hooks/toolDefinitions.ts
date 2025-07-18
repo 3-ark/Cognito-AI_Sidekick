@@ -90,4 +90,29 @@ export const toolDefinitions: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'web_search',
+      description:
+        'Performs a web search using a specified search engine to find up-to-date information, news, or specific documents on the web.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description:
+              'The search query to be executed. This should be a concise and targeted string similar to what a user would type into a search engine.',
+          },
+          engine: {
+            type: 'string',
+            description:
+              'The search engine to use. Defaults to Google if not specified. Wikipedia is ideal for factual lookups, while other engines are good for general searches.',
+            enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia'],
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
 ];

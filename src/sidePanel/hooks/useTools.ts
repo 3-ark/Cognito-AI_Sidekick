@@ -5,9 +5,11 @@ import {
   executeSaveNote,
   executeUpdateMemory,
   executeFetcher,
+  executeWebSearch,
   SaveNoteArgs,
   UpdateMemoryArgs,
   FetcherArgs,
+  WebSearchArgs,
 } from './toolExecutors';
 
 // Interface for LLM tool calls (remains here as it's part of the execution layer)
@@ -74,7 +76,7 @@ export const useTools = () => {
   const executeToolCall = useCallback(
     async (
       llmToolCall: LLMToolCall | { name: string; arguments: string; id?: string }
-    ): Promise<{ toolCallId?: string; name: string; result: string }> => {
+    ): Promise<{ toolCallId?: string; name: string; result: string; toolName: string }> => {
       let toolName: string;
       let rawArguments: string;
       let toolCallId: string | undefined;
@@ -95,31 +97,35 @@ export const useTools = () => {
 
         if (toolName === 'note.save') { // Updated name
           const { message } = await executeSaveNote(args as SaveNoteArgs);
-          return { toolCallId, name: toolName, result: message };
+          return { toolCallId, name: toolName, result: message, toolName };
         } else if (toolName === 'memory.update') { // Updated name
           const { message } = executeUpdateMemory(
             args as UpdateMemoryArgs,
             config.noteContent,
             updateConfig
           );
-          return { toolCallId, name: toolName, result: message };
+          return { toolCallId, name: toolName, result: message, toolName };
         } else if (toolName === 'fetcher') {
           const result = await executeFetcher(args as FetcherArgs);
-          return { toolCallId, name: toolName, result };
+          return { toolCallId, name: toolName, result, toolName };
+        } else if (toolName === 'web_search') {
+          const result = await executeWebSearch(args as WebSearchArgs, config);
+          return { toolCallId, name: toolName, result, toolName };
         } else {
           console.error(`Error: Unknown tool '${toolName}'`);
-          return { toolCallId, name: toolName, result: `Error: Unknown tool '${toolName}'` };
+          return { toolCallId, name: toolName, result: `Error: Unknown tool '${toolName}'`, toolName };
         }
       } catch (error: any) {
         console.error(`Error executing tool ${toolName}:`, error);
         // Specific error handling for fetcher can be kept if desired, or generalized
         if (toolName === 'fetcher' && typeof error === 'string' && error.startsWith('[Error scraping URL:')) {
-            return { toolCallId, name: toolName, result: error };
+            return { toolCallId, name: toolName, result: error, toolName };
         }
         return {
           toolCallId,
           name: toolName,
           result: `Error parsing arguments or executing tool ${toolName}: ${error.message || 'Unknown error'}`,
+          toolName,
         };
       }
     },

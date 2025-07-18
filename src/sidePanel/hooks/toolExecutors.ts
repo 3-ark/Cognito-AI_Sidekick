@@ -1,4 +1,5 @@
 import { toast } from 'react-hot-toast';
+import { webSearch } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
 import { Config } from '../../types/config'; // Corrected path for Config
 import ChannelNames from '../../types/ChannelNames';
@@ -20,8 +21,40 @@ export interface UpdateMemoryArgs {
 }
 
 export interface FetcherArgs {
-  url: string;
+  url:string;
 }
+
+export interface WebSearchArgs {
+  query: string;
+  engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia';
+}
+
+export const executeWebSearch = async (
+  args: WebSearchArgs,
+  config: Config
+): Promise<string> => {
+  const { query, engine = 'Google' } = args;
+  if (!query || query.trim() === '') {
+    return 'Error: Query cannot be empty for web search.';
+  }
+
+  // Create a temporary config for this specific search operation
+  const searchConfig: Config = {
+    ...config,
+    webMode: engine,
+  };
+
+  try {
+    const searchResults = await webSearch(query, searchConfig);
+    return searchResults;
+  } catch (error: any) {
+    console.error(
+      `Error executing web_search for query "${query}" with engine ${engine}:`,
+      error
+    );
+    return `Error performing web search: ${error.message || 'Unknown error'}`;
+  }
+};
 
 export const executeSaveNote = async (
   args: SaveNoteArgs
