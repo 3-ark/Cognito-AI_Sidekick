@@ -195,6 +195,8 @@ const useSendMessage = (
     }
     if (turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0) {
       apiMsg.tool_calls = turn.tool_calls;
+      // **FIX 1: API Compliance** - Content must be null when tool_calls is present.
+      apiMsg.content = null;
     }
     return apiMsg;
   };
@@ -387,11 +389,6 @@ ${JSON.stringify(toolDescriptions, null, 2)}
       const url = urlMap[currentModel.host || ''];
       if (!url) throw new Error(`Configuration error: Could not determine API URL for host '${currentModel.host}'.`);
 
-      const messagesForApiPayload: ApiMessage[] = [];
-      if (systemContent) messagesForApiPayload.push({ role: 'system', content: systemContent });
-      messagesForApiPayload.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage));
-      messagesForApiPayload.push({ role: 'user', content: messageForLLM });
-
       const processLlmResponse = async (currentMessages: ApiMessage[]) => {
         if (controller.signal.aborted) return;
   
@@ -406,30 +403,37 @@ ${JSON.stringify(toolDescriptions, null, 2)}
               const potentialToolCall = robustlyParseLlmResponseForToolCall(assistantResponseContent);
   
               if (potentialToolCall && ((potentialToolCall.tool_name && typeof potentialToolCall.tool_arguments === 'object') || (potentialToolCall.name && typeof potentialToolCall.arguments === 'object'))) {
-                const toolName = potentialToolCall.tool_name || potentialToolCall.name;
-                const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
-                const stringifiedArguments = JSON.stringify(toolArgumentsObject);
-                const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
-                const structuredToolCalls: LLMToolCall[] = [{ id: consistentToolCallId, type: 'function', function: { name: toolName, arguments: stringifiedArguments } }];
-  
-                setTurns(prevTurns => {
-                  const lastTurn = prevTurns[prevTurns.length - 1];
-                  return [...prevTurns.slice(0, -1), { ...lastTurn, content: assistantResponseContent, status: 'complete', tool_calls: structuredToolCalls }];
-                });
-  
-                const executionResult = await executeToolCall({ id: consistentToolCallId, name: toolName, arguments: stringifiedArguments });
-                const toolResultTurn: MessageTurn = { role: 'tool', tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, name: executionResult.name, content: executionResult.result, status: 'complete', timestamp: Date.now() };
-                setTurns(prevTurns => [...prevTurns, toolResultTurn]);
-  
-                const assistantApiMessageWithToolCall: ApiMessage = { role: 'assistant', content: assistantResponseContent, tool_calls: structuredToolCalls };
-                const toolResultApiMessage = turnToApiMessage(toolResultTurn);
-                const messagesForNextApiCall: ApiMessage[] = [...currentMessages, assistantApiMessageWithToolCall, toolResultApiMessage];
-  
-                const finalAssistantPlaceholder: MessageTurn = { role: 'assistant', content: '', status: 'streaming', timestamp: Date.now() + 1 };
-                setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
-  
-                await processLlmResponse(messagesForNextApiCall); // Recursive call
+                try {
+                  const toolName = potentialToolCall.tool_name || potentialToolCall.name;
+                  const toolArgumentsObject = potentialToolCall.tool_arguments || potentialToolCall.arguments;
+                  const stringifiedArguments = JSON.stringify(toolArgumentsObject);
+                  const consistentToolCallId = `tool_${callId}_${toolName.replace(/\s+/g, '_')}_${Date.now()}`;
+                  const structuredToolCalls: LLMToolCall[] = [{ id: consistentToolCallId, type: 'function', function: { name: toolName, arguments: stringifiedArguments } }];
+    
+                  setTurns(prevTurns => {
+                    const lastTurn = prevTurns[prevTurns.length - 1];
+                    return [...prevTurns.slice(0, -1), { ...lastTurn, content: assistantResponseContent, status: 'complete', tool_calls: structuredToolCalls }];
+                  });
+    
+                  const executionResult = await executeToolCall({ id: consistentToolCallId, name: toolName, arguments: stringifiedArguments });
+                  const toolResultTurn: MessageTurn = { role: 'tool', tool_call_id: executionResult.toolCallId || `call_${Date.now()}`, name: executionResult.name, content: executionResult.result, status: 'complete', timestamp: Date.now() };
+                  setTurns(prevTurns => [...prevTurns, toolResultTurn]);
+    
+                  const assistantApiMessageWithToolCall: ApiMessage = { role: 'assistant', content: null, tool_calls: structuredToolCalls };
+                  const toolResultApiMessage = turnToApiMessage(toolResultTurn);
+                  const messagesForNextApiCall: ApiMessage[] = [...currentMessages, assistantApiMessageWithToolCall, toolResultApiMessage];
+    
+                  const finalAssistantPlaceholder: MessageTurn = { role: 'assistant', content: '', status: 'streaming', timestamp: Date.now() + 1 };
+                  setTurns(prevTurns => [...prevTurns, finalAssistantPlaceholder]);
+    
+                  await processLlmResponse(messagesForNextApiCall); // Recursive call
+                } catch (toolError) {
+                  // **FIX 3: Robustness** - Catch errors from tool execution
+                  const errorMessage = toolError instanceof Error ? toolError.message : String(toolError);
+                  updateAssistantTurn(callId, `Tool execution failed: ${errorMessage}`, true, true);
+                }
               } else {
+                // **FIX 2: Logic Bug** - Append sources to the final answer
                 let finalContent = assistantResponseContent;
                 if (sourcesStringForAppending) finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
                 updateAssistantTurn(callId, finalContent, true, false);
@@ -442,7 +446,12 @@ ${JSON.stringify(toolDescriptions, null, 2)}
         );
       };
   
-      await processLlmResponse(messagesForApiPayload);
+      const initialMessages: ApiMessage[] = [];
+      if (systemContent) initialMessages.push({ role: 'system', content: systemContent });
+      initialMessages.push(...currentTurns.filter(t => t.role !== 'assistant' || t.status === 'complete').map(turnToApiMessage));
+      initialMessages.push({ role: 'user', content: messageForLLM });
+
+      await processLlmResponse(initialMessages);
     } catch (error) {
       if (!controller.signal.aborted) {
         console.error(`[${callId}] Error during send operation:`, error);
