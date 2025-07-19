@@ -370,6 +370,7 @@ If tool use is necessary:
 3.  **Direct Answers:** If no tool is needed, provide a direct, conversational answer.
 4.  **Avoid Redundancy:** Do not repeat a tool call with the exact same arguments if it has been made previously.
 5.  **Strict JSON Format:** To use a tool, you MUST respond *only* with a single JSON object adhering to this structure: \`{"tool_name": "tool_name", "tool_arguments": {"arg_name": "value", ...}}\`. No conversational text or explanations should precede or follow this JSON object.
+6.  **Only once per Turn:** You can only call one tool per turn. If multiple tools are needed, you must call them sequentially in separate turns.
 
 Available tools:
 ${JSON.stringify(toolDescriptions, null, 2)}
