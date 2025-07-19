@@ -24,7 +24,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'note.save', // Renamed from saveNote
+      name: 'note.save',
       description:
         "Saves a new note to the user's persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.",
       parameters: {
@@ -55,9 +55,9 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'fetcher', // Name remains the same as per instructions
+      name: 'fetcher',
       description:
-        'Fetches the main textual content of a given URL. Use this to get the content of a webpage.',
+        'Fetches the main textual content of a given URL. Use this when the user provides a link and asks you to summarize it, answer questions about it, or extract specific information from it.',
       parameters: {
         type: 'object',
         properties: {
@@ -74,7 +74,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'memory.update', // Renamed from updateMemory
+      name: 'memory.update',
       description:
         'Appends a short summary or key piece of information to a special "memory" note in the popover. Use this to remember user preferences, facts about the user, or important context from the conversation for future reference within the current session or for the user to see in their popover note.',
       parameters: {

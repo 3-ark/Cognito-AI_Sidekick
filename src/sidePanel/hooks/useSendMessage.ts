@@ -362,7 +362,8 @@ const useSendMessage = (
       const toolsPrompt = `To help you respond, you have access to the tools listed below. Please follow these guidelines carefully when using them:
 
 Tool Use Guidelines:
-Before deciding to use a tool, carefully consider if you can answer the user's request adequately with your existing knowledge. Only resort to a tool if essential information is missing or an action is explicitly required that only a tool can perform.
+Before deciding to use a tool, think step-by-step. First, analyze the user's request. Second, decide if any of your available tools could help you provide a better answer. If not, answer directly. If a tool is needed, identify the best one and determine the exact arguments required. Finally, if you have decided or been asked by user to use a tool:
+Only resort to a tool if essential information is missing or an action is explicitly required that only a tool can perform.
 
 If tool use is necessary:
 1.  **Argument Precision:** Always use the exact values for tool arguments. Do not use placeholders or variable names.
