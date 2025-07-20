@@ -191,7 +191,7 @@ export const EditableMessage: FC<MessageProps> = ({
           </div>
         </div>
       ) : turn.role === 'tool' ? (
-        <FetcherDisplay turn={turn} />
+        <ToolDisplay turn={turn} />
       ) : (
         <div className="message-markdown markdown-body relative z-[1] text-foreground">
           {shouldRendercontentAsMain && (
@@ -228,11 +228,17 @@ export const EditableMessage: FC<MessageProps> = ({
   );
 };
 
-const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
+const COLLAPSIBLE_TOOLS: Record<string, string> = {
+  fetcher: 'Fetched Content',
+  web_search: 'Web Search Results',
+};
+
+const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { config } = useConfig();
 
-  if (turn.name === 'fetcher') {
+  if (turn.name && turn.name in COLLAPSIBLE_TOOLS) {
+    const toolName = COLLAPSIBLE_TOOLS[turn.name];
     return (
       <div className="my-2">
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
@@ -245,7 +251,7 @@ const FetcherDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
                 "border-foreground text-foreground hover:text-accent-foreground"
               )}
             >
-              {isOpen ? 'Hide Fetched Content' : 'Show Fetched Content'}
+              {isOpen ? `Hide ${toolName}` : `Show ${toolName}`}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
