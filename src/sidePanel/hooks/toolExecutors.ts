@@ -3,7 +3,9 @@ import { webSearch } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
 import { Config } from '../../types/config';
 import ChannelNames from '../../types/ChannelNames';
-
+import { generateEmbeddings } from '../../background/embeddingUtils';
+import { findSimilarChunks } from '../../background/semanticSearchUtils';
+import { prompt } from '../../background/prompt';
 // Define UpdateConfig locally as its definition is simple and tied to how useConfig provides it
 export type UpdateConfig = (newConfig: Partial<Config>) => void;
 
@@ -32,16 +34,21 @@ export interface RetrieverArgs {
   query: string;
 }
 
-import { generateEmbeddings } from '../../background/embeddingUtils';
-import { findSimilarChunks } from '../../background/semanticSearchUtils';
-import { prompt } from '../../background/prompt';
-
 export interface PromptOptimizerArgs {
   prompt: string;
 }
 
 export interface PlannerArgs {
   task: string;
+  feedback?: string; // Optional feedback for plan improvement
+}
+
+export interface SmartDispatcherArgs {
+  task: string;
+}
+
+export interface ExecutorArgs {
+  plan: string;
 }
 
 export const executePromptOptimizer = async (
@@ -68,23 +75,61 @@ Optimized prompt:`
   }
 };
 
-export interface ExecutorArgs {
-  plan: string;
-}
-
 export const executePlanner = async (
-  args: PlannerArgs,
+  args: PlannerArgs, // Now uses the new interface
   config: Config
 ): Promise<string> => {
-  const { task } = args;
-  if (!task || task.trim() === '') {
-    return 'Error: Task cannot be empty for planner.';
+  const { task, feedback } = args;
+
+  // --- THE FIX ---
+  // Define the exact list of tools the planner is allowed to use.
+  const availableTools = [
+    'web_search',
+    'retriever',
+    'save_note',
+    'fetcher',
+    'prompt_optimizer',
+    'update_memory',
+    // DO NOT include smart_dispatcher, planner, or executor here to avoid loops.
+  ];
+  // Construct the prompt dynamically based on whether there's feedback
+  const feedbackInstruction = feedback 
+    ? `\n**IMPORTANT FEEDBACK:** ${feedback}\nYou MUST correct the plan based on this feedback.`
+    : '';
+
+  const systemPrompt = `You are a meticulous AI planning agent. Your task is to create a step-by-step plan in JSON format to accomplish a user's request.
+
+  **RULES:**
+  1.  You MUST ONLY use tools from the following list: ${JSON.stringify(availableTools)}.
+  2.  Do not invent any tool names. If a step cannot be accomplished with the available tools, you must state that in the plan or omit the step.
+  3.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
+  4.  Use placeholders like "$context.step_1_result" to pass the output from one step as an argument to a subsequent step.
+
+  **EXAMPLE GOOD PLAN:**
+  User Task: "Find out what GraphQL is and save the explanation in a note."
+  Your Output:
+  {
+    "steps": [
+      {
+        "tool_name": "web_search",
+        "tool_arguments": {"query": "what is GraphQL"}
+      },
+      {
+        "tool_name": "save_note",
+        "tool_arguments": {
+          "title": "GraphQL Explanation",
+          "content": "GraphQL is a query language for APIs. Key findings: $context.step_1_result"
+          "tags": ["GraphQL", "API"]
+        }
+      }
+    ]
   }
 
+  Now, create a plan for the following user task.
+  ${feedbackInstruction}`; // <-- Inject feedback here
+
   try {
-    const plan = await prompt(
-      `Create a JSON object that represents a step-by-step plan to accomplish the following task: "${task}". The JSON object should have a "steps" array. Each object in the "steps" array should have a "tool_name" and "tool_arguments" property. The "tool_arguments" property should be an object containing the arguments for the tool. Use placeholders like "$context.step_1_result" to pass results from one step to another.`
-    );
+    const plan = await prompt(systemPrompt + `User Task: "${task}"`);
     return plan;
   } catch (error: any) {
     console.error(`Error executing planner for task "${task}":`, error);
@@ -329,4 +374,70 @@ export const executeFetcher = async (args: FetcherArgs): Promise<string> => {
     }
     return `Error fetching content for ${args.url}: ${error.message || 'Unknown error'}`;
   }
+};
+
+export const executeSmartDispatcher = async (
+  args: SmartDispatcherArgs,
+  config: Config,
+  executeToolCall: (toolCall: any) => Promise<any>
+): Promise<string> => {
+  const { task } = args;
+  const MAX_REPAIR_ATTEMPTS = 2; // Try to generate a plan, then repair it once.
+  const availableTools = ['web_search', 'retriever', 'save_note', 'fetcher', 'prompt_optimizer', 'update_memory'];
+
+  let lastError = '';
+  let planObject: any = null;
+
+  for (let attempt = 0; attempt < MAX_REPAIR_ATTEMPTS; attempt++) {
+    console.log(`[SmartDispatcher] Planning attempt ${attempt + 1}...`);
+
+    // 1. Generate a plan (with feedback from the previous failed attempt if any)
+    const rawPlan = await executePlanner({ task, feedback: lastError }, config);
+
+    if (rawPlan.startsWith('Error:')) {
+      return `Error during planning phase: ${rawPlan}`;
+    }
+
+    // 2. Clean the plan (remove markdown)
+    let cleanPlanJson = rawPlan.trim();
+    const match = cleanPlanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match && match[1]) {
+      cleanPlanJson = match[1];
+    }
+
+    // 3. Try to parse and validate the plan
+    try {
+      planObject = JSON.parse(cleanPlanJson);
+      
+      const invalidSteps = planObject.steps.filter(
+        (step: any) => !availableTools.includes(step.tool_name)
+      );
+
+      if (invalidSteps.length === 0) {
+        // SUCCESS! The plan is valid.
+        console.log('[SmartDispatcher] Successfully generated a valid plan:', JSON.stringify(planObject, null, 2));
+        // Exit the loop and proceed to execution
+        break; 
+      } else {
+        // The plan is valid JSON but uses the wrong tools.
+        const invalidToolNames = invalidSteps.map((step: any) => step.tool_name).join(', ');
+        lastError = `The plan was invalid because it used non-existent tools: [${invalidToolNames}]. You MUST ONLY use tools from this list: ${JSON.stringify(availableTools)}.`;
+        planObject = null; // Invalidate the plan so we don't execute it.
+      }
+    } catch (e: any) {
+      // The plan is not even valid JSON.
+      lastError = `The plan was invalid because it was not correctly formatted JSON. The error was: ${e.message}. Please provide a single, clean JSON object.`;
+      planObject = null; // Invalidate the plan.
+    }
+  }
+
+  // 4. After the loop, check if we have a valid plan or not
+  if (!planObject) {
+    console.error('[SmartDispatcher] Failed to generate a valid plan after all attempts.');
+    return `Error: Failed to create a valid plan. Last known error: ${lastError}`;
+  }
+
+  // 5. If we have a valid plan, execute it.
+  console.log('[SmartDispatcher] Proceeding to execution...');
+  return await executeExecutor({ plan: JSON.stringify(planObject) }, executeToolCall);
 };

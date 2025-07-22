@@ -18,6 +18,7 @@ import {
   PlannerArgs,
   executeExecutor,
   ExecutorArgs,
+  executeSmartDispatcher,
 } from './toolExecutors';
 
 // Interface for LLM tool calls (remains here as it's part of the execution layer)
@@ -139,10 +140,10 @@ export const useTools = () => {
       try {
         const args = extractAndParseJsonArguments(rawArguments);
 
-        if (toolName === 'note.save') {
+        if (toolName === 'save_note') {
           const { message } = await executeSaveNote(args as SaveNoteArgs);
           return { toolCallId, name: toolName, result: message, toolName };
-        } else if (toolName === 'memory.update') {
+        } else if (toolName === 'update_memory') {
           const { message } = executeUpdateMemory(
             args as UpdateMemoryArgs,
             config.noteContent,
@@ -165,13 +166,15 @@ export const useTools = () => {
           const result = await executePlanner(args as PlannerArgs, config);
           return { toolCallId, name: toolName, result, toolName };
         } else if (toolName === 'executor') {
-          // Cast executeToolCall to the expected type for executeExecutor
-          const result = await executeExecutor(
-            args as ExecutorArgs,
+          const result = await executeExecutor(args as ExecutorArgs,
             executeToolCall as (toolCall: { id: string; name: string; arguments: string }) => Promise<{
               toolCallId: string; name: string; result: string;
             }>
           );
+          return { toolCallId, name: toolName, result, toolName };
+        } else if (toolName === 'smart_dispatcher') {
+          const task = args.task || '';
+          const result = await executeSmartDispatcher({ task }, config, executeToolCall as any);
           return { toolCallId, name: toolName, result, toolName };
         } else {
           console.error(`Error: Unknown tool '${toolName}'`);

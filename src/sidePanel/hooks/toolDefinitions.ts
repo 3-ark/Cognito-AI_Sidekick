@@ -97,7 +97,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'note.save',
+      name: 'save_note',
       description:
         "Saves a new note to the user's persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.",
       parameters: {
@@ -147,7 +147,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'memory.update',
+      name: 'update_memory',
       description:
         'Appends a short summary or key piece of information to a special "memory" note in the popover. Use this to remember user preferences, facts about the user, or important context from the conversation for future reference within the current session or for the user to see in their popover note.',
       parameters: {
@@ -185,6 +185,25 @@ export const toolDefinitions: ToolDefinition[] = [
           },
         },
         required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'smart_dispatcher',
+      description:
+        'Handles complex, multi-step user requests that require a sequence of actions or multiple tool calls. Use this for tasks like researching several topics and then summarizing, or finding information and then saving it. For simple, single-action requests (e.g., a single web search), call the specific tool directly.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task: {
+            type: 'string',
+            description:
+              "The user's complete, original, natural language request that describes the entire multi-step task. For example: 'search for the pros and cons of GraphQL and REST, and then create a note summarizing the findings'.",
+          },
+        },
+        required: ['task'],
       },
     },
   },
