@@ -10,6 +10,14 @@ import {
   UpdateMemoryArgs,
   FetcherArgs,
   WebSearchArgs,
+  executePromptOptimizer,
+  PromptOptimizerArgs,
+  executeRetriever,
+  RetrieverArgs,
+  executePlanner,
+  PlannerArgs,
+  executeExecutor,
+  ExecutorArgs,
 } from './toolExecutors';
 
 // Interface for LLM tool calls (remains here as it's part of the execution layer)
@@ -131,10 +139,10 @@ export const useTools = () => {
       try {
         const args = extractAndParseJsonArguments(rawArguments);
 
-        if (toolName === 'note.save') { // Updated name
+        if (toolName === 'note.save') {
           const { message } = await executeSaveNote(args as SaveNoteArgs);
           return { toolCallId, name: toolName, result: message, toolName };
-        } else if (toolName === 'memory.update') { // Updated name
+        } else if (toolName === 'memory.update') {
           const { message } = executeUpdateMemory(
             args as UpdateMemoryArgs,
             config.noteContent,
@@ -147,13 +155,30 @@ export const useTools = () => {
         } else if (toolName === 'web_search') {
           const result = await executeWebSearch(args as WebSearchArgs, config);
           return { toolCallId, name: toolName, result, toolName };
+        } else if (toolName === 'prompt_optimizer') {
+          const result = await executePromptOptimizer(args as PromptOptimizerArgs, config);
+          return { toolCallId, name: toolName, result, toolName };
+        } else if (toolName === 'retriever') {
+          const result = await executeRetriever(args as RetrieverArgs, config);
+          return { toolCallId, name: toolName, result, toolName };
+        } else if (toolName === 'planner') {
+          const result = await executePlanner(args as PlannerArgs, config);
+          return { toolCallId, name: toolName, result, toolName };
+        } else if (toolName === 'executor') {
+          // Cast executeToolCall to the expected type for executeExecutor
+          const result = await executeExecutor(
+            args as ExecutorArgs,
+            executeToolCall as (toolCall: { id: string; name: string; arguments: string }) => Promise<{
+              toolCallId: string; name: string; result: string;
+            }>
+          );
+          return { toolCallId, name: toolName, result, toolName };
         } else {
           console.error(`Error: Unknown tool '${toolName}'`);
           return { toolCallId, name: toolName, result: `Error: Unknown tool '${toolName}'`, toolName };
         }
       } catch (error: any) {
         console.error(`Error executing tool ${toolName}:`, error);
-        // Specific error handling for fetcher can be kept if desired, or generalized
         if (toolName === 'fetcher' && typeof error === 'string' && error.startsWith('[Error scraping URL:')) {
             return { toolCallId, name: toolName, result: error, toolName };
         }
@@ -165,9 +190,8 @@ export const useTools = () => {
         };
       }
     },
-    [config.noteContent, updateConfig] // Dependencies for useCallback
+    [config, updateConfig]
   );
 
-  // Expose toolDefinitions directly from the imported module
   return { toolDefinitions, executeToolCall };
 };
