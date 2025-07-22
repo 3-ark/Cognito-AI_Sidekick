@@ -83,7 +83,7 @@ export const executePlanner = async (
 
   try {
     const plan = await prompt(
-      `Create a step-by-step plan to accomplish the following task: "${task}". The plan should be a numbered list of actions.`
+      `Create a JSON object that represents a step-by-step plan to accomplish the following task: "${task}". The JSON object should have a "steps" array. Each object in the "steps" array should have a "tool_name" and "tool_arguments" property. The "tool_arguments" property should be an object containing the arguments for the tool. Use placeholders like "$context.step_1_result" to pass results from one step to another.`
     );
     return plan;
   } catch (error: any) {
@@ -110,23 +110,47 @@ export const executeExecutor = async (
   }
 
   try {
-    const steps = plan.split('\n').filter((step) => step.trim() !== '');
-    let result = '';
-    for (const step of steps) {
-      const toolCallMatch = step.match(/(\w+)\((.*)\)/);
-      if (toolCallMatch) {
-        const toolName = toolCallMatch[1];
-        const toolArgs = toolCallMatch[2];
-        const toolCallId = `executor_${toolName}_${Date.now()}`;
-        const executionResult = await executeToolCall({
-          id: toolCallId,
-          name: toolName,
-          arguments: toolArgs,
-        });
-        result += `${executionResult.name}: ${executionResult.result}\n`;
-      }
+    const planObject = JSON.parse(plan);
+    if (!Array.isArray(planObject.steps)) {
+      return 'Error: Invalid plan format. The plan must have a "steps" array.';
     }
-    return result;
+
+    const context: Record<string, any> = {};
+    let finalResult = '';
+
+    for (let i = 0; i < planObject.steps.length; i++) {
+      const step = planObject.steps[i];
+      const { tool_name, tool_arguments } = step;
+
+      if (!tool_name || !tool_arguments) {
+        finalResult += `Skipping invalid step: ${JSON.stringify(step)}\n`;
+        continue;
+      }
+
+      // Replace placeholders
+      let processedArgs = JSON.stringify(tool_arguments);
+      const placeholders = processedArgs.match(/\$context\.step_\d+_result/g);
+      if (placeholders) {
+        for (const placeholder of placeholders) {
+          const contextKey = placeholder.substring(9); // remove "$context."
+          if (context[contextKey]) {
+            processedArgs = processedArgs.replace(placeholder, context[contextKey]);
+          }
+        }
+      }
+
+      const toolCallId = `executor_${tool_name}_${Date.now()}`;
+      const executionResult = await executeToolCall({
+        id: toolCallId,
+        name: tool_name,
+        arguments: processedArgs,
+      });
+
+      const contextKey = `step_${i + 1}_result`;
+      context[contextKey] = executionResult.result;
+      finalResult += `${executionResult.name}: ${executionResult.result}\n`;
+    }
+    return finalResult;
   } catch (error: any) {
     console.error(`Error executing executor for plan "${plan}":`, error);
     return `Error executing plan: ${error.message || 'Unknown error'}`;
