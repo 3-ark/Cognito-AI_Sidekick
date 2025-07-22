@@ -716,6 +716,55 @@ export const webSearch = async (
 };
 
 
+export async function fetchData(
+  url: string,
+  data: Record<string, unknown>,
+  headers: Record<string, string> = {},
+  host: string,
+  abortSignal?: AbortSignal
+): Promise<string> {
+  if (url.startsWith('chrome://')) {
+    console.log("fetchData: Skipping chrome:// URL:", url);
+    return '';
+  }
+
+  if (url.includes('localhost')) {
+    await urlRewriteRuntime(url.endsWith('/') ? url.slice(0, -1) : url);
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ ...data, stream: false }),
+      signal: abortSignal,
+    });
+
+    if (!response.ok) {
+      let errorBody = `Network response was not ok (${response.status})`;
+      try {
+        const text = await response.text();
+        errorBody += `: ${text || response.statusText}`;
+      } catch (_) {
+        errorBody += `: ${response.statusText}`;
+      }
+      throw new Error(errorBody);
+    }
+
+    const responseData = await response.json();
+    const content = responseData?.choices?.[0]?.message?.content;
+    return typeof content === 'string' ? content : '';
+  } catch (error) {
+    if (abortSignal?.aborted) {
+      console.log(`[fetchData] Operation aborted via signal. Details:`, error);
+      throw new Error("Operation aborted by user.");
+    } else {
+      console.error('Error in fetchData (unexpected):', error);
+      throw error;
+    }
+  }
+}
+
 export async function fetchDataAsStream(
       url: string,
       data: Record<string, unknown>,

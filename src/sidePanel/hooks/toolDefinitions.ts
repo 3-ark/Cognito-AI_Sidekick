@@ -24,6 +24,79 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'prompt_optimizer',
+      description:
+        'Optimizes a user-provided prompt to be clearer, more concise, and more effective for the LLM. Use this when a prompt is ambiguous, overly complex, or could be improved for better results.',
+      parameters: {
+        type: 'object',
+        properties: {
+          prompt: {
+            type: 'string',
+            description: 'The user prompt to be optimized.',
+          },
+        },
+        required: ['prompt'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'retriever',
+      description:
+        'Performs a semantic search over the user’s notes and chat history to find relevant context. Use this to answer questions, recall information, or provide context for other tasks.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description:
+              'The query to search for in the user’s notes and chat history.',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'planner',
+      description:
+        'Analyzes a user’s task and the available tools to create a step-by-step plan of tool calls to achieve the mission. Use this for complex tasks that require multiple steps or tools.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task: {
+            type: 'string',
+            description: 'The user’s task to be planned.',
+          },
+        },
+        required: ['task'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'executor',
+      description:
+        'Executes a plan from the planner after user confirmation. The executor follows the plan strictly and executes the tool calls in the specified order.',
+      parameters: {
+        type: 'object',
+        properties: {
+          plan: {
+            type: 'string',
+            description: 'The plan to be executed.',
+          },
+        },
+        required: ['plan'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'note.save',
       description:
         "Saves a new note to the user's persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.",

@@ -3,6 +3,7 @@ import { webSearch } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
 import { Config } from '../../types/config'; // Corrected path for Config
 import ChannelNames from '../../types/ChannelNames';
+import { searchSimilar } from '../../background/semanticSearchUtils';
 
 // Define UpdateConfig locally as its definition is simple and tied to how useConfig provides it
 export type UpdateConfig = (newConfig: Partial<Config>) => void;
@@ -12,7 +13,7 @@ export interface SaveNoteArgs {
   title?: string;
   tags?: string[] | string;
   // id and url are optional for new notes created by LLM
-  id?: string; 
+  id?: string;
   url?: string;
 }
 
@@ -21,13 +22,141 @@ export interface UpdateMemoryArgs {
 }
 
 export interface FetcherArgs {
-  url:string;
+  url: string;
 }
 
 export interface WebSearchArgs {
   query: string;
   engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia';
 }
+
+export interface RetrieverArgs {
+  query: string;
+}
+
+import { generateEmbeddings } from '../../background/embeddingUtils';
+import { findSimilarChunks } from '../../background/semanticSearchUtils';
+import { prompt } from '../../background/prompt';
+
+export interface PromptOptimizerArgs {
+  prompt: string;
+}
+
+export interface PlannerArgs {
+  task: string;
+}
+
+export const executePromptOptimizer = async (
+  args: PromptOptimizerArgs,
+  config: Config
+): Promise<string> => {
+  const { prompt: userPrompt } = args;
+  if (!userPrompt || userPrompt.trim() === '') {
+    return 'Error: Prompt cannot be empty for prompt_optimizer.';
+  }
+
+  try {
+    const optimizedPrompt = await prompt(
+      `Optimize the following prompt for a large language model. The optimized prompt should be clear, concise, and effective.
+
+Original prompt: "${userPrompt}"
+
+Optimized prompt:`
+    );
+    return optimizedPrompt;
+  } catch (error: any) {
+    console.error(`Error executing prompt_optimizer for prompt "${userPrompt}":`, error);
+    return `Error optimizing prompt: ${error.message || 'Unknown error'}`;
+  }
+};
+
+export interface ExecutorArgs {
+  plan: string;
+}
+
+export const executePlanner = async (
+  args: PlannerArgs,
+  config: Config
+): Promise<string> => {
+  const { task } = args;
+  if (!task || task.trim() === '') {
+    return 'Error: Task cannot be empty for planner.';
+  }
+
+  try {
+    const plan = await prompt(
+      `Create a step-by-step plan to accomplish the following task: "${task}". The plan should be a numbered list of actions.`
+    );
+    return plan;
+  } catch (error: any) {
+    console.error(`Error executing planner for task "${task}":`, error);
+    return `Error creating plan: ${error.message || 'Unknown error'}`;
+  }
+};
+
+export const executeExecutor = async (
+  args: ExecutorArgs,
+  executeToolCall: (toolCall: {
+    id: string;
+    name: string;
+    arguments: string;
+  }) => Promise<{
+    toolCallId: string;
+    name: string;
+    result: string;
+  }>
+): Promise<string> => {
+  const { plan } = args;
+  if (!plan || plan.trim() === '') {
+    return 'Error: Plan cannot be empty for executor.';
+  }
+
+  try {
+    const steps = plan.split('\n').filter((step) => step.trim() !== '');
+    let result = '';
+    for (const step of steps) {
+      const toolCallMatch = step.match(/(\w+)\((.*)\)/);
+      if (toolCallMatch) {
+        const toolName = toolCallMatch[1];
+        const toolArgs = toolCallMatch[2];
+        const toolCallId = `executor_${toolName}_${Date.now()}`;
+        const executionResult = await executeToolCall({
+          id: toolCallId,
+          name: toolName,
+          arguments: toolArgs,
+        });
+        result += `${executionResult.name}: ${executionResult.result}\n`;
+      }
+    }
+    return result;
+  } catch (error: any) {
+    console.error(`Error executing executor for plan "${plan}":`, error);
+    return `Error executing plan: ${error.message || 'Unknown error'}`;
+  }
+};
+
+export const executeRetriever = async (
+  args: RetrieverArgs,
+  config: Config
+): Promise<string> => {
+  const { query } = args;
+  if (!query || query.trim() === '') {
+    return 'Error: Query cannot be empty for retriever.';
+  }
+
+  try {
+    const queryEmbedding = await generateEmbeddings([query]);
+    const searchResults = await findSimilarChunks(
+      queryEmbedding[0],
+      config.rag.numResults,
+      config.rag.semanticThreshold
+    );
+    return JSON.stringify(searchResults);
+  } catch (error: any) {
+    console.error(`Error executing retriever for query "${query}":`, error);
+    return `Error performing retrieval: ${error.message || 'Unknown error'}`;
+  }
+};
 
 export const executeWebSearch = async (
   args: WebSearchArgs,
