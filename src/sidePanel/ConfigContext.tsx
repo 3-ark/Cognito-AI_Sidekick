@@ -62,7 +62,7 @@ const defaultConfig: Config = {
   temperature: 0.7,
   topP: 0.95,
   presencepenalty: 0,
-  useTools: true, // Default to true
+  useTools: true,
   models: [],
   selectedModel: undefined,
   chatMode: undefined,
@@ -88,7 +88,7 @@ const defaultConfig: Config = {
     bm25: {
       k1: 1.2,
       b: 0.75,
-      topK: 50, // Moved and updated default
+      topK: 50,
     },
     embedding_model: 'text-embedding-3-small',
     semantic_threshold: 0.1,
@@ -96,7 +96,7 @@ const defaultConfig: Config = {
     final_top_k: 10, // For final results after reranking
     bm25_weight: 0.5,
     vectorDimension: 1024, // Default vector dimension
-    embeddingMode: 'manual', // Added default
+    embeddingMode: 'manual',
     bm25LastRebuild: "Never",
     embeddingsLastRebuild: "Never",
     embeddingsLastUpdate: "Never",

@@ -165,7 +165,13 @@ export const useTools = () => {
           const result = await executePlanner(args as PlannerArgs, config);
           return { toolCallId, name: toolName, result, toolName };
         } else if (toolName === 'executor') {
-          const result = await executeExecutor(args as ExecutorArgs, executeToolCall);
+          // Cast executeToolCall to the expected type for executeExecutor
+          const result = await executeExecutor(
+            args as ExecutorArgs,
+            executeToolCall as (toolCall: { id: string; name: string; arguments: string }) => Promise<{
+              toolCallId: string; name: string; result: string;
+            }>
+          );
           return { toolCallId, name: toolName, result, toolName };
         } else {
           console.error(`Error: Unknown tool '${toolName}'`);

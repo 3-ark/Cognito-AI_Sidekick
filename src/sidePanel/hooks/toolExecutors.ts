@@ -1,9 +1,8 @@
 import { toast } from 'react-hot-toast';
 import { webSearch } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
-import { Config } from '../../types/config'; // Corrected path for Config
+import { Config } from '../../types/config';
 import ChannelNames from '../../types/ChannelNames';
-import { searchSimilar } from '../../background/semanticSearchUtils';
 
 // Define UpdateConfig locally as its definition is simple and tied to how useConfig provides it
 export type UpdateConfig = (newConfig: Partial<Config>) => void;
@@ -12,7 +11,6 @@ export interface SaveNoteArgs {
   content: string;
   title?: string;
   tags?: string[] | string;
-  // id and url are optional for new notes created by LLM
   id?: string;
   url?: string;
 }
@@ -148,8 +146,8 @@ export const executeRetriever = async (
     const queryEmbedding = await generateEmbeddings([query]);
     const searchResults = await findSimilarChunks(
       queryEmbedding[0],
-      config.rag.numResults,
-      config.rag.semanticThreshold
+      config.rag?.final_top_k ?? 5,
+      config.rag?.semantic_threshold ?? 0.1
     );
     return JSON.stringify(searchResults);
   } catch (error: any) {

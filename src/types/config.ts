@@ -62,7 +62,7 @@ export interface Config {
   maxTokens: number;
   topP: number;
   presencepenalty: number;
-  useTools?: boolean; // Added for tool usage switch
+  useTools?: boolean;
   lmStudioUrl?: string;
   lmStudioConnected?: boolean;
   lmStudioError?: string | unknown;
@@ -125,7 +125,7 @@ export interface Config {
     bm25?: {
       k1?: number;
       b?: number;
-      topK?: number; // Renamed from topK at root of rag settings
+      topK?: number;
     };
     embedding_model?: string;
     semantic_threshold?: number;
@@ -133,7 +133,7 @@ export interface Config {
     final_top_k?: number; // For the final number of reranked chunks to return
     bm25_weight?: number;
     vectorDimension?: number;
-    embeddingMode?: 'manual' | 'automatic'; // Added
+    embeddingMode?: 'manual' | 'automatic';
     bm25LastRebuild?: string;
     embeddingsLastRebuild?: string;
     embeddingsLastUpdate?: string;
