@@ -1,7 +1,8 @@
 import { useState, useLayoutEffect, useRef, useEffect } from 'react';
 import { FiCopy, FiRepeat, FiPlay, FiPause, FiSquare } from 'react-icons/fi';
 import { MessageTurn } from '../background/chatHistoryStorage';
-import { EditableMessage } from './Message'; 
+import { EditableMessage } from './Message';
+import { ToolCallMessage } from './components/ToolCallMessage';
 import {
   speakMessage,
   stopSpeech,
@@ -160,13 +161,12 @@ export const Messages: React.FC<MessagesProps> = ({
     >
       {turns.map(
         (turn, i) => {
-          // Hide ALL assistant messages that contain a tool call
           if (
             turn.role === 'assistant' &&
             turn.tool_calls &&
             turn.tool_calls.length > 0
           ) {
-            return null;
+            return <ToolCallMessage key={`tool_call_${i}`} turn={turn} />;
           }
 
           return (
