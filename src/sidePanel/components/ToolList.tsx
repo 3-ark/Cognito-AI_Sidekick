@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -19,36 +20,46 @@ import { toolDefinitions } from '../hooks/toolDefinitions';
 import { cn } from '@/src/background/util';
 
 export const ToolList: React.FC = () => {
-  const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
 
   return (
     <Dialog>
       <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className={cn(
-                  "rounded-full shadow-lg",
-                  "bg-[var(--italic)] text-[var(--text)]",
-                  "hover:bg-italic/80",
-                  "focus:ring-1 focus:ring-[var(--ring)] focus:ring-offset-1 focus:ring-offset-[var(--bg)]",
-                  "absolute bottom-4 right-4"
-                )}>
-                <FiList className="h-5 w-5" />
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="left" className={sharedTooltipContentStyle}>
-            <p>View Available Tools</p>
-          </TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs text-[var(--text)]/70 font-mono">Browse available tools</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs",
+                    "border-none",
+                    "font-['Space_Mono',_monospace]",
+                    "hover:brightness-80 active:brightness-90",
+                    "focus:ring-1 focus:ring-white/50",
+                    "flex items-center gap-1",
+                    "bg-[var(--link)] text-white"
+                  )}
+                  style={{ minWidth: 0 }}
+                >
+                  <FiList className="h-3 w-3 mr-1" />
+                  Tools
+                </Button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>View Available Tools</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </TooltipProvider>
-      <DialogContent className="themedPanel max-w-md bg-[var(--bg)] text-[var(--text)] border-[var(--text)]">
+      <DialogContent className="themedPanel w-[80dvw] max-w-[300px] bg-[var(--bg)] text-[var(--text)] border-[var(--text)]">
         <DialogHeader>
           <DialogTitle>Available Tools</DialogTitle>
+          <DialogDescription className="text-xs text-[var(--text)]/70">
+            These tools can be used by the AI to help answer your questions or perform actions.
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-72 w-full rounded-md border border-[var(--text)]/20 p-2 bg-[var(--bg)]/30">
           <div className="p-4">
@@ -60,7 +71,7 @@ export const ToolList: React.FC = () => {
                       <TooltipTrigger>
                         <span className="font-mono text-sm font-bold">{tool.function.name}</span>
                       </TooltipTrigger>
-                      <TooltipContent side="right" className={sharedTooltipContentStyle}>
+                      <TooltipContent side="right">
                         <p className="max-w-xs">{tool.function.description}</p>
                       </TooltipContent>
                     </Tooltip>

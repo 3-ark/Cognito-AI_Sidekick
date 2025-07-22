@@ -97,7 +97,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   };
 
   const currentPersona = config?.persona || 'Ein'; // Default to 'Ein' if not set
-  const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
 
   // --- Persona Management State & Handlers ---
   const personas = config?.personas || { Ein: "You are Ein, a helpful AI assistant." };
@@ -372,7 +371,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                           <TooltipTrigger asChild>
                             <FiInfo className="px-0 mr-1 text-[var(--text)]/50" />
                           </TooltipTrigger>
-                          <TooltipContent side="top" className={sharedTooltipContentStyle}>
+                          <TooltipContent side="top">
                             <p>Manage your vector index</p>
                           </TooltipContent>
                         </Tooltip>
@@ -386,7 +385,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                               <span className="truncate">Rebuild</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="top" className={sharedTooltipContentStyle}>
+                          <TooltipContent side="top">
                             <p>Rebuild Embeddings</p>
                             <p className="text-xs opacity-80">Last: {embeddingsLastRebuild}</p>
                           </TooltipContent>
@@ -398,7 +397,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                               <span className="truncate">Update</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="top" className={sharedTooltipContentStyle}>
+                          <TooltipContent side="top">
                             <p>Update Embeddings</p>
                             <p className="text-xs opacity-80">Last: {embeddingsLastUpdate}</p>
                           </TooltipContent>
@@ -408,16 +407,22 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     <p className="text-xs font-['Space_Mono',_monospace] text-[var(--text)]/70 mt-3">
                       Current Model: {parseModelNameForDisplay(selectedEmbeddingModelDisplay) || 'None'}
                     </p>
-                    {embeddingStatus !== 'idle' && (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-xs text-[var(--text)]/70">
-                          {embeddingStatus === 'rebuilding' ? 'Rebuilding...' : 'Updating...'}
-                          ({embeddingProgress.processed}/{embeddingProgress.total})
-                        </p>
-                        <Progress value={(embeddingProgress.processed / embeddingProgress.total) * 100} className="h-2" />
-                      </div>
-                    )}
-                    <ToolList />
+                    {/* Progress bar always visible and separated */}
+                    <div className="mt-2 mb-2">
+                      {embeddingStatus !== 'idle' && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-[var(--text)]/70">
+                            {embeddingStatus === 'rebuilding' ? 'Rebuilding...' : 'Updating...'}
+                            ({embeddingProgress.processed}/{embeddingProgress.total})
+                          </p>
+                          <Progress value={(embeddingProgress.processed / embeddingProgress.total) * 100} className="h-2" />
+                        </div>
+                      )}
+                    </div>
+                    {/* ToolList always below progress and buttons, with spacing */}
+                    <div className="mt-3">
+                      <ToolList />
+                    </div>
                   </div>
                 </div>
               </TooltipProvider>
@@ -462,7 +467,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                                 <FiBookOpen />
                             </a>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className={sharedTooltipContentStyle}>User Guide</TooltipContent>
+                        <TooltipContent side="top">User Guide</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -475,7 +480,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                                 <FiX />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className={sharedTooltipContentStyle}> Close Settings </TooltipContent>
+                        <TooltipContent side="top"> Close Settings </TooltipContent>
                     </Tooltip>
                 </div>
                 </div>
