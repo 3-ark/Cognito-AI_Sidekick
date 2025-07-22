@@ -19,6 +19,7 @@ import { themes as appThemes, type Theme as AppTheme } from './Themes';
 import { cn } from "@/src/background/util";
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import AnimatedBackground from './AnimatedBackground';
+import { ToolList } from './components/ToolList';
 
 const SheetThemeButton = ({ theme, updateConfig, size = "h-6 w-6" }: { theme: AppTheme; updateConfig: (newConfig: Partial<Config>) => void; size?: string }) => (
   <Tooltip>
@@ -364,7 +365,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     </Button>
                   </div>
                   {/* Index Management Buttons */}
-                  <div className="pt-5 border-t border-[var(--text)]/20">
+                  <div className="pt-5 border-t border-[var(--text)]/20 relative">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
                         <Tooltip>
@@ -416,6 +417,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         <Progress value={(embeddingProgress.processed / embeddingProgress.total) * 100} className="h-2" />
                       </div>
                     )}
+                    <ToolList />
                   </div>
                 </div>
               </TooltipProvider>
