@@ -1,6 +1,6 @@
 Find the latest release and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
-### [3.9.0] - 2024-07-20
+### [3.9.1] - 2024-07-22
 
 New Tools:
 1. Planner: make a plan for your task with tool use step by step
