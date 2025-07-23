@@ -189,7 +189,7 @@ export const toolDefinitions: ToolDefinition[] = [
                 engine: {
                   type: 'string',
                   description: 'The search engine to use for this specific query. Defaults to Google.',
-                  enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia'],
+                  enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia', 'GoogleCustomSearch'],
                 },
               },
               required: ['query'],

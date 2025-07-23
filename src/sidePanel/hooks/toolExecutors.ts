@@ -28,7 +28,7 @@ export interface FetcherArgs {
 export interface WebSearchArgs {
   queries: {
     query: string;
-    engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia';
+    engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia' | 'GoogleCustomSearch';
   }[];
 }
 
