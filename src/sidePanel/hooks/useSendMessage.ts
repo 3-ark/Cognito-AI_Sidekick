@@ -233,7 +233,7 @@ const useSendMessage = (
         console.log(`[${callId}] Performing hybrid search for query: "${retrieverQuery}"`);
         
         const response = await new Promise<{ success: boolean; results?: HybridRankedChunk[]; error?: string }>((resolve, reject) => {
-          chrome.runtime.sendMessage({ type: 'GET_BM25_SEARCH_RESULTS', payload: { query: retrieverQuery } }, (res) => {
+          chrome.runtime.sendMessage({ type: 'GET_HYBRID_SEARCH_RESULTS', payload: { query: retrieverQuery } }, (res) => {
             if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message)); else resolve(res);
           });
         });

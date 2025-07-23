@@ -3,9 +3,8 @@ import { webSearch } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
 import { Config } from '../../types/config';
 import ChannelNames from '../../types/ChannelNames';
-import { generateEmbeddings } from '../../background/embeddingUtils';
-import { findSimilarChunks } from '../../background/semanticSearchUtils';
 import { prompt } from '../../background/prompt';
+
 // Define UpdateConfig locally as its definition is simple and tied to how useConfig provides it
 export type UpdateConfig = (newConfig: Partial<Config>) => void;
 
@@ -219,13 +218,23 @@ export const executeRetriever = async (
   }
 
   try {
-    const queryEmbedding = await generateEmbeddings([query]);
-    const searchResults = await findSimilarChunks(
-      queryEmbedding[0],
-      config.rag?.final_top_k ?? 5,
-      config.rag?.semantic_threshold ?? 0.1
-    );
-    return JSON.stringify(searchResults);
+    return await new Promise<string>((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'GET_HYBRID_SEARCH_RESULTS',
+          payload: { query, config }
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (response && response.success && response.results) {
+            resolve(JSON.stringify(response.results));
+          } else {
+            reject(new Error(response?.error || 'Unknown error from background retriever'));
+          }
+        }
+      );
+    });
   } catch (error: any) {
     console.error(`Error executing retriever for query "${query}":`, error);
     return `Error performing retrieval: ${error.message || 'Unknown error'}`;

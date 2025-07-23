@@ -233,6 +233,7 @@ const COLLAPSIBLE_TOOLS: Record<string, string> = {
   web_search: 'Web Search Results',
   smart_dispatcher: 'Smart Dispatcher',
   planner: 'The Plan',
+  retriever: 'Retrieved Content',
 };
 
 const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {

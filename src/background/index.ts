@@ -2,18 +2,6 @@ import { getCurrentTab, injectContentScript } from 'src/background/util';
 import buildStoreWithDefaults from 'src/state/store';
 import storage from 'src/background/storageUtil';
 import ChannelNames from '../types/ChannelNames'; 
-
-// Keep track of chat IDs that have been initially indexed in this session
-// This is to ensure a chat is added to the BM25 index once when it's new,
-// but not re-indexed on every subsequent save while it's active.
-const initiallyIndexedChatsInSession = new Set<string>();
-
-// Function to clear the set, could be called on browser startup or specific events
-// For now, it's just session-based. If the service worker restarts, the set clears.
-// chrome.runtime.onStartup.addListener(() => {
-//   initiallyIndexedChatsInSession.clear();
-// });
-
 import { 
     getAllNotesFromSystem, 
     saveNoteInSystem, 
@@ -31,7 +19,7 @@ import {
     indexSingleChatMessage,
     removeChatMessageFromIndex,
 } from './searchUtils';
-import { configureEmbeddingService, ensureEmbeddingServiceConfigured } from './embeddingUtils'; // Added ensureEmbeddingServiceConfigured
+import { configureEmbeddingService, ensureEmbeddingServiceConfigured } from './embeddingUtils';
 import { Note, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
 import { EmbeddingModelConfig, Config } from 'src/types/config'; // Added import for Config
 import { 
@@ -42,9 +30,10 @@ import {
     deleteAllChatMessages,
     getAllChatMessages as storageGetAllChats // Alias to avoid conflict if any
 } from './chatHistoryStorage'; 
-// Updated imports from retrieverUtils
 import { getHybridRankedChunks, formatResultsForLLM } from './retrieverUtils'; 
 import { NOTE_STORAGE_PREFIX } from './noteStorage'; // Import NOTE_STORAGE_PREFIX
+
+const initiallyIndexedChatsInSession = new Set<string>();
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
 
 chrome.sidePanel
@@ -477,8 +466,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates asynchronous response
   }
 
-  // GET_BM25_SEARCH_RESULTS handler (Now GET_HYBRID_SEARCH_RESULTS)
-  if (message.type === 'GET_BM25_SEARCH_RESULTS' && message.payload) {
+  // GET_HYBRID_SEARCH_RESULTS handler
+  if (message.type === 'GET_HYBRID_SEARCH_RESULTS' && message.payload) {
     const { query } = message.payload;
     (async () => {
       try {
