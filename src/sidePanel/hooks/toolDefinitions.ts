@@ -2,7 +2,11 @@ interface ToolParameterProperty {
   type: string;
   description: string;
   enum?: string[];
-  items?: { type: string };
+  items?: { 
+    type: string;
+    properties?: { [key: string]: ToolParameterProperty };
+    required?: string[];
+  };
 }
 
 export interface ToolDefinition {
@@ -168,23 +172,31 @@ export const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'web_search',
       description:
-        'Performs a web search using a specified search engine to find up-to-date information, news, or specific documents on the web.',
+        'Performs a web search using a specified search engine to find up-to-date information, news, or specific documents on the web. Can accept multiple queries to run concurrently, each with a different search engine.',
       parameters: {
         type: 'object',
         properties: {
-          query: {
-            type: 'string',
-            description:
-              'The search query to be executed. This should be a concise and targeted string similar to what a user would type into a search engine.',
-          },
-          engine: {
-            type: 'string',
-            description:
-              'The search engine to use. Defaults to Google if not specified. Wikipedia is ideal for factual lookups, while other engines are good for general searches.',
-            enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia'],
+          queries: {
+            type: 'array',
+            description: 'A list of search query objects to be executed concurrently.',
+            items: {
+              type: 'object',
+              properties: {
+                query: {
+                  type: 'string',
+                  description: 'The search query to be executed.',
+                },
+                engine: {
+                  type: 'string',
+                  description: 'The search engine to use for this specific query. Defaults to Google.',
+                  enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia'],
+                },
+              },
+              required: ['query'],
+            },
           },
         },
-        required: ['query'],
+        required: ['queries'],
       },
     },
   },

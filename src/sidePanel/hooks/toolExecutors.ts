@@ -26,8 +26,10 @@ export interface FetcherArgs {
 }
 
 export interface WebSearchArgs {
-  query: string;
-  engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia';
+  queries: {
+    query: string;
+    engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia';
+  }[];
 }
 
 export interface RetrieverArgs {
@@ -229,23 +231,25 @@ export const executeWebSearch = async (
   args: WebSearchArgs,
   config: Config
 ): Promise<string> => {
-  const { query, engine = 'Google' } = args;
-  if (!query || query.trim() === '') {
-    return 'Error: Query cannot be empty for web search.';
+  const { queries } = args;
+
+  if (!Array.isArray(queries) || queries.length === 0 || !queries.every(q => q.query && q.query.trim() !== '')) {
+    return 'Error: "queries" must be a non-empty array of objects, each with a non-empty "query" string.';
   }
 
-  // Create a temporary config for this specific search operation
-  const searchConfig: Config = {
-    ...config,
-    webMode: engine,
-  };
-
   try {
-    const searchResults = await webSearch(query, searchConfig);
-    return searchResults;
+    const searchPromises = queries.map(({ query, engine = 'Google' }) => {
+      const searchConfig: Config = { ...config, webMode: engine };
+      return webSearch(query, searchConfig).then(result => `Results for "${query}" (using ${engine}):\n${result}`);
+    });
+    
+    const results = await Promise.all(searchPromises);
+    
+    return results.join('\n\n---\n\n');
   } catch (error: any) {
+    const queryStrings = queries.map(q => q.query).join(', ');
     console.error(
-      `Error executing web_search for query "${query}" with engine ${engine}:`,
+      `Error executing web_search for queries "${queryStrings}":`,
       error
     );
     return `Error performing web search: ${error.message || 'Unknown error'}`;
