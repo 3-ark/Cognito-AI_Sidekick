@@ -108,13 +108,18 @@ export const executePlanner = async (
   4.  Use placeholders like "$context.step_1_result" to pass the output from one step as an argument to a subsequent step.
 
   **EXAMPLE GOOD PLAN:**
-  User Task: "Find out what GraphQL is and save the explanation in a note."
+  User Task: "Research the pros and cons of GraphQL vs REST and save it in a note."
   Your Output:
   {
     "steps": [
       {
         "tool_name": "web_search",
-        "tool_arguments": {"query": "what is GraphQL"}
+        "tool_arguments": {
+          "queries": [
+            { "query": "pros and cons of GraphQL" },
+            { "query": "pros and cons of REST APIs" }
+          ]
+        }
       },
       {
         "tool_name": "save_note",
