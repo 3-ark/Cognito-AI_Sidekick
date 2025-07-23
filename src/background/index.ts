@@ -640,15 +640,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true; // Indicates asynchronous response
   }
-  // Keep other message listeners if any, or ensure this is structured to allow multiple listeners
-  // For example, by returning true only for messages you handle asynchronously.
-  // If this is the only async listener, this is fine. Otherwise, be careful about returning true.
-  // For now, assuming other listeners might exist and they might return true or false appropriately.
-  // To be safe, one might check message.type and only return true if it's 'PERFORM_SETTINGS_SEARCH'.
-  // However, the boilerplate onMessage handler already returns true for other async handlers.
-  // The key is that an onMessage handler should return true if and only if it will call sendResponse asynchronously.
-  // If it handles the message synchronously or not at all, it should return false or undefined.
-  // Since this block IS handling 'PERFORM_SETTINGS_SEARCH' asynchronously, returning true here is correct for this specific message type.
 });
 // --- RAG Operations ---
 import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
