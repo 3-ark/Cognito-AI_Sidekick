@@ -231,6 +231,8 @@ export const EditableMessage: FC<MessageProps> = ({
 const COLLAPSIBLE_TOOLS: Record<string, string> = {
   fetcher: 'Fetched Content',
   web_search: 'Web Search Results',
+  smart_dispatcher: 'Smart Dispatcher',
+  planner: 'The Plan',
 };
 
 const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
