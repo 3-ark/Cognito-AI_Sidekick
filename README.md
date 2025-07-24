@@ -211,7 +211,3 @@ Contributions are welcome! If you'd like to help improve Cognito, please:
 *   Cognito was originally built upon and inspired by [sidellama](https://github.com/gyopak/sidellama).
 *   Inspiration and ideas from projects like Stanford's [WikiChat](https://github.com/stanford-oval/WikiChat), [StreamingKokoroJS](https://github.com/rhulha/StreamingKokoroJS), [WebAgent](https://github.com/Alibaba-NLP/WebAgent), [chatterbox](https://github.com/resemble-ai/chatterbox), [kokoro and kokoro.js](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and the [piper-browser-extension](https://github.com/ken107/piper-browser-extension).
 *   Thanks to all the developers of the open-source libraries and tools that make Cognito possible.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
