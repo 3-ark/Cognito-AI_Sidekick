@@ -24,26 +24,28 @@ export const MCPPopover: React.FC = () => {
 
   return (
     <Dialog>
+    <DialogTitle></DialogTitle> 
+    <DialogDescription></DialogDescription> {/* This is a placeholder for the title and description, to prevent errors */}
       <TooltipProvider>
         <div className="flex items-center gap-2 mb-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          className={cn(
-            "text-white rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs",
-            "border-none",
-            "font-['Space_Mono',_monospace]",
-            "hover:brightness-80 active:brightness-90",
-            "focus:ring-1 focus:ring-white/50"
-          )}
-          style={{ backgroundColor: "var(--link)" }}
-        >
-          <FiTool className="mr-2 h-4 w-4" />
-          MCP
-        </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    "text-white rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs",
+                    "border-none",
+                    "font-['Space_Mono',_monospace]",
+                    "hover:brightness-80 active:brightness-90",
+                    "focus:ring-1 focus:ring-white/50"
+                  )}
+                  style={{ backgroundColor: "var(--link)" }}
+                >
+                  <FiTool className="mr-2 h-4 w-4" />
+                  MCP
+                </Button>
               </DialogTrigger>
             </TooltipTrigger>
             <TooltipContent side="top">
