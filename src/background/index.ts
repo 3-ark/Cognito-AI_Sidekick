@@ -643,6 +643,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 // --- RAG Operations ---
 import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
+import mcpClient from './mcp-client';
+
+// --- MCP Client Initialization ---
+chrome.runtime.onStartup.addListener(() => {
+  // Connect to a default MCP server on startup
+  // In a real application, this would be configurable
+  mcpClient.connect('mcp://localhost:8080');
+});
+
+// Handle messages from the popover
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'MCP_LIST_TOOLS') {
+    mcpClient.listTools().then(sendResponse);
+    return true; // Indicates asynchronous response
+  } else if (message.type === 'MCP_CALL_TOOL') {
+    const { toolName, args } = message.payload;
+    mcpClient.callTool(toolName, args).then(sendResponse);
+    return true; // Indicates asynchronous response
+  }
+});
 
 
 // --- Embedding Model Configuration ---
