@@ -1,14 +1,10 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { Client } from "@modelcontext/mcp-sdk";
 
 class MCPClient {
   private client: Client;
 
   constructor() {
-    this.client = new Client({ 
-      name: 'cognito-ai-sidekick',
-      version: '0.1.0',
-      title: 'Cognito AI Sidekick Extension',
-
+    this.client = new Client({
       // MCP-client configuration
     });
   }

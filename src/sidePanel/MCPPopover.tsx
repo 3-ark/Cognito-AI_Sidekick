@@ -15,15 +15,16 @@ export const MCPPopover: React.FC = () => {
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          size="sm"
           variant="outline"
           className={cn(
-            "flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1",
-            "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]",
-            "border-[var(--text)]/20",
+            "text-white rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs",
+            "border-none",
             "font-['Space_Mono',_monospace]",
-            "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95",
-            "focus:ring-1 focus:ring-[var(--active)]"
+            "hover:brightness-80 active:brightness-90",
+            "focus:ring-1 focus:ring-white/50"
           )}
+          style={{ backgroundColor: "var(--link)" }}
         >
           <FiTool className="mr-2 h-4 w-4" />
           MCP Tools
