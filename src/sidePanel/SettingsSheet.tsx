@@ -421,10 +421,8 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                       )}
                     </div>
                     {/* ToolList always below progress and buttons, with spacing */}
-                    <div className="mt-3">
+                    <div className="flex space-x-2 mt-3">
                       <ToolList />
-                    </div>
-                    <div className="mt-3">
                       <MCPPopover />
                     </div>
                   </div>
