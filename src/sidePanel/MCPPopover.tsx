@@ -1,9 +1,20 @@
 import * as React from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';import { Button } from "@/components/ui/button";
 import { FiTool } from "react-icons/fi";
 import { cn } from "@/src/background/util";
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 export const MCPPopover: React.FC = () => {
   const [tools, setTools] = React.useState<any[]>([]);
 
@@ -12,8 +23,12 @@ export const MCPPopover: React.FC = () => {
   }, []);
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Dialog>
+      <TooltipProvider>
+        <div className="flex items-center gap-2 mb-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
         <Button
           size="sm"
           variant="outline"
@@ -29,8 +44,15 @@ export const MCPPopover: React.FC = () => {
           <FiTool className="mr-2 h-4 w-4" />
           MCP
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80">
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>View Available MCP Tools</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+      <DialogContent className="themedPanel w-[80dvw] max-w-[300px] bg-[var(--bg)] text-[var(--text)] border-[var(--text)]">
         <div className="grid gap-4">
           <div className="space-y-2">
             <h4 className="font-medium leading-none">MCP Tools</h4>
@@ -47,7 +69,7 @@ export const MCPPopover: React.FC = () => {
             ))}
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 };
