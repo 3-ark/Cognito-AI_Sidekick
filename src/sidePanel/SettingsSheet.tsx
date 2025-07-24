@@ -20,6 +20,7 @@ import { cn } from "@/src/background/util";
 import { DEFAULT_PERSONA_IMAGES } from './constants';
 import AnimatedBackground from './AnimatedBackground';
 import { ToolList } from './components/ToolList';
+import { MCPPopover } from './MCPPopover';
 
 const SheetThemeButton = ({ theme, updateConfig, size = "h-6 w-6" }: { theme: AppTheme; updateConfig: (newConfig: Partial<Config>) => void; size?: string }) => (
   <Tooltip>
@@ -419,9 +420,9 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         </div>
                       )}
                     </div>
-                    {/* ToolList always below progress and buttons, with spacing */}
-                    <div className="mt-3">
+                    <div className="flex justify-between items-center mt-3">
                       <ToolList />
+                      <MCPPopover />
                     </div>
                   </div>
                 </div>
