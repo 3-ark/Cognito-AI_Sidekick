@@ -420,15 +420,10 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         </div>
                       )}
                     </div>
-                    <div className="flex justify-between items-center">
-                    {/* ToolList always below progress and buttons, with spacing */}
-                    <div className="flex space-x-2 mt-3">
+                    <div className="flex justify-between items-center mt-3">
                       <ToolList />
-                    </div>
-                    <div className="flex space-x-2 mt-3">
                       <MCPPopover />
                     </div>
-                  </div>
                   </div>
                 </div>
               </TooltipProvider>

@@ -27,7 +27,7 @@ export const MCPPopover: React.FC = () => {
           style={{ backgroundColor: "var(--link)" }}
         >
           <FiTool className="mr-2 h-4 w-4" />
-          MCP Tools
+          MCP
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80">
