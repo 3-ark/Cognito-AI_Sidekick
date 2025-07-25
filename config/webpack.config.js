@@ -83,7 +83,10 @@ const config = {
       patterns: [
         {
           from: Public,
-          to: 'assets'
+          to: 'assets',
+          globOptions: {
+            ignore: ['**/_locales/**'],
+          },
         },
         {
           from: 'public/_locales',

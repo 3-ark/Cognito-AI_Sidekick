@@ -16,6 +16,10 @@ i18n
     backend: {
       loadPath: '/_locales/{{lng}}/messages.json',
     },
+    react: {
+      useSuspense: false,
+    },
+    returnObjects: true,
   });
 
 export default i18n;
