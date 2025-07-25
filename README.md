@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub version](https://img.shields.io/github/v/release/3-ark/Cognito)](https://github.com/3-ark/Cognito-AI_Sidekick/releases/latest)
 
-Cognito is your intelligent browser companion — combining RAG, TTS/STT, note-taking, and customizable personas into a sleek sidebar assistant. Now with hybrid retrieval using **BM25 + semantic embeddings**!
+Cognito is your intelligent browser companion — combining RAG, TTS/STT, note-taking, and customizable personas into a sleek sidebar assistant. Now with hybrid retrieval using **BM25 + semantic embeddings**, **Tool Orchestration**, and **MCP Servers**.
 
 ---
 
@@ -38,11 +38,15 @@ Cognito is your intelligent browser companion — combining RAG, TTS/STT, note-t
 
 * Uses tools like:
 
-  * `saveNote`
-  * `updateMemory`
-  * `searchWeb`
+  * `Save Note`
+  * `UpdateMemory`
+  * `Web Search`
+  * `Planner`
+ etc.
+
 * Responses are structured in **pure JSON**, enabling predictable parsing and automation.
 * System prompts enforce tool discipline per persona.
+* 9 native tools plus MCP tools you can add
 
 ### 🧠 Memory & Context Engine
 
