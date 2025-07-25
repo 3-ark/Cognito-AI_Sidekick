@@ -78,25 +78,24 @@ function TypewriterLinesWordByWord({ lines, delay = 120, className = "" }: { lin
   );
 }
 
+import { Trans } from 'react-i18next';
 // --- Guide content with link ---
 const GuideLines = ({ t }: { t: (key: string, options?: any) => string }) => [
   t('guideStep1'),
   t('guideStep2'),
   t('guideStep3'),
-  <>
-    <Trans
-      i18nKey="guideStep4"
-      t={t}
-      components={[
-        <a
-          href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
-        />,
-      ]}
-    />
-  </>,
+  <Trans
+    i18nKey="guideStep4"
+    t={t}
+    components={[
+      <a
+        href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+      />,
+    ]}
+  />,
   "",
   t('guideHaveFun'),
 ];
