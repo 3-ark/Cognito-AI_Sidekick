@@ -6,6 +6,7 @@ const {
 module.exports = {
   version,
   manifest_version: 3,
+  default_locale: 'en',
   name,
   description,
   permissions,

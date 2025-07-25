@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "Einstellungen"
+  },
+  "chatHistory": {
+    "message": "Chat-Verlauf"
+  },
+  "noteSystem": {
+    "message": "Notizsystem"
+  },
+  "backToChat": {
+    "message": "Zurück zum Chat"
+  },
+  "hiSettings": {
+    "message": "Hallo {{userName}}, Einstellungen?"
+  },
+  "online": {
+    "message": "Online"
+  },
+  "typing": {
+    "message": "Schreibt…"
+  },
+  "thinking": {
+    "message": "Denkt nach…"
+  },
+  "searchingWeb": {
+    "message": "Sucht im Web…"
+  },
+  "processingSERP": {
+    "message": "Verarbeitet SERP…"
+  },
+  "readingPage": {
+    "message": "Liest Seite…"
+  },
+  "analyzing": {
+    "message": "Analysiert…"
+  },
+  "resetChat": {
+    "message": "Chat zurücksetzen"
+  },
+  "shareOptions": {
+    "message": "Freigabeoptionen"
+  },
+  "yourProfile": {
+    "message": "Dein Profil"
+  },
+  "whatsNew": {
+    "message": "Was ist neu"
+  },
+  "exportChat": {
+    "message": "Chat exportieren"
+  },
+  "deleteAllHistory": {
+    "message": "Gesamten Verlauf löschen"
+  },
+  "noteOptions": {
+    "message": "Notizoptionen"
+  },
+  "createNote": {
+    "message": "Notiz erstellen"
+  },
+  "importNote": {
+    "message": "Notiz importieren"
+  },
+  "selectNotes": {
+    "message": "Notizen auswählen"
+  },
+  "quickGuide": {
+    "message": "Kurzanleitung"
+  },
+  "guideIntro": {
+    "message": "Eine kurze Einführung, um Ihnen den Einstieg in Cognito zu erleichtern."
+  },
+  "guideStep1": {
+    "message": "1. Gehen Sie in den Einstellungen zu 'API-Zugriff', um Ihre API-Schlüssel oder URLs einzugeben."
+  },
+  "guideStep2": {
+    "message": "2. Verlassen Sie die Einstellungen und klicken Sie dann auf den Modellauswähler in der Kopfzeile, um Ihr Modell auszuwählen. Sie können Ihren Benutzernamen in der oberen rechten Ecke festlegen."
+  },
+  "guideStep3": {
+    "message": "3. Verwenden Sie die 'Chat-Steuerung' (Notizbuchsymbol in der Eingabeleiste), um den KI-Speicher und die Werkzeugnutzung umzuschalten."
+  },
+  "guideStep4": {
+    "message": "4. Sehen Sie sich die Bedienungsanleitung <1>hier</1> an"
+  },
+  "guideHaveFun": {
+    "message": "Viel Spaß!"
+  },
+  "gotIt": {
+    "message": "Verstanden, zu den Einstellungen"
+  },
+  "editProfile": {
+    "message": "Profil bearbeiten"
+  },
+  "editProfileDesc": {
+    "message": "Legen Sie Ihren Anzeigenamen und Ihre Profilinformationen fest."
+  },
+  "username": {
+    "message": "Benutzername"
+  },
+  "userProfile": {
+    "message": "Benutzerprofil"
+  },
+  "cancel": {
+    "message": "Abbrechen"
+  },
+  "save": {
+    "message": "Speichern"
+  },
+  "profileUpdated": {
+    "message": "Profil aktualisiert!"
+  },
+  "confirmDeletion": {
+    "message": "Löschung bestätigen"
+  },
+  "confirmDeletionDesc": {
+    "message": "Sind Sie sicher, dass Sie den gesamten Chat-Verlauf löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "deleteAll": {
+    "message": "Alles löschen"
+  },
+  "searchPlaceholder": {
+    "message": "Durchsuchen Sie Ihre Notizen und Ihren Chat-Verlauf..."
+  },
+  "searching": {
+    "message": "Sucht..."
+  },
+  "settingsTitle": {
+    "message": "Einstellungen"
+  },
+  "selectPersona": {
+    "message": "Persona auswählen..."
+  },
+  "editPersona": {
+    "message": "Ausgewählte Persona bearbeiten"
+  },
+  "addPersona": {
+    "message": "Neue Persona hinzufügen"
+  },
+  "deletePersona": {
+    "message": "Ausgewählte Persona löschen"
+  },
+  "history": {
+    "message": "Verlauf"
+  },
+  "notes": {
+    "message": "Notizen"
+  },
+  "embeddings": {
+    "message": "Einbettungen"
+  },
+  "manageIndex": {
+    "message": "Verwalten Sie Ihren Vektorindex"
+  },
+  "rebuild": {
+    "message": "Neu erstellen"
+  },
+  "rebuildEmbeddings": {
+    "message": "Einbettungen neu erstellen"
+  },
+  "lastRebuild": {
+    "message": "Zuletzt: {{date}}"
+  },
+  "update": {
+    "message": "Aktualisieren"
+  },
+  "updateEmbeddings": {
+    "message": "Einbettungen aktualisieren"
+  },
+  "lastUpdate": {
+    "message": "Zuletzt: {{date}}"
+  },
+  "currentModel": {
+    "message": "Aktuelles Modell: {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "Wird neu erstellt..."
+  },
+  "updating": {
+    "message": "Wird aktualisiert..."
+  },
+  "userGuide": {
+    "message": "Bedienungsanleitung"
+  },
+  "closeSettings": {
+    "message": "Einstellungen schließen"
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "Paramètres"
+  },
+  "chatHistory": {
+    "message": "Historique des discussions"
+  },
+  "noteSystem": {
+    "message": "Système de notes"
+  },
+  "backToChat": {
+    "message": "Retour au chat"
+  },
+  "hiSettings": {
+    "message": "Bonjour {{userName}}, paramètres ?"
+  },
+  "online": {
+    "message": "En ligne"
+  },
+  "typing": {
+    "message": "En train d'écrire…"
+  },
+  "thinking": {
+    "message": "En train de réfléchir…"
+  },
+  "searchingWeb": {
+    "message": "Recherche sur le web…"
+  },
+  "processingSERP": {
+    "message": "Traitement de la SERP…"
+  },
+  "readingPage": {
+    "message": "Lecture de la page…"
+  },
+  "analyzing": {
+    "message": "Analyse en cours…"
+  },
+  "resetChat": {
+    "message": "Réinitialiser le chat"
+  },
+  "shareOptions": {
+    "message": "Options de partage"
+  },
+  "yourProfile": {
+    "message": "Votre profil"
+  },
+  "whatsNew": {
+    "message": "Nouveautés"
+  },
+  "exportChat": {
+    "message": "Exporter le chat"
+  },
+  "deleteAllHistory": {
+    "message": "Supprimer tout l'historique"
+  },
+  "noteOptions": {
+    "message": "Options des notes"
+  },
+  "createNote": {
+    "message": "Créer une note"
+  },
+  "importNote": {
+    "message": "Importer une note"
+  },
+  "selectNotes": {
+    "message": "Sélectionner des notes"
+  },
+  "quickGuide": {
+    "message": "Guide rapide"
+  },
+  "guideIntro": {
+    "message": "Une introduction rapide pour vous aider à démarrer avec Cognito."
+  },
+  "guideStep1": {
+    "message": "1. Dans les Paramètres, allez dans 'Accès API' pour renseigner vos clés API ou URL."
+  },
+  "guideStep2": {
+    "message": "2. Quittez les paramètres, puis cliquez sur le sélecteur de modèle dans l'en-tête pour choisir votre modèle. Vous pouvez définir votre nom d'utilisateur dans le coin supérieur droit."
+  },
+  "guideStep3": {
+    "message": "3. Utilisez les 'Contrôles de chat' (icône de carnet dans la barre de saisie) pour activer/désactiver la mémoire de l'IA et l'utilisation des outils."
+  },
+  "guideStep4": {
+    "message": "4. Consultez le guide de l'utilisateur <1>ici</1>"
+  },
+  "guideHaveFun": {
+    "message": "Amusez-vous bien !"
+  },
+  "gotIt": {
+    "message": "Compris, passer aux paramètres"
+  },
+  "editProfile": {
+    "message": "Modifier le profil"
+  },
+  "editProfileDesc": {
+    "message": "Définissez votre nom d'affichage et vos informations de profil."
+  },
+  "username": {
+    "message": "Nom d'utilisateur"
+  },
+  "userProfile": {
+    "message": "Profil utilisateur"
+  },
+  "cancel": {
+    "message": "Annuler"
+  },
+  "save": {
+    "message": "Enregistrer"
+  },
+  "profileUpdated": {
+    "message": "Profil mis à jour !"
+  },
+  "confirmDeletion": {
+    "message": "Confirmer la suppression"
+  },
+  "confirmDeletionDesc": {
+    "message": "Êtes-vous sûr de vouloir supprimer tout l'historique des discussions ? Cette action est irréversible."
+  },
+  "deleteAll": {
+    "message": "Tout supprimer"
+  },
+  "searchPlaceholder": {
+    "message": "Recherchez dans vos notes et votre historique de discussion..."
+  },
+  "searching": {
+    "message": "Recherche en cours..."
+  },
+  "settingsTitle": {
+    "message": "Paramètres"
+  },
+  "selectPersona": {
+    "message": "Sélectionner un persona..."
+  },
+  "editPersona": {
+    "message": "Modifier le persona sélectionné"
+  },
+  "addPersona": {
+    "message": "Ajouter un nouveau persona"
+  },
+  "deletePersona": {
+    "message": "Supprimer le persona sélectionné"
+  },
+  "history": {
+    "message": "Historique"
+  },
+  "notes": {
+    "message": "Notes"
+  },
+  "embeddings": {
+    "message": "Plongements"
+  },
+  "manageIndex": {
+    "message": "Gérez votre index vectoriel"
+  },
+  "rebuild": {
+    "message": "Reconstruire"
+  },
+  "rebuildEmbeddings": {
+    "message": "Reconstruire les plongements"
+  },
+  "lastRebuild": {
+    "message": "Dernière : {{date}}"
+  },
+  "update": {
+    "message": "Mettre à jour"
+  },
+  "updateEmbeddings": {
+    "message": "Mettre à jour les plongements"
+  },
+  "lastUpdate": {
+    "message": "Dernière : {{date}}"
+  },
+  "currentModel": {
+    "message": "Modèle actuel : {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "Reconstruction en cours..."
+  },
+  "updating": {
+    "message": "Mise à jour en cours..."
+  },
+  "userGuide": {
+    "message": "Guide de l'utilisateur"
+  },
+  "closeSettings": {
+    "message": "Fermer les paramètres"
+  }
+}

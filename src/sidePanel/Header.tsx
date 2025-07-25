@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiX, FiTrash2, FiShare, FiChevronLeft, FiUpload } from 'react-icons/fi';
 import { TbReload, TbJson } from "react-icons/tb";
 import { useConfig } from './ConfigContext';
@@ -27,22 +28,22 @@ import { VscRocket } from "react-icons/vsc";
 import { Textarea } from '@/components/ui/textarea';
 
 
-function getStatusText(mode: ChatMode, status: ChatStatus): string {
-  if (status === 'idle') return 'Online';
+function getStatusText(t: (key: string) => string, mode: ChatMode, status: ChatStatus): string {
+  if (status === 'idle') return t('online');
   if (mode === 'chat') {
-    if (status === 'typing') return 'Typing…';
-    if (status === 'thinking') return 'Thinking…';
+    if (status === 'typing') return t('typing');
+    if (status === 'thinking') return t('thinking');
   }
   if (mode === 'web') {
-    if (status === 'searching') return 'Searching web…';
-    if (status === 'thinking') return 'Processing SERP…';
+    if (status === 'searching') return t('searchingWeb');
+    if (status === 'thinking') return t('processingSERP');
   }
   if (mode === 'page') {
-    if (status === 'reading') return 'Reading page…';
-    if (status === 'thinking') return 'Analyzing…';
+    if (status === 'reading') return t('readingPage');
+    if (status === 'thinking') return t('analyzing');
   }
-  if (status === 'done') return 'Online';
-  return 'Online';
+  if (status === 'done') return t('online');
+  return t('online');
 }
 
 // --- Word-by-word typewriter animation ---
@@ -78,23 +79,26 @@ function TypewriterLinesWordByWord({ lines, delay = 120, className = "" }: { lin
 }
 
 // --- Guide content with link ---
-const guideLines = [
-  "1. In Settings, go to 'API Access' to fill in your API keys or URLs.",
-  "2. Exit settings, then click the model selector in the header to choose your model. You can set your username in the top right corner.",
-  "3. Use the 'Chat Controls' (notebook icon in input bar) to toggle AI memory and tool usage.",
+const GuideLines = ({ t }: { t: (key: string, options?: any) => string }) => [
+  t('guideStep1'),
+  t('guideStep2'),
+  t('guideStep3'),
   <>
-    4. Check the user guide{" "}
-    <a
-      href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
-    >
-      here
-    </a>
+    <Trans
+      i18nKey="guideStep4"
+      t={t}
+      components={[
+        <a
+          href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+        />,
+      ]}
+    />
   </>,
   "",
-  "Have fun!"
+  t('guideHaveFun'),
 ];
 
 interface WelcomeModalProps {
@@ -104,6 +108,8 @@ interface WelcomeModalProps {
 }
 
 const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSettingsMode }) => {
+  const { t } = useTranslation();
+  const guideLines = GuideLines({ t });
   const handleGotIt = () => {
     chrome.storage.local.set({ hasSeenWelcomeGuide: true });
     onClose();
@@ -127,9 +133,9 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
         onInteractOutside={(e) => e.preventDefault()} // Prevent closing on outside click
       >
         <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow mt-4">
-          <DialogTitle className="text-lg">Quick Guide</DialogTitle>
+          <DialogTitle className="text-lg">{t('quickGuide')}</DialogTitle>
           <DialogDescription className="sr-only">
-            A quick introduction to get you started with Cognito.
+            {t('guideIntro')}
           </DialogDescription>
         </DialogHeader>
         <div className="p-4 text-left w-full max-w-md">
@@ -144,7 +150,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
             variant="ghost"
             className="fingerprint-pulse-btn"
             onClick={handleGotIt}
-            aria-label="Got it, proceed to settings"
+            aria-label={t('gotIt')}
           >
             <IoFingerPrint size="3rem" color="var(--active)" />
           </Button>
@@ -167,6 +173,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
   config,
   updateConfig,
 }) => {
+  const { t } = useTranslation();
   const [currentUserName, setCurrentUserName] = useState(config?.userName || '');
   const [currentUserProfile, setCurrentUserProfile] = useState(config?.userProfile || '');
 
@@ -180,7 +187,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
   const handleSave = () => {
     updateConfig({ userName: currentUserName, userProfile: currentUserProfile });
     onOpenChange(false);
-    toast.success("Profile updated!");
+    toast.success(t('profileUpdated'));
   };
 
   return (
@@ -190,15 +197,15 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         className="max-w-xs"
       >
         <DialogHeader className="px-6 py-2">
-          <DialogTitle className="text-lg font-semibold text-[var(--text)]">Edit Profile</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-[var(--text)]">{t('editProfile')}</DialogTitle>
           <DialogDescription className="text-sm text-[var(--text)] opacity-80">
-            Set your display name and profile information.
+            {t('editProfileDesc')}
           </DialogDescription>
         </DialogHeader>
         <div className="px-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="username" className="text-sm font-medium text-[var(--text)] opacity-90">
-              Username
+              {t('username')}
             </Label>
             <Input
               id="username"
@@ -214,7 +221,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="userprofile" className="text-sm font-medium text-[var(--text)] opacity-90">
-              User Profile
+              {t('userProfile')}
             </Label>
             <Textarea
               id="userprofile"
@@ -239,7 +246,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             size="sm"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             variant="outline-subtle"
@@ -247,7 +254,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             size="sm"
             onClick={handleSave}
           >
-            Save
+            {t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -296,6 +303,7 @@ export const Header: React.FC<HeaderProps> = ({
   onImportNoteRequest,
   onSelectNotesRequest, // Destructure new prop
 }) => {
+  const { t } = useTranslation();
   const { config, updateConfig } = useConfig();
   const { fetchAllModels } = useUpdateModels();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
@@ -354,11 +362,11 @@ const handleChangelogClose = () => {
     }
   };
 
-  const leftButtonLabel = showBackButton 
-    ? 'Back to Chat' 
-    : config?.userName 
-      ? `Hi ${config.userName}, settings?`
-      : 'Settings';
+  const leftButtonLabel = showBackButton
+    ? t('backToChat')
+    : config?.userName
+      ? t('hiSettings', { userName: config.userName })
+      : t('settings');
 
   const handleDeleteAllWithConfirmation = () => {
     toast.custom(
@@ -370,9 +378,9 @@ const handleChangelogClose = () => {
             "flex flex-col space-y-3"
           )}
         >
-          <h4 className="text-lg font-semibold text-[var(--text)]">Confirm Deletion</h4>
+          <h4 className="text-lg font-semibold text-[var(--text)]">{t('confirmDeletion')}</h4>
           <p className="text-sm text-[var(--text)] opacity-90">
-            Are you sure you want to delete all chat history? This action cannot be undone.
+            {t('confirmDeletionDesc')}
           </p>
           <div className="flex justify-end space-x-3 pt-2">
             <Button
@@ -384,7 +392,7 @@ const handleChangelogClose = () => {
               )}
               onClick={() => toast.dismiss(t.id)}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -408,7 +416,7 @@ const handleChangelogClose = () => {
                 }
               }}
             >
-              Delete All
+              {t('deleteAll')}
             </Button>
           </div>
         </div>
@@ -471,7 +479,7 @@ const handleChangelogClose = () => {
                   {chatStatus === 'idle' && (
                     <span className="h-1.5 w-1.5 bg-green-600 rounded-full mr-1"></span>
                   )}
-                  {getStatusText(chatMode, chatStatus)}
+                  {getStatusText(t, chatMode, chatStatus)}
                 </span>
               </div>
             )}
@@ -496,21 +504,21 @@ const handleChangelogClose = () => {
             {settingsMode && (
               <div className="flex items-center justify-center">
                 <p className="relative top-0 text-lg font-['Bruno_Ace_SC'] header-title-glow">
-                  Settings
+                  {t('settings')}
                 </p>
               </div>
             )}
             {historyMode && (
               <div className="flex items-center justify-center">
                 <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
-                  Chat History
+                  {t('chatHistory')}
                 </p>
               </div>
             )}
             {noteSystemMode && (
               <div className="flex items-center justify-center">
                 <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
-                  Note System
+                  {t('noteSystem')}
                 </p>
               </div>
             )}
@@ -536,7 +544,7 @@ const handleChangelogClose = () => {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    Reset Chat
+                    {t('resetChat')}
                   </TooltipContent>
                 </Tooltip>
 
@@ -546,7 +554,7 @@ const handleChangelogClose = () => {
                     <TooltipTrigger asChild>
                       <DropdownMenuPrimitive.Trigger asChild>
                         <Button
-                          aria-label="Share Options"
+                          aria-label={t('shareOptions')}
                           variant="ghost"
                           size="sm"
                           className="text-[var(--text)] rounded-md"
@@ -556,7 +564,7 @@ const handleChangelogClose = () => {
                       </DropdownMenuPrimitive.Trigger>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                      Share Options
+                      {t('shareOptions')}
                     </TooltipContent>
                   </Tooltip>
                   <DropdownMenuPrimitive.Portal>
@@ -576,8 +584,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
-                        <IoPerson  className="h-4 w-4" />
-                        <span>Your Profile</span>
+                        <IoPerson className="h-4 w-4" />
+                        <span>{t('yourProfile')}</span>
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
@@ -594,7 +602,7 @@ const handleChangelogClose = () => {
                         onSelect={() => setChangelogOpen(true)}
                       >
                         <VscRocket className="h-4 w-4" />
-                        <span>What's New</span>
+                        <span>{t('whatsNew')}</span>
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
@@ -610,8 +618,8 @@ const handleChangelogClose = () => {
                             "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                           )}
                         >
-                        <FiChevronLeft className="h-4 w-4" />
-                          <span>Export Chat</span>
+                          <FiChevronLeft className="h-4 w-4" />
+                          <span>{t('exportChat')}</span>
                         </DropdownMenuPrimitive.SubTrigger>
                         <DropdownMenuPrimitive.Portal>
                           <DropdownMenuPrimitive.SubContent
@@ -626,28 +634,28 @@ const handleChangelogClose = () => {
                               className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadMarkdown}
                             >
-                            <BsFiletypeMd className="h-4 w-4" />
+                              <BsFiletypeMd className="h-4 w-4" />
                               <span>.md</span>
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
                               className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadText}
                             >
-                            <IoTextOutline className="h-4 w-4" />
+                              <IoTextOutline className="h-4 w-4" />
                               <span>.txt</span>
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
                               className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadJson}
                             >
-                            <TbJson className="h-4 w-4" />
+                              <TbJson className="h-4 w-4" />
                               <span>.json</span>
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
                               className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadImage}
                             >
-                            <IoImageOutline className="h-4 w-4" />
+                              <IoImageOutline className="h-4 w-4" />
                               <span>.png</span>
                             </DropdownMenuPrimitive.Item>
                           </DropdownMenuPrimitive.SubContent>
@@ -662,7 +670,7 @@ const handleChangelogClose = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    aria-label="Delete All History"
+                    aria-label={t('deleteAllHistory')}
                     variant="ghost"
                     size="sm"
                     className="text-[var(--text)] rounded-md"
@@ -672,7 +680,7 @@ const handleChangelogClose = () => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                  Delete All
+                  {t('deleteAll')}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -682,17 +690,17 @@ const handleChangelogClose = () => {
                   <TooltipTrigger asChild>
                     <DropdownMenuPrimitive.Trigger asChild>
                       <Button
-                        aria-label="Note Options"
+                        aria-label={t('noteOptions')}
                         variant="ghost"
                         size="sm"
                         className="text-[var(--text)] rounded-md"
                       >
-                        <LuEllipsis size="18px" /> 
+                        <LuEllipsis size="18px" />
                       </Button>
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    Note Options
+                    {t('noteOptions')}
                   </TooltipContent>
                 </Tooltip>
                 <DropdownMenuPrimitive.Portal>
@@ -707,14 +715,14 @@ const handleChangelogClose = () => {
                     {onAddNewNoteRequest && (
                       <DropdownMenuPrimitive.Item
                         className={cn(
-                          dropdownItemClasses, 
+                          dropdownItemClasses,
                           "gap-2",
                           "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
                         )}
                         onSelect={onAddNewNoteRequest}
                       >
                         <GoPlus className="h-4 w-4" />
-                        <span>Create Note</span>
+                        <span>{t('createNote')}</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onImportNoteRequest && (
@@ -727,7 +735,7 @@ const handleChangelogClose = () => {
                         onSelect={onImportNoteRequest}
                       >
                         <FiUpload className="h-4 w-4" />
-                        <span>Import Note</span>
+                        <span>{t('importNote')}</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onSelectNotesRequest && (
@@ -739,8 +747,8 @@ const handleChangelogClose = () => {
                         )}
                         onSelect={onSelectNotesRequest}
                       >
-                        <IoCheckmarkCircleOutline className="h-4 w-4" /> 
-                        <span>Select Notes</span>
+                        <IoCheckmarkCircleOutline className="h-4 w-4" />
+                        <span>{t('selectNotes')}</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                   </DropdownMenuPrimitive.Content>

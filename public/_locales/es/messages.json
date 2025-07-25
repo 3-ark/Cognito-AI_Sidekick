@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "Configuración"
+  },
+  "chatHistory": {
+    "message": "Historial de chat"
+  },
+  "noteSystem": {
+    "message": "Sistema de notas"
+  },
+  "backToChat": {
+    "message": "Volver al chat"
+  },
+  "hiSettings": {
+    "message": "Hola {{userName}}, ¿configuración?"
+  },
+  "online": {
+    "message": "En línea"
+  },
+  "typing": {
+    "message": "Escribiendo…"
+  },
+  "thinking": {
+    "message": "Pensando…"
+  },
+  "searchingWeb": {
+    "message": "Buscando en la web…"
+  },
+  "processingSERP": {
+    "message": "Procesando SERP…"
+  },
+  "readingPage": {
+    "message": "Leyendo página…"
+  },
+  "analyzing": {
+    "message": "Analizando…"
+  },
+  "resetChat": {
+    "message": "Reiniciar chat"
+  },
+  "shareOptions": {
+    "message": "Opciones para compartir"
+  },
+  "yourProfile": {
+    "message": "Tu perfil"
+  },
+  "whatsNew": {
+    "message": "Novedades"
+  },
+  "exportChat": {
+    "message": "Exportar chat"
+  },
+  "deleteAllHistory": {
+    "message": "Eliminar todo el historial"
+  },
+  "noteOptions": {
+    "message": "Opciones de nota"
+  },
+  "createNote": {
+    "message": "Crear nota"
+  },
+  "importNote": {
+    "message": "Importar nota"
+  },
+  "selectNotes": {
+    "message": "Seleccionar notas"
+  },
+  "quickGuide": {
+    "message": "Guía rápida"
+  },
+  "guideIntro": {
+    "message": "Una introducción rápida para que comiences a usar Cognito."
+  },
+  "guideStep1": {
+    "message": "1. En Configuración, ve a 'Acceso a la API' para ingresar tus claves de API o URL."
+  },
+  "guideStep2": {
+    "message": "2. Sal de la configuración, luego haz clic en el selector de modelos en el encabezado para elegir tu modelo. Puedes establecer tu nombre de usuario en la esquina superior derecha."
+  },
+  "guideStep3": {
+    "message": "3. Usa los 'Controles de chat' (icono de cuaderno en la barra de entrada) para alternar la memoria de la IA y el uso de herramientas."
+  },
+  "guideStep4": {
+    "message": "4. Consulta la guía del usuario <1>aquí</1>"
+  },
+  "guideHaveFun": {
+    "message": "¡Diviértete!"
+  },
+  "gotIt": {
+    "message": "Entendido, proceder a la configuración"
+  },
+  "editProfile": {
+    "message": "Editar perfil"
+  },
+  "editProfileDesc": {
+    "message": "Establece tu nombre para mostrar y la información de tu perfil."
+  },
+  "username": {
+    "message": "Nombre de usuario"
+  },
+  "userProfile": {
+    "message": "Perfil de usuario"
+  },
+  "cancel": {
+    "message": "Cancelar"
+  },
+  "save": {
+    "message": "Guardar"
+  },
+  "profileUpdated": {
+    "message": "¡Perfil actualizado!"
+  },
+  "confirmDeletion": {
+    "message": "Confirmar eliminación"
+  },
+  "confirmDeletionDesc": {
+    "message": "¿Estás seguro de que quieres eliminar todo el historial de chat? Esta acción no se puede deshacer."
+  },
+  "deleteAll": {
+    "message": "Eliminar todo"
+  },
+  "searchPlaceholder": {
+    "message": "Busca en tus notas y en el historial de chat..."
+  },
+  "searching": {
+    "message": "Buscando..."
+  },
+  "settingsTitle": {
+    "message": "Configuración"
+  },
+  "selectPersona": {
+    "message": "Seleccionar persona..."
+  },
+  "editPersona": {
+    "message": "Editar persona seleccionada"
+  },
+  "addPersona": {
+    "message": "Añadir nueva persona"
+  },
+  "deletePersona": {
+    "message": "Eliminar persona seleccionada"
+  },
+  "history": {
+    "message": "Historial"
+  },
+  "notes": {
+    "message": "Notas"
+  },
+  "embeddings": {
+    "message": "Incrustaciones"
+  },
+  "manageIndex": {
+    "message": "Gestiona tu índice vectorial"
+  },
+  "rebuild": {
+    "message": "Reconstruir"
+  },
+  "rebuildEmbeddings": {
+    "message": "Reconstruir incrustaciones"
+  },
+  "lastRebuild": {
+    "message": "Última: {{date}}"
+  },
+  "update": {
+    "message": "Actualizar"
+  },
+  "updateEmbeddings": {
+    "message": "Actualizar incrustaciones"
+  },
+  "lastUpdate": {
+    "message": "Última: {{date}}"
+  },
+  "currentModel": {
+    "message": "Modelo actual: {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "Reconstruyendo..."
+  },
+  "updating": {
+    "message": "Actualizando..."
+  },
+  "userGuide": {
+    "message": "Guía del usuario"
+  },
+  "closeSettings": {
+    "message": "Cerrar configuración"
+  }
+}

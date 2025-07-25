@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "सेटिंग्स"
+  },
+  "chatHistory": {
+    "message": "चैट इतिहास"
+  },
+  "noteSystem": {
+    "message": "नोट सिस्टम"
+  },
+  "backToChat": {
+    "message": "चैट पर वापस"
+  },
+  "hiSettings": {
+    "message": "नमस्ते {{userName}}, सेटिंग्स?"
+  },
+  "online": {
+    "message": "ऑनलाइन"
+  },
+  "typing": {
+    "message": "लिख रहा है…"
+  },
+  "thinking": {
+    "message": "सोच रहा है…"
+  },
+  "searchingWeb": {
+    "message": "वेब खोज रहा है…"
+  },
+  "processingSERP": {
+    "message": "SERP संसाधित कर रहा है…"
+  },
+  "readingPage": {
+    "message": "पेज पढ़ रहा है…"
+  },
+  "analyzing": {
+    "message": "विश्लेषण कर रहा है…"
+  },
+  "resetChat": {
+    "message": "चैट रीसेट करें"
+  },
+  "shareOptions": {
+    "message": "शेयर विकल्प"
+  },
+  "yourProfile": {
+    "message": "आपकी प्रोफ़ाइल"
+  },
+  "whatsNew": {
+    "message": "नया क्या है"
+  },
+  "exportChat": {
+    "message": "चैट निर्यात करें"
+  },
+  "deleteAllHistory": {
+    "message": "सभी इतिहास हटाएं"
+  },
+  "noteOptions": {
+    "message": "नोट विकल्प"
+  },
+  "createNote": {
+    "message": "नोट बनाएं"
+  },
+  "importNote": {
+    "message": "नोट आयात करें"
+  },
+  "selectNotes": {
+    "message": "नोट चुनें"
+  },
+  "quickGuide": {
+    "message": "त्वरित गाइड"
+  },
+  "guideIntro": {
+    "message": "Cognito के साथ आरंभ करने के लिए एक त्वरित परिचय।"
+  },
+  "guideStep1": {
+    "message": "1. सेटिंग्स में, अपनी एपीआई कुंजी या यूआरएल भरने के लिए 'एपीआई एक्सेस' पर जाएं।"
+  },
+  "guideStep2": {
+    "message": "2. सेटिंग्स से बाहर निकलें, फिर अपना मॉडल चुनने के लिए हेडर में मॉडल चयनकर्ता पर क्लिक करें। आप ऊपरी दाएं कोने में अपना उपयोगकर्ता नाम सेट कर सकते हैं।"
+  },
+  "guideStep3": {
+    "message": "3. एआई मेमोरी और टूल उपयोग को टॉगल करने के लिए 'चैट कंट्रोल्स' (इनपुट बार में नोटबुक आइकन) का उपयोग करें।"
+  },
+  "guideStep4": {
+    "message": "4. उपयोगकर्ता गाइड <1>यहां</1> देखें"
+  },
+  "guideHaveFun": {
+    "message": "मज़े करो!"
+  },
+  "gotIt": {
+    "message": "समझ गया, सेटिंग्स पर आगे बढ़ें"
+  },
+  "editProfile": {
+    "message": "प्रोफ़ाइल संपादित करें"
+  },
+  "editProfileDesc": {
+    "message": "अपना प्रदर्शन नाम और प्रोफ़ाइल जानकारी सेट करें।"
+  },
+  "username": {
+    "message": "उपयोगकर्ता नाम"
+  },
+  "userProfile": {
+    "message": "उपयोगकर्ता प्रोफ़ाइल"
+  },
+  "cancel": {
+    "message": "रद्द करें"
+  },
+  "save": {
+    "message": "सहेजें"
+  },
+  "profileUpdated": {
+    "message": "प्रोफ़ाइल अपडेट की गई!"
+  },
+  "confirmDeletion": {
+    "message": "हटाने की पुष्टि करें"
+  },
+  "confirmDeletionDesc": {
+    "message": "क्या आप वाकई सभी चैट इतिहास हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती है।"
+  },
+  "deleteAll": {
+    "message": "सभी हटाएं"
+  },
+  "searchPlaceholder": {
+    "message": "अपने नोट्स और चैट इतिहास खोजें..."
+  },
+  "searching": {
+    "message": "खोज रहा है..."
+  },
+  "settingsTitle": {
+    "message": "सेटिंग्स"
+  },
+  "selectPersona": {
+    "message": "व्यक्तित्व चुनें..."
+  },
+  "editPersona": {
+    "message": "चयनित व्यक्तित्व संपादित करें"
+  },
+  "addPersona": {
+    "message": "नया व्यक्तित्व जोड़ें"
+  },
+  "deletePersona": {
+    "message": "चयनित व्यक्तित्व हटाएं"
+  },
+  "history": {
+    "message": "इतिहास"
+  },
+  "notes": {
+    "message": "नोट्स"
+  },
+  "embeddings": {
+    "message": "एम्बेडिंग"
+  },
+  "manageIndex": {
+    "message": "अपने वेक्टर इंडेक्स को प्रबंधित करें"
+  },
+  "rebuild": {
+    "message": "पुनर्निर्माण"
+  },
+  "rebuildEmbeddings": {
+    "message": "एम्बेडिंग का पुनर्निर्माण करें"
+  },
+  "lastRebuild": {
+    "message": "पिछला: {{date}}"
+  },
+  "update": {
+    "message": "अपडेट करें"
+  },
+  "updateEmbeddings": {
+    "message": "एम्बेडिंग अपडेट करें"
+  },
+  "lastUpdate": {
+    "message": "पिछला: {{date}}"
+  },
+  "currentModel": {
+    "message": "वर्तमान मॉडल: {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "पुनर्निर्माण हो रहा है..."
+  },
+  "updating": {
+    "message": "अपडेट हो रहा है..."
+  },
+  "userGuide": {
+    "message": "उपयोगकर्ता गाइड"
+  },
+  "closeSettings": {
+    "message": "सेटिंग्स बंद करें"
+  }
+}

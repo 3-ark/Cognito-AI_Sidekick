@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "Settings"
+  },
+  "chatHistory": {
+    "message": "Chat History"
+  },
+  "noteSystem": {
+    "message": "Note System"
+  },
+  "backToChat": {
+    "message": "Back to Chat"
+  },
+  "hiSettings": {
+    "message": "Hi {{userName}}, settings?"
+  },
+  "online": {
+    "message": "Online"
+  },
+  "typing": {
+    "message": "Typing…"
+  },
+  "thinking": {
+    "message": "Thinking…"
+  },
+  "searchingWeb": {
+    "message": "Searching web…"
+  },
+  "processingSERP": {
+    "message": "Processing SERP…"
+  },
+  "readingPage": {
+    "message": "Reading page…"
+  },
+  "analyzing": {
+    "message": "Analyzing…"
+  },
+  "resetChat": {
+    "message": "Reset Chat"
+  },
+  "shareOptions": {
+    "message": "Share Options"
+  },
+  "yourProfile": {
+    "message": "Your Profile"
+  },
+  "whatsNew": {
+    "message": "What's New"
+  },
+  "exportChat": {
+    "message": "Export Chat"
+  },
+  "deleteAllHistory": {
+    "message": "Delete All History"
+  },
+  "noteOptions": {
+    "message": "Note Options"
+  },
+  "createNote": {
+    "message": "Create Note"
+  },
+  "importNote": {
+    "message": "Import Note"
+  },
+  "selectNotes": {
+    "message": "Select Notes"
+  },
+  "quickGuide": {
+    "message": "Quick Guide"
+  },
+  "guideIntro": {
+    "message": "A quick introduction to get you started with Cognito."
+  },
+  "guideStep1": {
+    "message": "1. In Settings, go to 'API Access' to fill in your API keys or URLs."
+  },
+  "guideStep2": {
+    "message": "2. Exit settings, then click the model selector in the header to choose your model. You can set your username in the top right corner."
+  },
+  "guideStep3": {
+    "message": "3. Use the 'Chat Controls' (notebook icon in input bar) to toggle AI memory and tool usage."
+  },
+  "guideStep4": {
+    "message": "4. Check the user guide <1>here</1>"
+  },
+  "guideHaveFun": {
+    "message": "Have fun!"
+  },
+  "gotIt": {
+    "message": "Got it, proceed to settings"
+  },
+  "editProfile": {
+    "message": "Edit Profile"
+  },
+  "editProfileDesc": {
+    "message": "Set your display name and profile information."
+  },
+  "username": {
+    "message": "Username"
+  },
+  "userProfile": {
+    "message": "User Profile"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "profileUpdated": {
+    "message": "Profile updated!"
+  },
+  "confirmDeletion": {
+    "message": "Confirm Deletion"
+  },
+  "confirmDeletionDesc": {
+    "message": "Are you sure you want to delete all chat history? This action cannot be undone."
+  },
+  "deleteAll": {
+    "message": "Delete All"
+  },
+  "searchPlaceholder": {
+    "message": "Search your notes and chat history..."
+  },
+  "searching": {
+    "message": "Searching..."
+  },
+  "settingsTitle": {
+    "message": "Settings"
+  },
+  "selectPersona": {
+    "message": "Select Persona..."
+  },
+  "editPersona": {
+    "message": "Edit selected persona"
+  },
+  "addPersona": {
+    "message": "Add new persona"
+  },
+  "deletePersona": {
+    "message": "Delete selected persona"
+  },
+  "history": {
+    "message": "History"
+  },
+  "notes": {
+    "message": "Notes"
+  },
+  "embeddings": {
+    "message": "Embeddings"
+  },
+  "manageIndex": {
+    "message": "Manage your vector index"
+  },
+  "rebuild": {
+    "message": "Rebuild"
+  },
+  "rebuildEmbeddings": {
+    "message": "Rebuild Embeddings"
+  },
+  "lastRebuild": {
+    "message": "Last: {{date}}"
+  },
+  "update": {
+    "message": "Update"
+  },
+  "updateEmbeddings": {
+    "message": "Update Embeddings"
+  },
+  "lastUpdate": {
+    "message": "Last: {{date}}"
+  },
+  "currentModel": {
+    "message": "Current Model: {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "Rebuilding..."
+  },
+  "updating": {
+    "message": "Updating..."
+  },
+  "userGuide": {
+    "message": "User Guide"
+  },
+  "closeSettings": {
+    "message": "Close Settings"
+  }
+}

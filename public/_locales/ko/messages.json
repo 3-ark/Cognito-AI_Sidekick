@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "설정"
+  },
+  "chatHistory": {
+    "message": "채팅 기록"
+  },
+  "noteSystem": {
+    "message": "노트 시스템"
+  },
+  "backToChat": {
+    "message": "채팅으로 돌아가기"
+  },
+  "hiSettings": {
+    "message": "안녕하세요 {{userName}}님, 설정하시겠어요?"
+  },
+  "online": {
+    "message": "온라인"
+  },
+  "typing": {
+    "message": "입력 중…"
+  },
+  "thinking": {
+    "message": "생각 중…"
+  },
+  "searchingWeb": {
+    "message": "웹 검색 중…"
+  },
+  "processingSERP": {
+    "message": "SERP 처리 중…"
+  },
+  "readingPage": {
+    "message": "페이지 읽는 중…"
+  },
+  "analyzing": {
+    "message": "분석 중…"
+  },
+  "resetChat": {
+    "message": "채팅 재설정"
+  },
+  "shareOptions": {
+    "message": "공유 옵션"
+  },
+  "yourProfile": {
+    "message": "내 프로필"
+  },
+  "whatsNew": {
+    "message": "새로운 기능"
+  },
+  "exportChat": {
+    "message": "채팅 내보내기"
+  },
+  "deleteAllHistory": {
+    "message": "모든 기록 삭제"
+  },
+  "noteOptions": {
+    "message": "노트 옵션"
+  },
+  "createNote": {
+    "message": "노트 생성"
+  },
+  "importNote": {
+    "message": "노트 가져오기"
+  },
+  "selectNotes": {
+    "message": "노트 선택"
+  },
+  "quickGuide": {
+    "message": "빠른 안내"
+  },
+  "guideIntro": {
+    "message": "Cognito를 시작하는 데 도움이 되는 빠른 소개입니다."
+  },
+  "guideStep1": {
+    "message": "1. '설정'에서 'API 액세스'로 이동하여 API 키 또는 URL을 입력합니다."
+  },
+  "guideStep2": {
+    "message": "2. 설정을 종료한 다음 헤더의 모델 선택기를 클릭하여 모델을 선택합니다. 오른쪽 상단에서 사용자 이름을 설정할 수 있습니다."
+  },
+  "guideStep3": {
+    "message": "3. '채팅 컨트롤'(입력 표시줄의 노트북 아이콘)을 사용하여 AI 메모리 및 도구 사용을 전환합니다."
+  },
+  "guideStep4": {
+    "message": "4. <1>여기</1>에서 사용 설명서를 확인하세요."
+  },
+  "guideHaveFun": {
+    "message": "즐거운 시간 보내세요!"
+  },
+  "gotIt": {
+    "message": "알겠습니다, 설정으로 이동"
+  },
+  "editProfile": {
+    "message": "프로필 편집"
+  },
+  "editProfileDesc": {
+    "message": "표시 이름과 프로필 정보를 설정합니다."
+  },
+  "username": {
+    "message": "사용자 이름"
+  },
+  "userProfile": {
+    "message": "사용자 프로필"
+  },
+  "cancel": {
+    "message": "취소"
+  },
+  "save": {
+    "message": "저장"
+  },
+  "profileUpdated": {
+    "message": "프로필이 업데이트되었습니다!"
+  },
+  "confirmDeletion": {
+    "message": "삭제 확인"
+  },
+  "confirmDeletionDesc": {
+    "message": "모든 채팅 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+  },
+  "deleteAll": {
+    "message": "모두 삭제"
+  },
+  "searchPlaceholder": {
+    "message": "노트 및 채팅 기록 검색..."
+  },
+  "searching": {
+    "message": "검색 중..."
+  },
+  "settingsTitle": {
+    "message": "설정"
+  },
+  "selectPersona": {
+    "message": "페르소나 선택..."
+  },
+  "editPersona": {
+    "message": "선택한 페르소나 편집"
+  },
+  "addPersona": {
+    "message": "새 페르소나 추가"
+  },
+  "deletePersona": {
+    "message": "선택한 페르소나 삭제"
+  },
+  "history": {
+    "message": "기록"
+  },
+  "notes": {
+    "message": "노트"
+  },
+  "embeddings": {
+    "message": "임베딩"
+  },
+  "manageIndex": {
+    "message": "벡터 인덱스 관리"
+  },
+  "rebuild": {
+    "message": "재구축"
+  },
+  "rebuildEmbeddings": {
+    "message": "임베딩 재구축"
+  },
+  "lastRebuild": {
+    "message": "마지막: {{date}}"
+  },
+  "update": {
+    "message": "업데이트"
+  },
+  "updateEmbeddings": {
+    "message": "임베딩 업데이트"
+  },
+  "lastUpdate": {
+    "message": "마지막: {{date}}"
+  },
+  "currentModel": {
+    "message": "현재 모델: {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "재구축 중..."
+  },
+  "updating": {
+    "message": "업데이트 중..."
+  },
+  "userGuide": {
+    "message": "사용 설명서"
+  },
+  "closeSettings": {
+    "message": "설정 닫기"
+  }
+}
