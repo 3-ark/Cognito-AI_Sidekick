@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiX, FiBookOpen, FiSearch, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiFileText, FiInfo } from 'react-icons/fi';
+import { FiBookOpen, FiSearch, FiRefreshCw, FiZap, FiEdit2, FiPlus, FiTrash2, FiSliders, FiFileText, FiInfo } from 'react-icons/fi';
 import { PersonaEditPopover, DeletePersonaDialog } from './Persona'; // Import new persona components
 import { Sheet, SheetContent, SheetTitle, SheetDescription, SheetOverlay } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { RiChatHistoryLine } from "react-icons/ri";
+import { RiChatHistoryLine, RiCloseFill } from "react-icons/ri";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; 
 import { type EmbeddingModelConfig, type Model, type Config as AppConfig } from "@/src/types/config";
 import { Input } from "@/components/ui/input";
@@ -476,12 +476,13 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
-                                variant={'link'}
+                                variant={'ghost'}
+                                size='xs'
                                 aria-label={t('closeSettings.message')}
-                                className="text-[var(--text)] p-1.5 hover:bg-[var(--active)]/20 h-6 w-6 hover:px-0 focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
+                                className="text-[var(--text)] hover:bg-[var(--active)]/20 focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
                                 onClick={() => onOpenChange(false)}
                             >
-                                <FiX />
+                                <RiCloseFill />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="top"> {t('closeSettings.message')} </TooltipContent>
