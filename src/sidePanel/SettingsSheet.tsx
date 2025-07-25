@@ -284,9 +284,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 <div className="flex items-center space-x-1.5">
                   {presetThemesForSheet.map(theme => (<SheetThemeButton key={theme.name} theme={theme} updateConfig={updateConfig} size="h-5 w-5" />))}
                 </div>
-                <div className="flex items-center space-x-2">
-                  <LanguageSwitcher />
-                  <Button size="sm" onClick={handleConfigClick} variant="outline"
+                <Button size="sm" onClick={handleConfigClick} variant="outline"
                   className={cn(
                     "text-white rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs",
                     "border-none",
@@ -299,7 +297,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   <FiSliders className="h-3 w-3 mr-1" />
                   {t('settings.message')}
                 </Button>
-                </div>
               </div>
               <div className="w-full flex items-center space-x-2">
                 <Select value={currentPersona} onValueChange={(value) => updateConfig({ persona: value })}>
@@ -440,7 +437,8 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 "sticky bottom-0 z-10 p-3", // p-3 provides padding around the footer content
                 "flex items-center justify-between"
             )}>
-                {/* Pill Tag */}
+                <div className="flex items-center space-x-2">
+                <LanguageSwitcher />
                 <div className="flex rounded-xl overflow-hidden shadow-md">
                     <SheetTitle asChild>
                         <span
@@ -458,6 +456,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                             v{APP_VERSION}
                         </span>
                     </SheetDescription>
+                </div>
                 </div>
 
                 {/* Icons */}
