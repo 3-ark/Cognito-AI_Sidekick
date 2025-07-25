@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogTrigger,
@@ -19,7 +18,11 @@ export const MCPPopover: React.FC = () => {
   const [tools, setTools] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    // Fetch tools from the background script
+    chrome.runtime.sendMessage({ type: 'MCP_LIST_TOOLS' }, (response) => {
+      if (response) {
+        setTools(response);
+      }
+    });
   }, []);
 
   return (

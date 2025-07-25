@@ -15,12 +15,12 @@ import {
     HydratedSearchResultItem, 
     indexSingleNote, 
     removeNoteFromIndex, 
-    rebuildFullIndex, // Formerly indexNotes, this is indexAllFullRebuild
+    rebuildFullIndex,
     indexSingleChatMessage,
     removeChatMessageFromIndex,
 } from './searchUtils';
 import { configureEmbeddingService, ensureEmbeddingServiceConfigured } from './embeddingUtils';
-import { Note, NoteWithEmbedding } from '../types/noteTypes'; // Import NOTE_STORAGE_PREFIX
+import { Note, NoteWithEmbedding } from '../types/noteTypes';
 import { EmbeddingModelConfig, Config } from 'src/types/config'; // Added import for Config
 import { 
     getChatMessageById, 
@@ -31,7 +31,9 @@ import {
     getAllChatMessages as storageGetAllChats // Alias to avoid conflict if any
 } from './chatHistoryStorage'; 
 import { getHybridRankedChunks, formatResultsForLLM } from './retrieverUtils'; 
-import { NOTE_STORAGE_PREFIX } from './noteStorage'; // Import NOTE_STORAGE_PREFIX
+import { NOTE_STORAGE_PREFIX } from './noteStorage';
+import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
+import mcpClient from './mcp-client';
 
 const initiallyIndexedChatsInSession = new Set<string>();
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
@@ -641,15 +643,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicates asynchronous response
   }
 });
-// --- RAG Operations ---
-import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
-import mcpClient from './mcp-client';
+
 
 // --- MCP Client Initialization ---
-chrome.runtime.onStartup.addListener(() => {
-  // Connect to a default MCP server on startup
-  // In a real application, this would be configurable
-  mcpClient.connect('mcp://localhost:8080');
+const connectToMCPServers = () => {
+  chrome.storage.local.get('mcpServers', (result) => {
+    if (result.mcpServers) {
+      result.mcpServers.forEach((server: any) => {
+        mcpClient.connect(server.url);
+      });
+    }
+  });
+};
+
+chrome.runtime.onStartup.addListener(connectToMCPServers);
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.mcpServers) {
+    // Reconnect to all servers when the configuration changes
+    // A more sophisticated implementation would diff the changes
+    // and only connect/disconnect the affected servers.
+    connectToMCPServers();
+  }
 });
 
 // Handle messages from the popover

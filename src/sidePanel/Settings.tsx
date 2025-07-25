@@ -8,6 +8,7 @@ import { Themes } from './Themes';
 import { TtsSettings } from './TtsSettings';
 import { WebSearch } from './WebSearch';
 import { RagSettings } from './RagSettings';
+import { MCPServerManager } from './components/MCPServerManager';
 
 export const Settings = () => {
   const [accordionValue, setAccordionValue] = useState<string>(""); // Keep if Connect button needs it
@@ -32,6 +33,7 @@ export const Settings = () => {
         <PageContext />
         <WebSearch />
         <RagSettings />
+        <MCPServerManager />
         <div className="pointer-events-none h-12" /> {/* prevent the missing bottom border */}
       </Accordion>
     </div>
