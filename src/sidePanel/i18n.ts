@@ -8,15 +8,27 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    debug: true,
-    fallbackLng: 'en',
+    // Best practice: only show debug logs in development mode
+    debug: process.env.NODE_ENV === 'development',
+    // Define the order in which to try different Chinese language codes.
+    // This ensures "zh" falls back to "zh_CN" if available.
+    fallbackLng: {
+      'zh': ['zh_CN', 'zh_TW'], // Fallback for generic "zh"
+      'default': ['en'] // Explicitly set the final fallback
+    },
     interpolation: {
       escapeValue: false,
     },
     backend: {
-      loadPath: '/_locales/{{lng}}/messages.json',
+      // This function converts standard codes (e.g., "zh-CN")
+      // to your folder structure (e.g., "zh_CN") before fetching.
+      loadPath: (lngs: string[]) => {
+        const lang = lngs[0];
+        const finalLang = lang.replace('-', '_');
+        return `/_locales/${finalLang}/messages.json`;
+      },
     },
-    react: {
+      react: {
       useSuspense: false,
     },
     returnObjects: true,
