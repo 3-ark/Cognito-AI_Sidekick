@@ -83,7 +83,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
 
   const parseModelNameForDisplay = (modelString: string): string => {
     if (!modelString || modelString === 'Not Set') {
-      return t('notSet');
+      return t('notSet.message');
     }
     // Remove provider part like `[lmStudio] `
     let name = modelString.replace(/\[.*?\]\s*/, '');
@@ -157,10 +157,10 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
           if (modelDetail) {
             setSelectedEmbeddingModelDisplay(`[${modelDetail.host || 'Unknown'}] ${modelDetail.id}`);
           } else {
-            setSelectedEmbeddingModelDisplay(t('notSet'));
+            setSelectedEmbeddingModelDisplay(t('notSet.message'));
           }
         } else {
-          setSelectedEmbeddingModelDisplay(t('notSet'));
+          setSelectedEmbeddingModelDisplay(t('notSet.message'));
         }
       });
     };
@@ -262,16 +262,16 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
           <div className={cn("flex flex-col space-y-5 flex-1", sectionPaddingX, "py-5")}>
             <div className="relative mt-5">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text)] opacity-50" />
-              <Input type="text" placeholder={t('searchPlaceholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl shadow-sm border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] h-8 placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
+              <Input type="text" placeholder={t('searchPlaceholder.message')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={cn("pl-10 pr-4 py-2 w-full rounded-xl shadow-sm border border-[var(--text)]/20 bg-[var(--input-background)] text-[var(--text)] h-8 placeholder:text-[var(--text)]/50", "focus:ring-1 focus:ring-[var(--active)] focus:border-[var(--active)]")} />
             </div>
-            {isLoadingSearch && <div className="text-center text-[var(--text)] opacity-70">{t('searching')}</div>}
+            {isLoadingSearch && <div className="text-center text-[var(--text)] opacity-70">{t('searching.message')}</div>}
             {searchError && <div className="text-center text-red-500">{searchError}</div>}
             {searchResults.length > 0 && (
               <ScrollArea className="h-[200px] rounded-md border border-[var(--text)]/20 p-2 bg-[var(--bg)]/30">
                 <div className="space-y-2">
                   {searchResults.map((result) => (
                     <div key={result.chunkId} className="p-2 rounded-md bg-[var(--bg)]/50 border border-[var(--text)]/20">
-                      <div className="text-xs text-[var(--text)] opacity-70">{result.parentType === 'note' ? t('notes') : t('chatHistory')} - Score: {result.hybridScore.toFixed(2)}</div>
+                      <div className="text-xs text-[var(--text)] opacity-70">{result.parentType === 'note' ? t('notes.message') : t('chatHistory.message')} - Score: {result.hybridScore.toFixed(2)}</div>
                       <div className="font-medium text-sm text-[var(--text)] truncate" title={result.parentTitle}>{result.parentTitle}</div>
                       <p className="text-xs text-[var(--text)] opacity-80 line-clamp-2" title={result.chunkText}>{result.chunkText}</p>
                     </div>
@@ -297,14 +297,14 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   style={{ backgroundColor: 'var(--link)' }}
                 >
                   <FiSliders className="h-3 w-3 mr-1" />
-                  {t('settings')}
+                  {t('settings.message')}
                 </Button>
                 </div>
               </div>
               <div className="w-full flex items-center space-x-2">
                 <Select value={currentPersona} onValueChange={(value) => updateConfig({ persona: value })}>
                   <SelectTrigger id="persona-select" variant="settingsPanel" className="flex-1 font-['Space_Mono',_monospace] data-[placeholder]:text-muted-foreground w-auto">
-                    <SelectValue placeholder={t('selectPersona')} />
+                    <SelectValue placeholder={t('selectPersona.message')} />
                   </SelectTrigger>
                   <SelectContent variant="settingsPanel">
                     {Object.keys(config?.personas || {}).map((p) => {
@@ -329,7 +329,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   initialAvatar={currentPersonaAvatar}
                   onSave={handleSavePersona}
                   trigger={
-                    <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label={t('editPersona')}>
+                    <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label={t('editPersona.message')}>
                       <FiEdit2 />
                     </Button>
                   }
@@ -337,7 +337,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 <PersonaEditPopover
                   onSave={handleSavePersona}
                   trigger={
-                    <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label={t('addPersona')}>
+                    <Button variant="ghost" size="sm" className="text-[var(--text)]/80 hover:text-[var(--text)] hover:bg-[var(--text)]/10 rounded-md" aria-label={t('addPersona.message')}>
                       <FiPlus />
                     </Button>
                   }
@@ -347,7 +347,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                     personaName={currentPersona}
                     onConfirm={handleDeletePersona}
                     trigger={
-                      <Button variant="ghost" size="sm" className="text-[var(--error)]/80 hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-md" aria-label={t('deletePersona')}>
+                      <Button variant="ghost" size="sm" className="text-[var(--error)]/80 hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-md" aria-label={t('deletePersona.message')}>
                         <FiTrash2 />
                       </Button>
                     }
@@ -363,11 +363,11 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                   <div className="flex space-x-4"> {/* Adjusted spacing */}
                     <Button variant="outline" onClick={handleHistoryClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/20", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
                       <RiChatHistoryLine className="h-3 w-3 mr-1.5" />
-                      <span className="text-xs">{t('history')}</span>
+                      <span className="text-xs">{t('history.message')}</span>
                     </Button>
                     <Button variant="outline" onClick={handleNoteSystemClick} className={cn("flex-1 text-[var(--text)] rounded-xl shadow-md justify-start pl-4 font-medium h-8 text-xs px-3 py-1", "bg-[rgba(255,250,240,0.4)] dark:bg-[rgba(255,255,255,0.1)]", "border-[var(--text)]/20", "font-['Space_Mono',_monospace]", "hover:border-[var(--active)] hover:brightness-98 active:bg-[var(--active)] active:brightness-95", "focus:ring-1 focus:ring-[var(--active)]")}>
                       <FiFileText className="h-3 w-3 mr-1.5" />
-                      <span className="text-xs">{t('notes')}</span>
+                      <span className="text-xs">{t('notes.message')}</span>
                     </Button>
                   </div>
                   {/* Index Management Buttons */}
@@ -379,47 +379,47 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                             <FiInfo className="px-0 mr-1 text-[var(--text)]/50" />
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p>{t('manageIndex')}</p>
+                            <p>{t('manageIndex.message')}</p>
                           </TooltipContent>
                         </Tooltip>
-                        <Label className="text-base font-medium text-foreground opacity-80">{t('embeddings')}</Label>
+                        <Label className="text-base font-medium text-foreground opacity-80">{t('embeddings.message')}</Label>
                       </div>
                       <div className="flex space-x-3 items-center">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="outline" size="sm" onClick={handleRebuildEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-80 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
                               <FiRefreshCw className="h-3 w-3" />
-                              <span className="truncate">{t('rebuild')}</span>
+                              <span className="truncate">{t('rebuild.message')}</span>
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p>{t('rebuildEmbeddings')}</p>
-                            <p className="text-xs opacity-80">{t('lastRebuild', { date: embeddingsLastRebuild })}</p>
+                            <p>{t('rebuildEmbeddings.message')}</p>
+                            <p className="text-xs opacity-80">{t('lastRebuild.message', { date: embeddingsLastRebuild })}</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="outline" size="sm" onClick={handleUpdateEmbeddings} style={{ backgroundColor: 'var(--active)' }} className={cn("text-var(--text) rounded-sm shadow-md justify-start font-medium h-6 px-2 text-xs", "border-none", "font-['Space_Mono',_monospace]", "hover:brightness-80 active:brightness-90", "focus:ring-1 focus:ring-white/50")}>
                               <FiZap className="h-3 w-3" />
-                              <span className="truncate">{t('update')}</span>
+                              <span className="truncate">{t('update.message')}</span>
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            <p>{t('updateEmbeddings')}</p>
-                            <p className="text-xs opacity-80">{t('lastUpdate', { date: embeddingsLastUpdate })}</p>
+                            <p>{t('updateEmbeddings.message')}</p>
+                            <p className="text-xs opacity-80">{t('lastUpdate.message', { date: embeddingsLastUpdate })}</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
                     </div>
                     <p className="text-xs font-['Space_Mono',_monospace] text-[var(--text)]/70 mt-3">
-                      {t('currentModel', { modelName: parseModelNameForDisplay(selectedEmbeddingModelDisplay) || t('none') })}
+                      {t('currentModel.message', { modelName: parseModelNameForDisplay(selectedEmbeddingModelDisplay) || t('none.message') })}
                     </p>
                     {/* Progress bar always visible and separated */}
                     <div className="mt-2 mb-2">
                       {embeddingStatus !== 'idle' && (
                         <div className="space-y-1">
                           <p className="text-xs text-[var(--text)]/70">
-                            {embeddingStatus === 'rebuilding' ? t('rebuilding') : t('updating')}
+                            {embeddingStatus === 'rebuilding' ? t('rebuilding.message') : t('updating.message')}
                             ({embeddingProgress.processed}/{embeddingProgress.total})
                           </p>
                           <Progress value={(embeddingProgress.processed / embeddingProgress.total) * 100} className="h-2" />
@@ -469,25 +469,25 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[var(--text)] p-1.5 hover:bg-[var(--active)]/20 focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
-                                aria-label={t('userGuide')}
+                                aria-label={t('userGuide.message')}
                             >
                                 <FiBookOpen />
                             </a>
                         </TooltipTrigger>
-                        <TooltipContent side="top">{t('userGuide')}</TooltipContent>
+                        <TooltipContent side="top">{t('userGuide.message')}</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant={'link'}
-                                aria-label={t('closeSettings')}
+                                aria-label={t('closeSettings.message')}
                                 className="text-[var(--text)] p-1.5 hover:bg-[var(--active)]/20 h-6 w-6 hover:px-0 focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
                                 onClick={() => onOpenChange(false)}
                             >
                                 <FiX />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top"> {t('closeSettings')} </TooltipContent>
+                        <TooltipContent side="top"> {t('closeSettings.message')} </TooltipContent>
                     </Tooltip>
                 </div>
                 </div>

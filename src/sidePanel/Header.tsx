@@ -29,21 +29,21 @@ import { Textarea } from '@/components/ui/textarea';
 
 
 function getStatusText(t: (key: string) => string, mode: ChatMode, status: ChatStatus): string {
-  if (status === 'idle') return t('online');
+  if (status === 'idle') return t('online.message');
   if (mode === 'chat') {
-    if (status === 'typing') return t('typing');
-    if (status === 'thinking') return t('thinking');
+    if (status === 'typing') return t('typing.message');
+    if (status === 'thinking') return t('thinking.message');
   }
   if (mode === 'web') {
-    if (status === 'searching') return t('searchingWeb');
-    if (status === 'thinking') return t('processingSERP');
+    if (status === 'searching') return t('searchingWeb.message');
+    if (status === 'thinking') return t('processingSERP.message');
   }
   if (mode === 'page') {
-    if (status === 'reading') return t('readingPage');
-    if (status === 'thinking') return t('analyzing');
+    if (status === 'reading') return t('readingPage.message');
+    if (status === 'thinking') return t('analyzing.message');
   }
-  if (status === 'done') return t('online');
-  return t('online');
+  if (status === 'done') return t('online.message');
+  return t('online.message');
 }
 
 // --- Word-by-word typewriter animation ---
@@ -81,11 +81,11 @@ function TypewriterLinesWordByWord({ lines, delay = 120, className = "" }: { lin
 import { Trans } from 'react-i18next';
 // --- Guide content with link ---
 const GuideLines = ({ t }: { t: (key: string, options?: any) => string }) => [
-  t('guideStep1'),
-  t('guideStep2'),
-  t('guideStep3'),
+  t('guideStep1.message'),
+  t('guideStep2.message'),
+  t('guideStep3.message'),
   <Trans
-    i18nKey="guideStep4"
+    i18nKey="guideStep4.message"
     t={t}
     components={[
       <a
@@ -97,7 +97,7 @@ const GuideLines = ({ t }: { t: (key: string, options?: any) => string }) => [
     ]}
   />,
   "",
-  t('guideHaveFun'),
+  t('guideHaveFun.message'),
 ];
 
 interface WelcomeModalProps {
@@ -132,9 +132,9 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
         onInteractOutside={(e) => e.preventDefault()} // Prevent closing on outside click
       >
         <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow mt-4">
-          <DialogTitle className="text-lg">{t('quickGuide')}</DialogTitle>
+          <DialogTitle className="text-lg">{t('quickGuide.message')}</DialogTitle>
           <DialogDescription className="sr-only">
-            {t('guideIntro')}
+            {t('guideIntro.message')}
           </DialogDescription>
         </DialogHeader>
         <div className="p-4 text-left w-full max-w-md">
@@ -149,7 +149,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSetting
             variant="ghost"
             className="fingerprint-pulse-btn"
             onClick={handleGotIt}
-            aria-label={t('gotIt')}
+            aria-label={t('gotIt.message')}
           >
             <IoFingerPrint size="3rem" color="var(--active)" />
           </Button>
@@ -186,7 +186,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
   const handleSave = () => {
     updateConfig({ userName: currentUserName, userProfile: currentUserProfile });
     onOpenChange(false);
-    toast.success(t('profileUpdated'));
+    toast.success(t('profileUpdated.message'));
   };
 
   return (
@@ -196,15 +196,15 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         className="max-w-xs"
       >
         <DialogHeader className="px-6 py-2">
-          <DialogTitle className="text-lg font-semibold text-[var(--text)]">{t('editProfile')}</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-[var(--text)]">{t('editProfile.message')}</DialogTitle>
           <DialogDescription className="text-sm text-[var(--text)] opacity-80">
-            {t('editProfileDesc')}
+            {t('editProfileDesc.message')}
           </DialogDescription>
         </DialogHeader>
         <div className="px-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="username" className="text-sm font-medium text-[var(--text)] opacity-90">
-              {t('username')}
+              {t('username.message')}
             </Label>
             <Input
               id="username"
@@ -220,7 +220,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="userprofile" className="text-sm font-medium text-[var(--text)] opacity-90">
-              {t('userProfile')}
+              {t('userProfile.message')}
             </Label>
             <Textarea
               id="userprofile"
@@ -245,7 +245,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             size="sm"
             onClick={() => onOpenChange(false)}
           >
-            {t('cancel')}
+            {t('cancel.message')}
           </Button>
           <Button
             variant="outline-subtle"
@@ -253,7 +253,7 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             size="sm"
             onClick={handleSave}
           >
-            {t('save')}
+            {t('save.message')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -362,10 +362,10 @@ const handleChangelogClose = () => {
   };
 
   const leftButtonLabel = showBackButton
-    ? t('backToChat')
+    ? t('backToChat.message')
     : config?.userName
-      ? t('hiSettings', { userName: config.userName })
-      : t('settings');
+      ? t('hiSettings.message', { userName: config.userName })
+      : t('settings.message');
 
   const handleDeleteAllWithConfirmation = () => {
     toast.custom(
@@ -377,9 +377,9 @@ const handleChangelogClose = () => {
             "flex flex-col space-y-3"
           )}
         >
-          <h4 className="text-lg font-semibold text-[var(--text)]">{t('confirmDeletion')}</h4>
+          <h4 className="text-lg font-semibold text-[var(--text)]">{t('confirmDeletion.message')}</h4>
           <p className="text-sm text-[var(--text)] opacity-90">
-            {t('confirmDeletionDesc')}
+            {t('confirmDeletionDesc.message')}
           </p>
           <div className="flex justify-end space-x-3 pt-2">
             <Button
@@ -391,7 +391,7 @@ const handleChangelogClose = () => {
               )}
               onClick={() => toast.dismiss(t.id)}
             >
-              {t('cancel')}
+              {t('cancel.message')}
             </Button>
             <Button
               variant="destructive"
@@ -415,7 +415,7 @@ const handleChangelogClose = () => {
                 }
               }}
             >
-              {t('deleteAll')}
+              {t('deleteAll.message')}
             </Button>
           </div>
         </div>
@@ -503,21 +503,21 @@ const handleChangelogClose = () => {
             {settingsMode && (
               <div className="flex items-center justify-center">
                 <p className="relative top-0 text-lg font-['Bruno_Ace_SC'] header-title-glow">
-                  {t('settings')}
+                  {t('settings.message')}
                 </p>
               </div>
             )}
             {historyMode && (
               <div className="flex items-center justify-center">
                 <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
-                  {t('chatHistory')}
+                  {t('chatHistory.message')}
                 </p>
               </div>
             )}
             {noteSystemMode && (
               <div className="flex items-center justify-center">
                 <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
-                  {t('noteSystem')}
+                  {t('noteSystem.message')}
                 </p>
               </div>
             )}
@@ -543,7 +543,7 @@ const handleChangelogClose = () => {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    {t('resetChat')}
+                    {t('resetChat.message')}
                   </TooltipContent>
                 </Tooltip>
 
@@ -553,7 +553,7 @@ const handleChangelogClose = () => {
                     <TooltipTrigger asChild>
                       <DropdownMenuPrimitive.Trigger asChild>
                         <Button
-                          aria-label={t('shareOptions')}
+                          aria-label={t('shareOptions.message')}
                           variant="ghost"
                           size="sm"
                           className="text-[var(--text)] rounded-md"
@@ -563,7 +563,7 @@ const handleChangelogClose = () => {
                       </DropdownMenuPrimitive.Trigger>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                      {t('shareOptions')}
+                      {t('shareOptions.message')}
                     </TooltipContent>
                   </Tooltip>
                   <DropdownMenuPrimitive.Portal>
@@ -584,7 +584,7 @@ const handleChangelogClose = () => {
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
                         <IoPerson className="h-4 w-4" />
-                        <span>{t('yourProfile')}</span>
+                        <span>{t('yourProfile.message')}</span>
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
@@ -601,7 +601,7 @@ const handleChangelogClose = () => {
                         onSelect={() => setChangelogOpen(true)}
                       >
                         <VscRocket className="h-4 w-4" />
-                        <span>{t('whatsNew')}</span>
+                        <span>{t('whatsNew.message')}</span>
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
@@ -618,7 +618,7 @@ const handleChangelogClose = () => {
                           )}
                         >
                           <FiChevronLeft className="h-4 w-4" />
-                          <span>{t('exportChat')}</span>
+                          <span>{t('exportChat.message')}</span>
                         </DropdownMenuPrimitive.SubTrigger>
                         <DropdownMenuPrimitive.Portal>
                           <DropdownMenuPrimitive.SubContent
@@ -669,7 +669,7 @@ const handleChangelogClose = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    aria-label={t('deleteAllHistory')}
+                    aria-label={t('deleteAllHistory.message')}
                     variant="ghost"
                     size="sm"
                     className="text-[var(--text)] rounded-md"
@@ -679,7 +679,7 @@ const handleChangelogClose = () => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                  {t('deleteAll')}
+                  {t('deleteAll.message')}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -689,7 +689,7 @@ const handleChangelogClose = () => {
                   <TooltipTrigger asChild>
                     <DropdownMenuPrimitive.Trigger asChild>
                       <Button
-                        aria-label={t('noteOptions')}
+                        aria-label={t('noteOptions.message')}
                         variant="ghost"
                         size="sm"
                         className="text-[var(--text)] rounded-md"
@@ -699,7 +699,7 @@ const handleChangelogClose = () => {
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    {t('noteOptions')}
+                    {t('noteOptions.message')}
                   </TooltipContent>
                 </Tooltip>
                 <DropdownMenuPrimitive.Portal>
@@ -721,7 +721,7 @@ const handleChangelogClose = () => {
                         onSelect={onAddNewNoteRequest}
                       >
                         <GoPlus className="h-4 w-4" />
-                        <span>{t('createNote')}</span>
+                        <span>{t('createNote.message')}</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onImportNoteRequest && (
@@ -734,7 +734,7 @@ const handleChangelogClose = () => {
                         onSelect={onImportNoteRequest}
                       >
                         <FiUpload className="h-4 w-4" />
-                        <span>{t('importNote')}</span>
+                        <span>{t('importNote.message')}</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onSelectNotesRequest && (
@@ -747,7 +747,7 @@ const handleChangelogClose = () => {
                         onSelect={onSelectNotesRequest}
                       >
                         <IoCheckmarkCircleOutline className="h-4 w-4" />
-                        <span>{t('selectNotes')}</span>
+                        <span>{t('selectNotes.message')}</span>
                       </DropdownMenuPrimitive.Item>
                     )}
                   </DropdownMenuPrimitive.Content>
