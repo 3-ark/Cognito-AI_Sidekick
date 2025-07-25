@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "Configurações"
+  },
+  "chatHistory": {
+    "message": "Histórico de bate-papo"
+  },
+  "noteSystem": {
+    "message": "Sistema de anotações"
+  },
+  "backToChat": {
+    "message": "Voltar para o bate-papo"
+  },
+  "hiSettings": {
+    "message": "Olá {{userName}}, configurações?"
+  },
+  "online": {
+    "message": "Online"
+  },
+  "typing": {
+    "message": "Digitando…"
+  },
+  "thinking": {
+    "message": "Pensando…"
+  },
+  "searchingWeb": {
+    "message": "Pesquisando na web…"
+  },
+  "processingSERP": {
+    "message": "Processando SERP…"
+  },
+  "readingPage": {
+    "message": "Lendo página…"
+  },
+  "analyzing": {
+    "message": "Analisando…"
+  },
+  "resetChat": {
+    "message": "Redefinir bate-papo"
+  },
+  "shareOptions": {
+    "message": "Opções de compartilhamento"
+  },
+  "yourProfile": {
+    "message": "Seu perfil"
+  },
+  "whatsNew": {
+    "message": "O que há de novo"
+  },
+  "exportChat": {
+    "message": "Exportar bate-papo"
+  },
+  "deleteAllHistory": {
+    "message": "Excluir todo o histórico"
+  },
+  "noteOptions": {
+    "message": "Opções de anotação"
+  },
+  "createNote": {
+    "message": "Criar anotação"
+  },
+  "importNote": {
+    "message": "Importar anotação"
+  },
+  "selectNotes": {
+    "message": "Selecionar anotações"
+  },
+  "quickGuide": {
+    "message": "Guia rápido"
+  },
+  "guideIntro": {
+    "message": "Uma introdução rápida para você começar a usar o Cognito."
+  },
+  "guideStep1": {
+    "message": "1. Em Configurações, vá para 'Acesso à API' para preencher suas chaves de API ou URLs."
+  },
+  "guideStep2": {
+    "message": "2. Saia das configurações e clique no seletor de modelo no cabeçalho para escolher seu modelo. Você pode definir seu nome de usuário no canto superior direito."
+  },
+  "guideStep3": {
+    "message": "3. Use os 'Controles de bate-papo' (ícone de caderno na barra de entrada) para alternar a memória da IA e o uso de ferramentas."
+  },
+  "guideStep4": {
+    "message": "4. Confira o guia do usuário <1>aqui</1>"
+  },
+  "guideHaveFun": {
+    "message": "Divirta-se!"
+  },
+  "gotIt": {
+    "message": "Entendi, ir para as configurações"
+  },
+  "editProfile": {
+    "message": "Editar perfil"
+  },
+  "editProfileDesc": {
+    "message": "Defina seu nome de exibição e informações de perfil."
+  },
+  "username": {
+    "message": "Nome de usuário"
+  },
+  "userProfile": {
+    "message": "Perfil de usuário"
+  },
+  "cancel": {
+    "message": "Cancelar"
+  },
+  "save": {
+    "message": "Salvar"
+  },
+  "profileUpdated": {
+    "message": "Perfil atualizado!"
+  },
+  "confirmDeletion": {
+    "message": "Confirmar exclusão"
+  },
+  "confirmDeletionDesc": {
+    "message": "Tem certeza de que deseja excluir todo o histórico de bate-papo? Esta ação não pode ser desfeita."
+  },
+  "deleteAll": {
+    "message": "Excluir tudo"
+  },
+  "searchPlaceholder": {
+    "message": "Pesquise em suas anotações e histórico de bate-papo..."
+  },
+  "searching": {
+    "message": "Pesquisando..."
+  },
+  "settingsTitle": {
+    "message": "Configurações"
+  },
+  "selectPersona": {
+    "message": "Selecionar persona..."
+  },
+  "editPersona": {
+    "message": "Editar persona selecionada"
+  },
+  "addPersona": {
+    "message": "Adicionar nova persona"
+  },
+  "deletePersona": {
+    "message": "Excluir persona selecionada"
+  },
+  "history": {
+    "message": "Histórico"
+  },
+  "notes": {
+    "message": "Anotações"
+  },
+  "embeddings": {
+    "message": "Incorporações"
+  },
+  "manageIndex": {
+    "message": "Gerencie seu índice vetorial"
+  },
+  "rebuild": {
+    "message": "Reconstruir"
+  },
+  "rebuildEmbeddings": {
+    "message": "Reconstruir incorporações"
+  },
+  "lastRebuild": {
+    "message": "Última: {{date}}"
+  },
+  "update": {
+    "message": "Atualizar"
+  },
+  "updateEmbeddings": {
+    "message": "Atualizar incorporações"
+  },
+  "lastUpdate": {
+    "message": "Última: {{date}}"
+  },
+  "currentModel": {
+    "message": "Modelo atual: {{modelName}}"
+  },
+  "rebuilding": {
+    "message": "Reconstruindo..."
+  },
+  "updating": {
+    "message": "Atualizando..."
+  },
+  "userGuide": {
+    "message": "Guia do usuário"
+  },
+  "closeSettings": {
+    "message": "Fechar configurações"
+  }
+}

@@ -6,6 +6,7 @@ import ChannelNames from 'src/types/ChannelNames';
 
 import Cognito from './Cognito';
 import { ConfigProvider } from './ConfigContext';
+import './i18n';
 
 import 'src/content/index.css';
 import { cn } from '@/src/background/util';

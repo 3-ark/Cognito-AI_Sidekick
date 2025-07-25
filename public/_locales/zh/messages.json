@@ -1,0 +1,188 @@
+{
+  "settings": {
+    "message": "设置"
+  },
+  "chatHistory": {
+    "message": "聊天记录"
+  },
+  "noteSystem": {
+    "message": "笔记系统"
+  },
+  "backToChat": {
+    "message": "返回聊天"
+  },
+  "hiSettings": {
+    "message": "你好 {{userName}}，要设置吗？"
+  },
+  "online": {
+    "message": "在线"
+  },
+  "typing": {
+    "message": "正在输入…"
+  },
+  "thinking": {
+    "message": "正在思考…"
+  },
+  "searchingWeb": {
+    "message": "正在搜索网页…"
+  },
+  "processingSERP": {
+    "message": "正在处理 SERP…"
+  },
+  "readingPage": {
+    "message": "正在阅读页面…"
+  },
+  "analyzing": {
+    "message": "正在分析…"
+  },
+  "resetChat": {
+    "message": "重置聊天"
+  },
+  "shareOptions": {
+    "message": "分享选项"
+  },
+  "yourProfile": {
+    "message": "你的个人资料"
+  },
+  "whatsNew": {
+    "message": "最新功能"
+  },
+  "exportChat": {
+    "message": "导出聊天"
+  },
+  "deleteAllHistory": {
+    "message": "删除所有历史记录"
+  },
+  "noteOptions": {
+    "message": "笔记选项"
+  },
+  "createNote": {
+    "message": "创建笔记"
+  },
+  "importNote": {
+    "message": "导入笔记"
+  },
+  "selectNotes": {
+    "message": "选择笔记"
+  },
+  "quickGuide": {
+    "message": "快速指南"
+  },
+  "guideIntro": {
+    "message": "一个快速介绍，帮助您开始使用 Cognito。"
+  },
+  "guideStep1": {
+    "message": "1. 在“设置”中，转到“API 访问”以填写您的 API 密钥或 URL。"
+  },
+  "guideStep2": {
+    "message": "2. 退出设置，然后单击标题中的模型选择器以选择您的模型。您可以在右上角设置您的用户名。"
+  },
+  "guideStep3": {
+    "message": "3. 使用“聊天控件”（输入栏中的笔记本图标）来切换 AI 内存和工具使用。"
+  },
+  "guideStep4": {
+    "message": "4. 在<1>此处</1>查看用户指南"
+  },
+  "guideHaveFun": {
+    "message": "玩得开心！"
+  },
+  "gotIt": {
+    "message": "知道了，进入设置"
+  },
+  "editProfile": {
+    "message": "编辑个人资料"
+  },
+  "editProfileDesc": {
+    "message": "设置您的显示名称和个人资料信息。"
+  },
+  "username": {
+    "message": "用户名"
+  },
+  "userProfile": {
+    "message": "用户个人资料"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "profileUpdated": {
+    "message": "个人资料已更新！"
+  },
+  "confirmDeletion": {
+    "message": "确认删除"
+  },
+  "confirmDeletionDesc": {
+    "message": "您确定要删除所有聊天记录吗？此操作无法撤消。"
+  },
+  "deleteAll": {
+    "message": "全部删除"
+  },
+  "searchPlaceholder": {
+    "message": "搜索您的笔记和聊天记录..."
+  },
+  "searching": {
+    "message": "正在搜索..."
+  },
+  "settingsTitle": {
+    "message": "设置"
+  },
+  "selectPersona": {
+    "message": "选择角色..."
+  },
+  "editPersona": {
+    "message": "编辑所选角色"
+  },
+  "addPersona": {
+    "message": "添加新角色"
+  },
+  "deletePersona": {
+    "message": "删除所选角色"
+  },
+  "history": {
+    "message": "历史记录"
+  },
+  "notes": {
+    "message": "笔记"
+  },
+  "embeddings": {
+    "message": "嵌入"
+  },
+  "manageIndex": {
+    "message": "管理您的向量索引"
+  },
+  "rebuild": {
+    "message": "重建"
+  },
+  "rebuildEmbeddings": {
+    "message": "重建嵌入"
+  },
+  "lastRebuild": {
+    "message": "上次：{{date}}"
+  },
+  "update": {
+    "message": "更新"
+  },
+  "updateEmbeddings": {
+    "message": "更新嵌入"
+  },
+  "lastUpdate": {
+    "message": "上次：{{date}}"
+  },
+  "currentModel": {
+    "message": "当前模型：{{modelName}}"
+  },
+  "rebuilding": {
+    "message": "正在重建..."
+  },
+  "updating": {
+    "message": "正在更新..."
+  },
+  "userGuide": {
+    "message": "用户指南"
+  },
+  "closeSettings": {
+    "message": "关闭设置"
+  }
+}
