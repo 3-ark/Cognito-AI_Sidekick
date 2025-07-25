@@ -7,6 +7,7 @@ import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/
 import { SettingTitle } from '../SettingsTitle';
 import { cn } from "@/src/background/util";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DialogDescription } from '@radix-ui/react-dialog';
 
 interface MCPServer {
   name: string;
@@ -62,6 +63,9 @@ export const MCPServerManager: React.FC = () => {
         <div className="space-y-4">
           <div>
             <Label>MCP Servers</Label>
+            <p className="text-sm text-muted-foreground">
+              Example: mysql, npx -y @fhuang/mcp-mysql-server
+            </p>
             <div className="space-y-2 mt-2">
               {servers.map((server, index) => (
                 <div key={index} className="flex items-center space-x-2">
@@ -87,44 +91,43 @@ export const MCPServerManager: React.FC = () => {
             />
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline">Advanced</Button>
+            <Button variant="outline-themed" className='h-7' >Advanced</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Environment Variables</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              {Object.entries(envVars).map(([key, value]) => (
-                <div key={key} className="flex items-center space-x-2">
-                  <Input value={key} readOnly />
-                  <Input value={value} readOnly />
+            <DialogDescription className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Example: MYSQL_HOST, your_host
+              </p>
+            </DialogDescription>
+              {Object.entries(envVars).map(([key, value], index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <Input value={key} onChange={(e) => {
+                    const newEnvVars = { ...envVars };
+                    delete newEnvVars[key];
+                    newEnvVars[e.target.value] = value;
+                    setEnvVars(newEnvVars);
+                  }} />
+                  <Input value={value} onChange={(e) => {
+                    setEnvVars({ ...envVars, [key]: e.target.value });
+                  }} />
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    const newEnvVars = { ...envVars };
+                    delete newEnvVars[key];
+                    setEnvVars(newEnvVars);
+                  }}>
+                    <FiTrash2 />
+                  </Button>
                 </div>
               ))}
-              <div className="flex items-center space-x-2">
-                <Input
-                  placeholder="Key"
-                  onBlur={(e) => {
-                    const key = e.target.value;
-                    if (key) {
-                      setEnvVars({ ...envVars, [key]: '' });
-                    }
-                  }}
-                />
-                <Input
-                  placeholder="Value"
-                  onBlur={(e) => {
-                    const value = e.target.value;
-                    const key = Object.keys(envVars).find(key => envVars[key] === '');
-                    if (key) {
-                      setEnvVars({ ...envVars, [key]: value });
-                    }
-                  }}
-                />
-              </div>
-            </div>
+              <Button variant="ghost" onClick={() => setEnvVars({ ...envVars, '': '' })}>
+                <FiPlus />
+              </Button>
           </DialogContent>
         </Dialog>
-            <Button onClick={addServer}>
+            <Button variant="ghost" onClick={addServer}>
               <FiPlus />
             </Button>
           </div>
