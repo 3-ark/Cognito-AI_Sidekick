@@ -437,8 +437,6 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 "sticky bottom-0 z-10 p-3", // p-3 provides padding around the footer content
                 "flex items-center justify-between"
             )}>
-                <div className="flex items-center space-x-2">
-                <LanguageSwitcher />
                 <div className="flex rounded-xl overflow-hidden shadow-md">
                     <SheetTitle asChild>
                         <span
@@ -457,10 +455,10 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                         </span>
                     </SheetDescription>
                 </div>
-                </div>
 
                 {/* Icons */}
                 <div className="flex items-center space-x-1">
+                <LanguageSwitcher />
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <a
