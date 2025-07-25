@@ -184,5 +184,11 @@
   },
   "closeSettings": {
     "message": "Fermer les paramètres"
+  },
+  "extName": {
+    "message": "Cognito AI Sidekick"
+  },
+  "extShortDesc": {
+    "message": "Un acolyte IA axé sur la confidentialité, d'abord hors ligne, pour votre navigateur."
   }
 }

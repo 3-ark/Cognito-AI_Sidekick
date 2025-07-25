@@ -184,5 +184,11 @@
   },
   "closeSettings": {
     "message": "설정 닫기"
+  },
+  "extName": {
+    "message": "Cognito AI 사이드킥"
+  },
+  "extShortDesc": {
+    "message": "개인 정보 보호에 중점을 둔 오프라인 우선 AI 기반 브라우저 사이드킥입니다."
   }
 }

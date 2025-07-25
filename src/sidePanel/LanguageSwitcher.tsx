@@ -13,6 +13,15 @@ const languages = [
   { code: 'de', name: 'Deutsch' },
   { code: 'it', name: 'Italiano' },
   { code: 'pt', name: 'Português' },
+  { code: 'ru', name: 'Русский' },
+  { code: 'bn', name: 'বাংলা' },
+  { code: 'ar', name: 'العربية' },
+  { code: 'jv', name: 'Basa Jawa' },
+  { code: 'vi', name: 'Tiếng Việt' },
+  { code: 'tr', name: 'Türkçe' },
+  { code: 'zh_TW', name: '繁體中文' },
+  { code: 'id', name: 'Bahasa Indonesia' },
+  { code: 'th', name: 'ภาษาไทย' },
 ];
 
 export const LanguageSwitcher: React.FC = () => {
@@ -24,7 +33,8 @@ export const LanguageSwitcher: React.FC = () => {
 
   return (
     <Select value={i18n.language} onValueChange={changeLanguage}>
-      <SelectTrigger className="w-[100px] border-[var(--text)]/20 h-6 rounded-full">
+      <SelectTrigger className="w-[120px] border-[var(--text)]/20 h-6 rounded-full">
+        <span>🌎</span>
         <SelectValue placeholder="Language" />
       </SelectTrigger>
       <SelectContent>
