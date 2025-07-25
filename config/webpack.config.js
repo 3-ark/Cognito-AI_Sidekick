@@ -86,6 +86,10 @@ const config = {
           to: 'assets'
         },
         {
+          from: 'public/_locales',
+          to: '_locales'
+        },
+        {
           from: require.resolve('pdfjs-dist/build/pdf.worker.mjs'),
           to: '.'
         }
