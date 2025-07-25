@@ -184,5 +184,11 @@
   },
   "closeSettings": {
     "message": "关闭设置"
+  },
+  "extName": {
+    "message": "Cognito 人工智能助手"
+  },
+  "extShortDesc": {
+    "message": "一个注重隐私、离线优先的人工智能浏览器助手。"
   }
 }

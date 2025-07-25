@@ -184,5 +184,11 @@
   },
   "closeSettings": {
     "message": "Cerrar configuración"
+  },
+  "extName": {
+    "message": "Cognito AI Sidekick"
+  },
+  "extShortDesc": {
+    "message": "Un compañero de IA centrado en la privacidad, primero sin conexión, para su navegador."
   }
 }

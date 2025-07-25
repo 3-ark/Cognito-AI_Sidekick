@@ -184,5 +184,11 @@
   },
   "closeSettings": {
     "message": "Einstellungen schließen"
+  },
+  "extName": {
+    "message": "Cognito AI Sidekick"
+  },
+  "extShortDesc": {
+    "message": "Ein datenschutzorientierter, offline-fähiger, KI-gestützter Sidekick für Ihren Browser."
   }
 }

@@ -1,4 +1,6 @@
 const manifestV3Object = require('./manifest/v3.js');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = function(browser) {
   let manifest = JSON.parse(JSON.stringify(manifestV3Object));

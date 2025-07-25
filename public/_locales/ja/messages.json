@@ -184,5 +184,11 @@
   },
   "closeSettings": {
     "message": "設定を閉じる"
+  },
+  "extName": {
+    "message": "Cognito AIサイドキック"
+  },
+  "extShortDesc": {
+    "message": "プライバシーを重視した、オフラインファーストのAI搭載ブラウザサイドキック。"
   }
 }
