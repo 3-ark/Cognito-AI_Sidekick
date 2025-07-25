@@ -650,7 +650,7 @@ const connectToMCPServers = () => {
   chrome.storage.local.get('mcpServers', (result) => {
     if (result.mcpServers) {
       result.mcpServers.forEach((server: any) => {
-        mcpClient.connect(server.url);
+        mcpClient.connect(server.url, server.env);
       });
     }
   });

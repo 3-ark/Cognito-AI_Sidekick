@@ -6,24 +6,28 @@ import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { SettingTitle } from '../SettingsTitle';
 import { cn } from "@/src/background/util";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface MCPServer {
   name: string;
   url: string;
+  env?: { [key: string]: string };
 }
 
 export const MCPServerManager: React.FC = () => {
   const [servers, setServers] = React.useState<MCPServer[]>([]);
   const [newServerName, setNewServerName] = React.useState('');
   const [newServerUrl, setNewServerUrl] = React.useState('');
+  const [envVars, setEnvVars] = React.useState<{ [key: string]: string }>({});
 
   const addServer = () => {
     if (newServerName && newServerUrl) {
-      const newServer = { name: newServerName, url: newServerUrl };
+      const newServer = { name: newServerName, url: newServerUrl, env: envVars };
       const updatedServers = [...servers, newServer];
       setServers(updatedServers);
       setNewServerName('');
       setNewServerUrl('');
+      setEnvVars({});
       // Save to storage
     }
   };
@@ -81,6 +85,45 @@ export const MCPServerManager: React.FC = () => {
               value={newServerUrl}
               onChange={(e) => setNewServerUrl(e.target.value)}
             />
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline">Advanced</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Environment Variables</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {Object.entries(envVars).map(([key, value]) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Input value={key} readOnly />
+                  <Input value={value} readOnly />
+                </div>
+              ))}
+              <div className="flex items-center space-x-2">
+                <Input
+                  placeholder="Key"
+                  onBlur={(e) => {
+                    const key = e.target.value;
+                    if (key) {
+                      setEnvVars({ ...envVars, [key]: '' });
+                    }
+                  }}
+                />
+                <Input
+                  placeholder="Value"
+                  onBlur={(e) => {
+                    const value = e.target.value;
+                    const key = Object.keys(envVars).find(key => envVars[key] === '');
+                    if (key) {
+                      setEnvVars({ ...envVars, [key]: value });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
             <Button onClick={addServer}>
               <FiPlus />
             </Button>

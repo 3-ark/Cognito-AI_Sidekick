@@ -11,7 +11,7 @@ class MCPClient {
     });
   }
 
-  async connect(serverUri: string) {
+  async connect(serverUri: string, env?: { [key: string]: string }) {
     // Connection logic
   }
 
