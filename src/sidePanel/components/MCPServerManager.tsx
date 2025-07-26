@@ -8,6 +8,7 @@ import { SettingTitle } from '../SettingsTitle';
 import { cn } from "@/src/background/util";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DialogDescription } from '@radix-ui/react-dialog';
+import storage from '../../background/storageUtil';
 
 interface MCPServer {
   name: string;
@@ -15,28 +16,40 @@ interface MCPServer {
   env?: { [key: string]: string };
 }
 
+const MCP_SERVERS_KEY = 'mcpServers';
+
 export const MCPServerManager: React.FC = () => {
   const [servers, setServers] = React.useState<MCPServer[]>([]);
   const [newServerName, setNewServerName] = React.useState('');
   const [newServerUrl, setNewServerUrl] = React.useState('');
   const [envVars, setEnvVars] = React.useState<{ [key: string]: string }>({});
 
-  const addServer = () => {
+  React.useEffect(() => {
+    const fetchServers = async () => {
+      const storedServers = await storage.getItem(MCP_SERVERS_KEY);
+      if (storedServers) {
+        setServers(JSON.parse(storedServers));
+      }
+    };
+    fetchServers();
+  }, []);
+
+  const addServer = async () => {
     if (newServerName && newServerUrl) {
       const newServer = { name: newServerName, url: newServerUrl, env: envVars };
       const updatedServers = [...servers, newServer];
       setServers(updatedServers);
+      await storage.setItem(MCP_SERVERS_KEY, updatedServers);
       setNewServerName('');
       setNewServerUrl('');
       setEnvVars({});
-      // Save to storage
     }
   };
 
-  const removeServer = (index: number) => {
+  const removeServer = async (index: number) => {
     const updatedServers = servers.filter((_, i) => i !== index);
     setServers(updatedServers);
-    // Save to storage
+    await storage.setItem(MCP_SERVERS_KEY, updatedServers);
   };
 
   return (

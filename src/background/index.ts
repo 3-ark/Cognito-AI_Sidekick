@@ -646,22 +646,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 // --- MCP Client Initialization ---
-const connectToMCPServers = () => {
-  chrome.storage.local.get('mcpServers', (result) => {
-    if (result.mcpServers) {
-      result.mcpServers.forEach((server: any) => {
-        mcpClient.connect(server.url, server.env);
-      });
-    }
-  });
+const connectToMCPServers = async () => {
+  const result = await chrome.storage.local.get('mcpServers');
+  const storedServers = result.mcpServers || [];
+  const connectedServerURIs = Object.keys(mcpClient['connections']);
+
+  const serversToConnect = storedServers.filter((server: any) => !connectedServerURIs.includes(server.url));
+  const serversToDisconnect = connectedServerURIs.filter(uri => !storedServers.some((server: any) => server.url === uri));
+
+  for (const server of serversToConnect) {
+    mcpClient.connect(server.url, server.env);
+  }
+
+  for (const uri of serversToDisconnect) {
+    mcpClient.disconnect(uri);
+  }
 };
 
 chrome.runtime.onStartup.addListener(connectToMCPServers);
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local' && changes.mcpServers) {
-    // Reconnect to all servers when the configuration changes
-    // A more sophisticated implementation would diff the changes
-    // and only connect/disconnect the affected servers.
     connectToMCPServers();
   }
 });
