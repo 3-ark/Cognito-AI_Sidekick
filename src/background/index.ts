@@ -33,7 +33,7 @@ import {
 import { getHybridRankedChunks, formatResultsForLLM } from './retrieverUtils'; 
 import { NOTE_STORAGE_PREFIX } from './noteStorage';
 import { rebuildAllEmbeddings, updateMissingEmbeddings } from './ragOperations';
-import mcpClient from './mcp-client';
+import { MCPClient } from './mcp-client';
 
 const initiallyIndexedChatsInSession = new Set<string>();
 buildStoreWithDefaults({ channelName: ChannelNames.ContentPort });
@@ -591,6 +591,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true; // Indicates asynchronous response
   }
+
+  // --- MCP Handlers ---
+  if (message.type === 'MCP_LIST_TOOLS') {
+    (async () => {
+      try {
+        if (Object.keys(mcpClients).length === 0) {
+          sendResponse([]); // Send empty array if no clients are connected
+          return;
+        }
+
+        const allToolsPromises = Object.entries(mcpClients).map(async ([url, serverInfo]) => {
+          try {
+            const tools = await serverInfo.client.listTools();
+            // Tag each tool with its source server info.
+            return tools.map(tool => ({
+              ...tool,
+              serverName: serverInfo.name,
+              serverUrl: url,
+            }));
+          } catch (error) {
+            console.error(`[MCP] Failed to list tools for ${serverInfo.name} (${url}):`, error);
+            return []; // Return empty array for this server on error
+          }
+        });
+
+        const allToolsArrays = await Promise.all(allToolsPromises);
+        const flatToolList = allToolsArrays.flat();
+        sendResponse(flatToolList);
+
+      } catch (error) {
+        console.error('[MCP] Error aggregating tools from servers:', error);
+        sendResponse([]); // Send empty array on general failure
+      }
+    })();
+    return true; // Indicates asynchronous response
+  }
+
+  if (message.type === 'MCP_CALL_TOOL') {
+    (async () => {
+      const { toolName, args, serverUrl } = message.payload;
+      const serverInfo = mcpClients[serverUrl];
+
+      if (!serverInfo) {
+        sendResponse({ success: false, error: `No active MCP connection for server URL: ${serverUrl}` });
+        return;
+      }
+
+      const result = await serverInfo.client.callTool({ name: toolName, arguments: args });
+      sendResponse(result);
+    })();
+    return true; // Indicates asynchronous response
+  }
 });
 
 // --- Message Handler for Settings Search ---
@@ -646,41 +698,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
 // --- MCP Client Initialization ---
-const connectToMCPServers = async () => {
-  const result = await chrome.storage.local.get('mcpServers');
-  const storedServers = result.mcpServers || [];
-  const connectedServerURIs = Object.keys(mcpClient['connections']);
+let mcpClients: { [url: string]: { client: MCPClient; name: string } } = {};
 
-  const serversToConnect = storedServers.filter((server: any) => !connectedServerURIs.includes(server.url));
-  const serversToDisconnect = connectedServerURIs.filter(uri => !storedServers.some((server: any) => server.url === uri));
+const connectToMCPServers = async () => {
+  const storedValue = await storage.getItem('mcpServers');
+  let storedServers: { name: string; url: string }[] = [];
+
+  if (storedValue) {
+    try {
+      // Handle data that might be a string or already an object/array
+      const parsed = typeof storedValue === 'string' ? JSON.parse(storedValue) : storedValue;
+      if (Array.isArray(parsed)) {
+        storedServers = parsed;
+      }
+    } catch (e) {
+      console.error("[MCP] Failed to parse servers from storage, resetting. Error:", e);
+    }
+  }
+
+  const connectedServerURIs = Object.keys(mcpClients);
+
+  const serversToConnect = storedServers.filter(server => server && server.url && !connectedServerURIs.includes(server.url));
+  const serversToDisconnect = connectedServerURIs.filter(uri => !storedServers.some(server => server && server.url === uri));
 
   for (const server of serversToConnect) {
-    mcpClient.connect(server.url, server.env);
+    const mcp = new MCPClient(server);
+    await mcp.connect();
+    mcpClients[server.url] = { client: mcp, name: server.name };
+    console.log(`[MCP] Connected to server: ${server.name} at ${server.url}`);
   }
 
   for (const uri of serversToDisconnect) {
-    mcpClient.disconnect(uri);
+    if (mcpClients[uri]) {
+      mcpClients[uri].client.disconnect();
+      delete mcpClients[uri];
+      console.log(`[MCP] Disconnected from server at ${uri}`);
+    }
   }
 };
-
-chrome.runtime.onStartup.addListener(connectToMCPServers);
-chrome.storage.onChanged.addListener((changes, namespace) => {
-  if (namespace === 'local' && changes.mcpServers) {
-    connectToMCPServers();
-  }
-});
-
-// Handle messages from the popover
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'MCP_LIST_TOOLS') {
-    mcpClient.listTools().then(sendResponse);
-    return true; // Indicates asynchronous response
-  } else if (message.type === 'MCP_CALL_TOOL') {
-    const { toolName, args } = message.payload;
-    mcpClient.callTool(toolName, args).then(sendResponse);
-    return true; // Indicates asynchronous response
-  }
-});
 
 
 // --- Embedding Model Configuration ---
@@ -706,6 +761,11 @@ const loadAndConfigureEmbeddingService = () => {
 
 // Load configuration on startup
 loadAndConfigureEmbeddingService();
+connectToMCPServers();
+
+chrome.runtime.onStartup.addListener(() => {
+    connectToMCPServers();
+});
 
 // Listen for changes in storage
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -721,6 +781,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
       console.log('[Background] embeddingModelConfig was removed or cleared. Embedding service may need manual reconfiguration or revert to defaults.');
       // Optionally, clear configuration or set to defaults
       // configureEmbeddingService('', ''); // Example of clearing
+    }
+    if (namespace === 'local' && changes.mcpServers) {
+        console.log("[MCP] mcpServers changed, reconnecting...");
+        connectToMCPServers();
     }
   }
 });

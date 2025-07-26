@@ -6,14 +6,11 @@ import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { SettingTitle } from '../SettingsTitle';
 import { cn } from "@/src/background/util";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DialogDescription } from '@radix-ui/react-dialog';
 import storage from '../../background/storageUtil';
 
 interface MCPServer {
   name: string;
   url: string;
-  env?: { [key: string]: string };
 }
 
 const MCP_SERVERS_KEY = 'mcpServers';
@@ -22,13 +19,20 @@ export const MCPServerManager: React.FC = () => {
   const [servers, setServers] = React.useState<MCPServer[]>([]);
   const [newServerName, setNewServerName] = React.useState('');
   const [newServerUrl, setNewServerUrl] = React.useState('');
-  const [envVars, setEnvVars] = React.useState<{ [key: string]: string }>({});
 
   React.useEffect(() => {
     const fetchServers = async () => {
       const storedServers = await storage.getItem(MCP_SERVERS_KEY);
+      // Ensure we handle both stringified JSON and raw objects for robustness.
       if (storedServers) {
-        setServers(JSON.parse(storedServers));
+        try {
+          const parsedServers = typeof storedServers === 'string' ? JSON.parse(storedServers) : storedServers;
+          if (Array.isArray(parsedServers)) {
+            setServers(parsedServers);
+          }
+        } catch (e) {
+          console.error("Failed to parse MCP servers from storage:", e);
+        }
       }
     };
     fetchServers();
@@ -36,20 +40,19 @@ export const MCPServerManager: React.FC = () => {
 
   const addServer = async () => {
     if (newServerName && newServerUrl) {
-      const newServer = { name: newServerName, url: newServerUrl, env: envVars };
+      const newServer = { name: newServerName, url: newServerUrl };
       const updatedServers = [...servers, newServer];
       setServers(updatedServers);
-      await storage.setItem(MCP_SERVERS_KEY, updatedServers);
+      await storage.setItem(MCP_SERVERS_KEY, JSON.stringify(updatedServers));
       setNewServerName('');
       setNewServerUrl('');
-      setEnvVars({});
     }
   };
 
   const removeServer = async (index: number) => {
     const updatedServers = servers.filter((_, i) => i !== index);
     setServers(updatedServers);
-    await storage.setItem(MCP_SERVERS_KEY, updatedServers);
+    await storage.setItem(MCP_SERVERS_KEY, JSON.stringify(updatedServers));
   };
 
   return (
@@ -77,7 +80,7 @@ export const MCPServerManager: React.FC = () => {
           <div>
             <Label>MCP Servers</Label>
             <p className="text-sm text-muted-foreground">
-              Example: mysql, npx -y @fhuang/mcp-mysql-server
+              Add the WebSocket URL of a running MCP server. Example: ws://localhost:8080
             </p>
             <div className="space-y-2 mt-2">
               {servers.map((server, index) => (
@@ -102,44 +105,6 @@ export const MCPServerManager: React.FC = () => {
               value={newServerUrl}
               onChange={(e) => setNewServerUrl(e.target.value)}
             />
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline-themed" className='h-7' >Advanced</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Environment Variables</DialogTitle>
-            </DialogHeader>
-            <DialogDescription className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Example: MYSQL_HOST, your_host
-              </p>
-            </DialogDescription>
-              {Object.entries(envVars).map(([key, value], index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <Input value={key} onChange={(e) => {
-                    const newEnvVars = { ...envVars };
-                    delete newEnvVars[key];
-                    newEnvVars[e.target.value] = value;
-                    setEnvVars(newEnvVars);
-                  }} />
-                  <Input value={value} onChange={(e) => {
-                    setEnvVars({ ...envVars, [key]: e.target.value });
-                  }} />
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    const newEnvVars = { ...envVars };
-                    delete newEnvVars[key];
-                    setEnvVars(newEnvVars);
-                  }}>
-                    <FiTrash2 />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="ghost" onClick={() => setEnvVars({ ...envVars, '': '' })}>
-                <FiPlus />
-              </Button>
-          </DialogContent>
-        </Dialog>
             <Button variant="ghost" onClick={addServer}>
               <FiPlus />
             </Button>
