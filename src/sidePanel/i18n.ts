@@ -23,7 +23,10 @@ i18n
       // This function converts standard codes (e.g., "zh-CN")
       // to your folder structure (e.g., "zh_CN") before fetching.
       loadPath: (lngs: string[]) => {
-        const lang = lngs[0];
+        let lang = lngs[0];
+        if (lang === 'zh') {
+          lang = 'zh_CN'
+        }
         const finalLang = lang.replace('-', '_');
         return `/_locales/${finalLang}/messages.json`;
       },
