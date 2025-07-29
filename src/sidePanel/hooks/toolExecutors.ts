@@ -92,6 +92,7 @@ export const executePlanner = async (
     'web_search',
     'retriever',
     'save_note',
+    'wikipedia_search',
     'fetcher',
     'prompt_optimizer',
     'update_memory',
