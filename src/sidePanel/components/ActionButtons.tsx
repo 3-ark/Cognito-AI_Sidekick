@@ -1,5 +1,4 @@
 import { TbWorldSearch, TbBrowserPlus } from "react-icons/tb";
-import { BiBrain } from "react-icons/bi";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/src/background/util";

@@ -234,6 +234,7 @@ const COLLAPSIBLE_TOOLS: Record<string, string> = {
   smart_dispatcher: 'Smart Dispatcher',
   planner: 'The Plan',
   retriever: 'Retrieved Content',
+  wikipedia_search: 'Wikipedia Search Results',
 };
 
 const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
