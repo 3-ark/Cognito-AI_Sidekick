@@ -10,6 +10,7 @@ import {
   UpdateMemoryArgs,
   FetcherArgs,
   WebSearchArgs,
+  WikipediaSearchArgs,
   executePromptOptimizer,
   PromptOptimizerArgs,
   executeRetriever,
@@ -19,6 +20,7 @@ import {
   executeExecutor,
   ExecutorArgs,
   executeSmartDispatcher,
+  executeWikipediaSearch,
 } from './toolExecutors';
 
 import { v4 as uuidv4 } from 'uuid'; 
@@ -108,6 +110,9 @@ export const useTools = () => {
             break;
           case 'fetcher':
             result = await executeFetcher(args as FetcherArgs);
+            break;
+          case 'wikipedia_search':
+            result = await executeWikipediaSearch(args as WikipediaSearchArgs, config);
             break;
           case 'web_search':
             result = await executeWebSearch(args as WebSearchArgs, config);

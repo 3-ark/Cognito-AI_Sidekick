@@ -46,6 +46,24 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'wikipedia_search',
+      description:
+        'Performs a semantic search over Wikipedia to find relevant articles and information. Use this for fact-checking, definitions, and general knowledge questions.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'The query to search for on Wikipedia.',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'retriever',
       description:
         'Performs a semantic search over the user’s notes and chat history to find relevant context. Use this to answer questions, recall information, or provide context for other tasks.',
@@ -189,7 +207,7 @@ export const toolDefinitions: ToolDefinition[] = [
                 engine: {
                   type: 'string',
                   description: 'The search engine to use for this specific query. Defaults to Google.',
-                  enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia', 'GoogleCustomSearch'],
+                  enum: ['Google', 'DuckDuckGo', 'Brave', 'GoogleCustomSearch'],
                 },
               },
               required: ['query'],
