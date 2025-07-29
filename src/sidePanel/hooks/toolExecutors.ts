@@ -27,8 +27,12 @@ export interface FetcherArgs {
 export interface WebSearchArgs {
   queries: {
     query: string;
-    engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'Wikipedia' | 'GoogleCustomSearch';
+    engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'GoogleCustomSearch';
   }[];
+}
+
+export interface WikipediaSearchArgs {
+  query: string;
 }
 
 export interface RetrieverArgs {
@@ -251,10 +255,46 @@ export const executeWebSearch = async (
     return 'Error: "queries" must be a non-empty array of objects, each with a non-empty "query" string.';
   }
 
+  const fallbackEngines: ('Google' | 'DuckDuckGo' | 'Brave')[] = ['Google', 'DuckDuckGo', 'Brave'];
+
   try {
-    const searchPromises = queries.map(({ query, engine = 'Google' }) => {
-      const searchConfig: Config = { ...config, webMode: engine };
-      return webSearch(query, searchConfig).then(result => `Results for "${query}" (using ${engine}):\n${result}`);
+    const searchPromises = queries.map(async ({ query, engine }) => {
+      let lastError: any = null;
+      const enginesToTry: (typeof fallbackEngines[number] | 'GoogleCustomSearch')[] = [];
+
+      if (engine) {
+        enginesToTry.push(engine);
+      }
+
+      // Add fallback engines
+      if (!engine) {
+          if (config.googleApiKey && config.googleCx) {
+              enginesToTry.push('GoogleCustomSearch');
+          }
+          enginesToTry.push(...fallbackEngines);
+      } else {
+        enginesToTry.push(...fallbackEngines);
+      }
+
+
+      for (const currentEngine of enginesToTry) {
+        try {
+          const searchConfig: Config = { ...config, webMode: currentEngine };
+          const result = await webSearch(query, searchConfig);
+          return `Results for "${query}" (using ${currentEngine}):\n${result}`;
+        } catch (error: any) {
+          lastError = error;
+          console.warn(`Web search with ${currentEngine} for query "${query}" failed. Trying next engine. Error: ${error.message}`);
+        }
+      }
+
+      // If all engines failed for this query
+      const queryStrings = queries.map(q => q.query).join(', ');
+      console.error(
+        `Error executing web_search for queries "${queryStrings}" after trying all engines:`,
+        lastError
+      );
+      return `Error performing web search for "${query}": ${lastError.message || 'Unknown error'}`;
     });
     
     const results = await Promise.all(searchPromises);
@@ -267,6 +307,29 @@ export const executeWebSearch = async (
       error
     );
     return `Error performing web search: ${error.message || 'Unknown error'}`;
+  }
+};
+
+export const executeWikipediaSearch = async (
+  args: WikipediaSearchArgs,
+  config: Config
+): Promise<string> => {
+  const { query } = args;
+
+  if (!query || query.trim() === '') {
+    return 'Error: "query" must be a non-empty string.';
+  }
+
+  try {
+    const searchConfig: Config = { ...config, webMode: 'Wikipedia' };
+    const result = await webSearch(query, searchConfig);
+    return `Results for "${query}" (using Wikipedia):\n${result}`;
+  } catch (error: any) {
+    console.error(
+      `Error executing wikipedia_search for query "${query}":`,
+      error
+    );
+    return `Error performing Wikipedia search: ${error.message || 'Unknown error'}`;
   }
 };
 
