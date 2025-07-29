@@ -30,7 +30,7 @@ export const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'prompt_optimizer',
       description:
-        'Optimizes a user-provided prompt to be clearer, more concise, and more effective for the LLM. Use this when a prompt is ambiguous, overly complex, or could be improved for better results.',
+        'Optimizes a user-provided prompt to be clearer, more concise, and more effective for the LLM. Use this when a prompt is ambiguous, overly complex, or could be improved for better results. This should be used (when you do need it) in the first step in the smart_dispatcher or planner tool.',
       parameters: {
         type: 'object',
         properties: {

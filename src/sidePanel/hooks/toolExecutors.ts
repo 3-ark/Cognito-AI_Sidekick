@@ -81,41 +81,56 @@ Optimized prompt:`
 };
 
 export const executePlanner = async (
-  args: PlannerArgs, // Now uses the new interface
+  args: PlannerArgs,
   config: Config
 ): Promise<string> => {
   const { task, feedback } = args;
 
-  // --- THE FIX ---
-  // Define the exact list of tools the planner is allowed to use.
-  const availableTools = [
-    'web_search',
-    'retriever',
-    'save_note',
-    'wikipedia_search',
-    'fetcher',
-    'prompt_optimizer',
-    'update_memory',
-    // DO NOT include smart_dispatcher, planner, or executor here to avoid loops.
-  ];
-  // Construct the prompt dynamically based on whether there's feedback
+  const toolSchemas = `
+    - "web_search": Searches the web.
+      - "tool_arguments": { "queries": [{ "query": "your search query" }] }
+    - "wikipedia_search": Searches Wikipedia.
+      - "tool_arguments": { "query": "your search query" }
+    - "save_note": Saves content to a note.
+      - "tool_arguments": { "title": "Note Title", "content": "Note content, can use $context.step_N_result", "tags": ["tag1", "tag2"] }
+    - "fetcher": Fetches the raw content of a single URL.
+      - "tool_arguments": { "url": "http://example.com" }
+    - "retriever": Searches your personal saved notes.
+      - "tool_arguments": { "query": "your search query" }
+    // Add other tools like prompt_optimizer and update_memory if you want the planner to use them.
+  `;
+
   const feedbackInstruction = feedback 
-    ? `\n**IMPORTANT FEEDBACK:** ${feedback}\nYou MUST correct the plan based on this feedback.`
+    ? `\n**IMPORTANT FEEDBACK ON PREVIOUS FAILED PLAN:** ${feedback}\nYou MUST correct the plan based on this feedback.`
     : '';
 
   const systemPrompt = `You are a meticulous AI planning agent. Your task is to create a step-by-step plan in JSON format to accomplish a user's request.
 
   **RULES:**
-  1.  You MUST ONLY use tools from the following list: ${JSON.stringify(availableTools)}.
-  2.  Do not invent any tool names. If a step cannot be accomplished with the available tools, you must state that in the plan or omit the step.
-  3.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
-  4.  Use placeholders like "$context.step_1_result" to pass the output from one step as an argument to a subsequent step.
+  1.  You MUST ONLY use tools with the exact schemas provided below. Do not invent arguments.
+  2.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
+  3.  Use placeholders like "$context.step_1_result" to pass the output from one step as an argument to a subsequent step.
 
-  **EXAMPLE GOOD PLAN:**
+  **AVAILABLE TOOLS AND THEIR SCHEMAS:**
+  ${toolSchemas}
+
+  **EXAMPLE PLAN:**
   User Task: "Research the pros and cons of GraphQL vs REST and save it in a note."
   Your Output:
   {
     "steps": [
+      {
+        "tool_name": "wikipedia_search",
+        "tool_arguments": {
+          "query": "GraphQL" ,
+        }
+      },
+      {
+        "tool_name": "wikipedia_search",
+        "tool_arguments": {
+          "query": "REST APIs" 
+        }
+      },
       {
         "tool_name": "web_search",
         "tool_arguments": {
@@ -128,24 +143,79 @@ export const executePlanner = async (
       {
         "tool_name": "save_note",
         "tool_arguments": {
-          "title": "GraphQL Explanation",
-          "content": "GraphQL is a query language for APIs. Key findings: $context.step_1_result"
-          "tags": ["GraphQL", "API"]
+          "title": "GraphQL vs REST Comparison",
+          "content": "Here is a comparison of GraphQL and REST: $context.step_1_result, $context.step_2_result and $context.step_3_result",
+          "tags": ["GraphQL", "API", "REST"]
         }
       }
     ]
   }
 
   Now, create a plan for the following user task.
-  ${feedbackInstruction}`; // <-- Inject feedback here
+  ${feedbackInstruction}`;
 
   try {
-    const plan = await prompt(systemPrompt + `User Task: "${task}"`);
-    return plan;
+    const rawPlan = await prompt(systemPrompt + `User Task: "${task}"`);
+    
+    // JSON Parsing
+    try {
+      // Clean potential markdown fences before parsing
+      const cleanJson = rawPlan.replace(/```json\n?|```/g, '').trim();
+      const parsedPlan = JSON.parse(cleanJson);
+      // Return a non-prettified string for transport efficiency
+      return JSON.stringify(parsedPlan); 
+    } catch (parseError: any) {
+      console.error(`Error: Planner returned invalid JSON for task "${task}". Raw output:`, rawPlan);
+      throw new Error(`Planner outputted malformed JSON. Original error: ${parseError.message}`);
+    }
+
   } catch (error: any) {
     console.error(`Error executing planner for task "${task}":`, error);
     return `Error creating plan: ${error.message || 'Unknown error'}`;
   }
+};
+
+// Helper function to recursively replace placeholders in an object/array
+const replacePlaceholders = (argObject: any, context: Record<string, any>): any => {
+  if (typeof argObject === 'string') {
+    const match = argObject.match(/^\$context\.(step_\d+_result)$/);
+    if (match && Object.prototype.hasOwnProperty.call(context, match[1])) {
+      // If the entire string is a placeholder, replace it with the result
+      // This handles cases where the result might be an object/array itself
+      return context[match[1]];
+    } else {
+      // Otherwise, do a simple string replacement for partial placeholders
+      return argObject.replace(/\$context\.step_\d+_result/g, (placeholder) => {
+        const contextKey = placeholder.substring(9); // remove "$context."
+        
+        // --- START OF FIX ---
+        // Check for the key's EXISTENCE, not its truthiness.
+        if (Object.prototype.hasOwnProperty.call(context, contextKey)) {
+          // If the key exists (even if its value is "" or null), use its value.
+          return context[contextKey];
+        }
+        // Only if the key is truly missing, leave the placeholder.
+        return placeholder;
+        // --- END OF FIX ---
+      });
+    }
+  }
+
+  if (Array.isArray(argObject)) {
+    return argObject.map(item => replacePlaceholders(item, context));
+  }
+
+  if (argObject && typeof argObject === 'object') {
+    const newObj: Record<string, any> = {};
+    for (const key in argObject) {
+      if (Object.prototype.hasOwnProperty.call(argObject, key)) {
+        newObj[key] = replacePlaceholders(argObject[key], context);
+      }
+    }
+    return newObj;
+  }
+
+  return argObject;
 };
 
 export const executeExecutor = async (
@@ -164,7 +234,6 @@ export const executeExecutor = async (
   if (!plan || plan.trim() === '') {
     return 'Error: Plan cannot be empty for executor.';
   }
-
   try {
     const planObject = JSON.parse(plan);
     if (!Array.isArray(planObject.steps)) {
@@ -183,30 +252,30 @@ export const executeExecutor = async (
         continue;
       }
 
-      // Replace placeholders
-      let processedArgs = JSON.stringify(tool_arguments);
-      const placeholders = processedArgs.match(/\$context\.step_\d+_result/g);
-      if (placeholders) {
-        for (const placeholder of placeholders) {
-          const contextKey = placeholder.substring(9); // remove "$context."
-          if (context[contextKey]) {
-            processedArgs = processedArgs.replace(placeholder, context[contextKey]);
-          }
-        }
-      }
+      // --- START OF FIX ---
+      // Replace placeholders by operating on the JS object, not the JSON string.
+      const processedArgsObject = replacePlaceholders(tool_arguments, context);
+      const processedArgsString = JSON.stringify(processedArgsObject);
+      // --- END OF FIX ---
 
       const toolCallId = `executor_${tool_name}_${Date.now()}`;
       const executionResult = await executeToolCall({
         id: toolCallId,
         name: tool_name,
-        arguments: processedArgs,
+        arguments: processedArgsString, // Pass the correctly formatted JSON string
       });
 
       const contextKey = `step_${i + 1}_result`;
-      context[contextKey] = executionResult.result;
-      finalResult += `${executionResult.name}: ${executionResult.result}\n`;
+      // Store the raw result. The helper function will handle injection.
+      const resultToStore = typeof executionResult.result === 'string' 
+        ? executionResult.result
+        : JSON.stringify(executionResult.result, null, 2); // Pretty-print objects/arrays
+      context[contextKey] = resultToStore;
+      finalResult += `${executionResult.name} result for step ${i + 1} stored.\n`;
     }
-    return finalResult;
+    // Return the result of the final step, or a summary
+    const lastStepKey = `step_${planObject.steps.length}_result`;
+    return `Execution finished. Final result:\n${context[lastStepKey] || 'No final result was produced.'}`;
   } catch (error: any) {
     console.error(`Error executing executor for plan "${plan}":`, error);
     return `Error executing plan: ${error.message || 'Unknown error'}`;
@@ -258,59 +327,56 @@ export const executeWebSearch = async (
 
   const fallbackEngines: ('Google' | 'DuckDuckGo' | 'Brave')[] = ['Google', 'DuckDuckGo', 'Brave'];
 
-  try {
-    const searchPromises = queries.map(async ({ query, engine }) => {
-      let lastError: any = null;
-      const enginesToTry: (typeof fallbackEngines[number] | 'GoogleCustomSearch')[] = [];
-
-      if (engine) {
-        enginesToTry.push(engine);
+  const searchPromises = queries.map(async ({ query, engine }) => {
+    // This inner logic is mostly correct, but we will let it throw on failure.
+    const enginesToTry: (string | undefined)[] = [engine];
+    if (!engine) {
+      if (config.googleApiKey && config.googleCx) {
+        enginesToTry.push('GoogleCustomSearch');
       }
-      
-      // Add fallback engines
-      if (!engine) {
-          if (config.googleApiKey && config.googleCx) {
-              enginesToTry.push('GoogleCustomSearch');
-          }
-          enginesToTry.push(...fallbackEngines);
-      } else {
-        enginesToTry.push(...fallbackEngines);
-      }
+    }
+    enginesToTry.push(...fallbackEngines);
+    const uniqueEngines = [...new Set(enginesToTry.filter(Boolean))];
 
-
-      for (const currentEngine of enginesToTry) {
-        for (let i = 0; i < 2; i++) {
-          try {
-            const searchConfig: Config = { ...config, webMode: currentEngine };
-            const result = await webSearch(query, searchConfig);
-            return `Results for "${query}" (using ${currentEngine}):\n${result}`;
-          } catch (error: any) {
-            lastError = error;
-            console.warn(`Web search with ${currentEngine} for query "${query}" failed. Attempt ${i + 1} of 2. Error: ${error.message}`);
-          }
+    for (const currentEngine of uniqueEngines) {
+      for (let i = 0; i < 2; i++) { // Retry loop
+        try {
+          const searchConfig: Config = { ...config, webMode: currentEngine };
+          const result = await webSearch(query, searchConfig);
+          // On success, return the result string
+          return `Results for "${query}" (using ${currentEngine}):\n${result}`;
+        } catch (error: any) {
+          console.warn(`Web search with ${currentEngine} for query "${query}" failed. Attempt ${i + 1} of 2. Error: ${error.message}`);
         }
       }
+    }
 
-      // If all engines failed for this query
-      const queryStrings = queries.map(q => q.query).join(', ');
-      console.error(
-        `Error executing web_search for queries "${queryStrings}" after trying all engines:`,
-        lastError
-      );
-      return `Error performing web search for "${query}": ${lastError.message || 'Unknown error'}`;
-    });
-    
-    const results = await Promise.all(searchPromises);
-    
-    return results.join('\n\n---\n\n');
-  } catch (error: any) {
-    const queryStrings = queries.map(q => q.query).join(', ');
-    console.error(
-      `Error executing web_search for queries "${queryStrings}":`,
-      error
-    );
-    return `Error performing web search: ${error.message || 'Unknown error'}`;
-  }
+    // If the entire loop completes without returning, it means all engines failed.
+    // Instead of returning a string, we throw an error to make the promise reject.
+    throw new Error(`All search engines failed for the query: "${query}"`);
+  });
+
+  // --- START OF FIX ---
+  // Use Promise.allSettled to run all searches and collect all results,
+  // whether they succeeded or failed.
+  const settledResults = await Promise.allSettled(searchPromises);
+
+  // Now, map over the settled results to create a clean, final output string.
+  const finalResults = settledResults.map((result, index) => {
+    const query = queries[index].query;
+    if (result.status === 'fulfilled') {
+      // If the promise was fulfilled, the value is the success message.
+      return result.value;
+    } else {
+      // If the promise was rejected, the reason is the error.
+      // We format it into a user-friendly error message.
+      console.error(`Error executing web_search for query "${query}":`, result.reason);
+      return `Error performing web search for "${query}": ${result.reason.message || 'Unknown error'}`;
+    }
+  });
+
+  return finalResults.join('\n\n---\n\n');
+  // --- END OF FIX ---
 };
 
 export const executeWikipediaSearch = async (
@@ -467,7 +533,7 @@ export const executeSmartDispatcher = async (
 ): Promise<string> => {
   const { task } = args;
   const MAX_REPAIR_ATTEMPTS = 2; // Try to generate a plan, then repair it once.
-  const availableTools = ['web_search', 'retriever', 'save_note', 'fetcher', 'prompt_optimizer', 'update_memory'];
+  const availableTools = ['web_search', 'wikipedia_search', 'retriever', 'save_note', 'fetcher', 'prompt_optimizer', 'update_memory'];
 
   let lastError = '';
   let planObject: any = null;
@@ -482,16 +548,9 @@ export const executeSmartDispatcher = async (
       return `Error during planning phase: ${rawPlan}`;
     }
 
-    // 2. Clean the plan (remove markdown)
-    let cleanPlanJson = rawPlan.trim();
-    const match = cleanPlanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (match && match[1]) {
-      cleanPlanJson = match[1];
-    }
-
-    // 3. Try to parse and validate the plan
+    // 2. Dispatcher parses the string ONCE to get a JS object to work with.
     try {
-      planObject = JSON.parse(cleanPlanJson);
+      planObject = JSON.parse(rawPlan); // Using the string from the planner
       
       const invalidSteps = planObject.steps.filter(
         (step: any) => !availableTools.includes(step.tool_name)
@@ -503,25 +562,23 @@ export const executeSmartDispatcher = async (
         // Exit the loop and proceed to execution
         break; 
       } else {
-        // The plan is valid JSON but uses the wrong tools.
-        const invalidToolNames = invalidSteps.map((step: any) => step.tool_name).join(', ');
-        lastError = `The plan was invalid because it used non-existent tools: [${invalidToolNames}]. You MUST ONLY use tools from this list: ${JSON.stringify(availableTools)}.`;
+        lastError = `The plan used non-existent tools...`;
         planObject = null; // Invalidate the plan so we don't execute it.
       }
     } catch (e: any) {
-      // The plan is not even valid JSON.
-      lastError = `The plan was invalid because it was not correctly formatted JSON. The error was: ${e.message}. Please provide a single, clean JSON object.`;
+      // This catch block is a fallback in case the planner's guarantee fails.
+      lastError = `The plan was not correctly formatted JSON...`;
       planObject = null; // Invalidate the plan.
     }
   }
 
-  // 4. After the loop, check if we have a valid plan or not
+  // 3. After the loop, check if we have a valid plan or not
   if (!planObject) {
     console.error('[SmartDispatcher] Failed to generate a valid plan after all attempts.');
     return `Error: Failed to create a valid plan. Last known error: ${lastError}`;
   }
 
-  // 5. If we have a valid plan, execute it.
+  // 4. If we have a valid plan, execute it.
   console.log('[SmartDispatcher] Proceeding to execution...');
   return await executeExecutor({ plan: JSON.stringify(planObject) }, executeToolCall);
 };
