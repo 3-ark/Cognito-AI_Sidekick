@@ -266,7 +266,7 @@ export const executeWebSearch = async (
       if (engine) {
         enginesToTry.push(engine);
       }
-
+      
       // Add fallback engines
       if (!engine) {
           if (config.googleApiKey && config.googleCx) {
@@ -279,13 +279,15 @@ export const executeWebSearch = async (
 
 
       for (const currentEngine of enginesToTry) {
-        try {
-          const searchConfig: Config = { ...config, webMode: currentEngine };
-          const result = await webSearch(query, searchConfig);
-          return `Results for "${query}" (using ${currentEngine}):\n${result}`;
-        } catch (error: any) {
-          lastError = error;
-          console.warn(`Web search with ${currentEngine} for query "${query}" failed. Trying next engine. Error: ${error.message}`);
+        for (let i = 0; i < 2; i++) {
+          try {
+            const searchConfig: Config = { ...config, webMode: currentEngine };
+            const result = await webSearch(query, searchConfig);
+            return `Results for "${query}" (using ${currentEngine}):\n${result}`;
+          } catch (error: any) {
+            lastError = error;
+            console.warn(`Web search with ${currentEngine} for query "${query}" failed. Attempt ${i + 1} of 2. Error: ${error.message}`);
+          }
         }
       }
 
