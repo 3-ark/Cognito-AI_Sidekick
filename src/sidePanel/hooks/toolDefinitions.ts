@@ -103,7 +103,7 @@ export const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'executor',
       description:
-        'Executes a plan from the planner after user confirmation. The executor follows the plan strictly and executes the tool calls in the specified order.',
+        'Executes the **JSON plan generated** by the planner after user confirmation. The executor follows the plan strictly and executes the tool calls in the specified order.',
       parameters: {
         type: 'object',
         properties: {
