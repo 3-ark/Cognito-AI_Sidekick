@@ -46,6 +46,30 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'summarizer',
+      description:
+        'Summarizes a given text content. Use this to condense long search results or articles to extract the key information relevant to a specific goal.',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: { 
+            type: 'string',
+            description:
+              'The text content to be summarized. This should be a substantial piece of text to get a meaningful summary.',
+          },
+          task_context: {
+            type: 'string',
+            description:
+              "The original user task or question. This provides crucial context to guide the summary towards the most relevant information. For example: 'What are the side effects of X?'",
+          },
+        },
+        required: ['text', 'task_context'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'wikipedia_search',
       description:
         'Performs a semantic search over Wikipedia to find relevant articles and information. Use this for fact-checking, definitions, and general knowledge questions.',

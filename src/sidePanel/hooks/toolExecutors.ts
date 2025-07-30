@@ -5,7 +5,6 @@ import { Config } from '../../types/config';
 import ChannelNames from '../../types/ChannelNames';
 import { prompt } from '../../background/prompt';
 
-// Define UpdateConfig locally as its definition is simple and tied to how useConfig provides it
 export type UpdateConfig = (newConfig: Partial<Config>) => void;
 
 export interface SaveNoteArgs {
@@ -22,6 +21,11 @@ export interface UpdateMemoryArgs {
 
 export interface FetcherArgs {
   url: string;
+}
+
+export interface SummarizerArgs {
+  text: string;
+  task_context?: string;
 }
 
 export interface WebSearchArgs {
@@ -45,7 +49,7 @@ export interface PromptOptimizerArgs {
 
 export interface PlannerArgs {
   task: string;
-  feedback?: string; // Optional feedback for plan improvement
+  feedback?: string;
 }
 
 export interface SmartDispatcherArgs {
@@ -87,17 +91,20 @@ export const executePlanner = async (
   const { task, feedback } = args;
 
   const toolSchemas = `
-    - "web_search": Searches the web.
+    - "prompt_optimizer": Optimizes a user-provided prompt to be clearer, more concise, and more effective for the LLM.
+      - "tool_arguments": { "prompt": "your prompt" }
+    - "summarizer": Summarizes a given text. Use this to condense long search results or articles to extract the key information relevant to a specific goal.
+      - "tool_arguments": { "text": "$context.step_N_result", "task_context": "The original user task, e.g., 'Research the pros and cons of X'" }
+    - "web_search": Searches the web for raw information.
       - "tool_arguments": { "queries": [{ "query": "your search query" }] }
     - "wikipedia_search": Searches Wikipedia.
       - "tool_arguments": { "query": "your search query" }
-    - "save_note": Saves content to a note.
-      - "tool_arguments": { "title": "Note Title", "content": "Note content, can use $context.step_N_result", "tags": ["tag1", "tag2"] }
+    - "save_note": Saves a final, processed result to a note. Do not save raw search results directly.
+      - "tool_arguments": { "title": "Note Title", "content": "$context.step_N_result", "tags": ["tag1"] }
     - "fetcher": Fetches the raw content of a single URL.
       - "tool_arguments": { "url": "http://example.com" }
     - "retriever": Searches your personal saved notes.
       - "tool_arguments": { "query": "your search query" }
-    // Add other tools like prompt_optimizer and update_memory if you want the planner to use them.
   `;
 
   const feedbackInstruction = feedback 
@@ -114,37 +121,32 @@ export const executePlanner = async (
   **AVAILABLE TOOLS AND THEIR SCHEMAS:**
   ${toolSchemas}
 
-  **EXAMPLE PLAN:**
+**EXAMPLE PLAN:**
   User Task: "Research the pros and cons of GraphQL vs REST and save it in a note."
   Your Output:
   {
     "steps": [
       {
-        "tool_name": "wikipedia_search",
-        "tool_arguments": {
-          "query": "GraphQL" ,
-        }
-      },
-      {
-        "tool_name": "wikipedia_search",
-        "tool_arguments": {
-          "query": "REST APIs" 
-        }
-      },
-      {
         "tool_name": "web_search",
         "tool_arguments": {
           "queries": [
-            { "query": "pros and cons of GraphQL" },
-            { "query": "pros and cons of REST APIs" }
+            { "query": "GraphQL pros and cons" },
+            { "query": "REST API pros and cons" }
           ]
+        }
+      },
+      {
+        "tool_name": "summarize",
+        "tool_arguments": {
+          "text": "$context.step_1_result",
+          "task_context": "Research the pros and cons of GraphQL vs REST"
         }
       },
       {
         "tool_name": "save_note",
         "tool_arguments": {
           "title": "GraphQL vs REST Comparison",
-          "content": "Here is a comparison of GraphQL and REST: $context.step_1_result, $context.step_2_result and $context.step_3_result",
+          "content": "$context.step_2_result",
           "tags": ["GraphQL", "API", "REST"]
         }
       }
@@ -188,7 +190,6 @@ const replacePlaceholders = (argObject: any, context: Record<string, any>): any 
       return argObject.replace(/\$context\.step_\d+_result/g, (placeholder) => {
         const contextKey = placeholder.substring(9); // remove "$context."
         
-        // --- START OF FIX ---
         // Check for the key's EXISTENCE, not its truthiness.
         if (Object.prototype.hasOwnProperty.call(context, contextKey)) {
           // If the key exists (even if its value is "" or null), use its value.
@@ -196,7 +197,6 @@ const replacePlaceholders = (argObject: any, context: Record<string, any>): any 
         }
         // Only if the key is truly missing, leave the placeholder.
         return placeholder;
-        // --- END OF FIX ---
       });
     }
   }
@@ -252,11 +252,9 @@ export const executeExecutor = async (
         continue;
       }
 
-      // --- START OF FIX ---
       // Replace placeholders by operating on the JS object, not the JSON string.
       const processedArgsObject = replacePlaceholders(tool_arguments, context);
       const processedArgsString = JSON.stringify(processedArgsObject);
-      // --- END OF FIX ---
 
       const toolCallId = `executor_${tool_name}_${Date.now()}`;
       const executionResult = await executeToolCall({
@@ -356,7 +354,6 @@ export const executeWebSearch = async (
     throw new Error(`All search engines failed for the query: "${query}"`);
   });
 
-  // --- START OF FIX ---
   // Use Promise.allSettled to run all searches and collect all results,
   // whether they succeeded or failed.
   const settledResults = await Promise.allSettled(searchPromises);
@@ -376,7 +373,6 @@ export const executeWebSearch = async (
   });
 
   return finalResults.join('\n\n---\n\n');
-  // --- END OF FIX ---
 };
 
 export const executeWikipediaSearch = async (
@@ -526,6 +522,39 @@ export const executeFetcher = async (args: FetcherArgs): Promise<string> => {
   }
 };
 
+export const executeSummarizer = async (
+  args: SummarizerArgs,
+  config: Config
+): Promise<string> => {
+  const { text, task_context } = args;
+  if (!text || text.trim() === '') {
+    return 'Error: Content cannot be empty for summarizer.';
+  }
+
+  // Provide context to the LLM so it knows what's important
+  const contextInstruction = task_context 
+    ? `The user's original goal was: "${task_context}". Focus the summary on information relevant to this goal.`
+    : 'Create a concise and informative summary of the following text.';
+
+  try {
+    const summaryPrompt = `
+      ${contextInstruction}
+
+      TEXT TO SUMMARIZE:
+      ---
+      ${text}
+      ---
+
+      SUMMARY:
+    `;
+    const summary = await prompt(summaryPrompt);
+    return summary;
+  } catch (error: any) {
+    console.error(`Error executing summarize for text:`, error);
+    return `Error summarizing text: ${error.message || 'Unknown error'}`;
+  }
+};
+
 export const executeSmartDispatcher = async (
   args: SmartDispatcherArgs,
   config: Config,
@@ -533,7 +562,7 @@ export const executeSmartDispatcher = async (
 ): Promise<string> => {
   const { task } = args;
   const MAX_REPAIR_ATTEMPTS = 2; // Try to generate a plan, then repair it once.
-  const availableTools = ['web_search', 'wikipedia_search', 'retriever', 'save_note', 'fetcher', 'prompt_optimizer', 'update_memory'];
+  const availableTools = ['web_search', 'wikipedia_search', 'summarizer', 'retriever', 'save_note', 'fetcher', 'prompt_optimizer', 'update_memory'];
 
   let lastError = '';
   let planObject: any = null;

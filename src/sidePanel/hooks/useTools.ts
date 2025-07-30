@@ -6,9 +6,11 @@ import {
   executeUpdateMemory,
   executeFetcher,
   executeWebSearch,
+  executeSummarizer,
   SaveNoteArgs,
   UpdateMemoryArgs,
   FetcherArgs,
+  SummarizerArgs,
   WebSearchArgs,
   WikipediaSearchArgs,
   executePromptOptimizer,
@@ -110,6 +112,9 @@ export const useTools = () => {
             break;
           case 'fetcher':
             result = await executeFetcher(args as FetcherArgs);
+            break;
+          case 'summarizer':
+            result = await executeSummarizer(args as SummarizerArgs, config);
             break;
           case 'wikipedia_search':
             result = await executeWikipediaSearch(args as WikipediaSearchArgs, config);
