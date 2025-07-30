@@ -48,17 +48,22 @@ export const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'summarizer',
       description:
-        'Summarizes a given text content, providing a concise and accurate summary that captures the key information without missing important details. Use this when you have a large block of text and need to quickly understand its main points.',
+        'Summarizes a given text content. Use this to condense long search results or articles to extract the key information relevant to a specific goal.',
       parameters: {
         type: 'object',
         properties: {
-          content: {
+          text: { 
             type: 'string',
             description:
               'The text content to be summarized. This should be a substantial piece of text to get a meaningful summary.',
           },
+          task_context: {
+            type: 'string',
+            description:
+              "The original user task or question. This provides crucial context to guide the summary towards the most relevant information. For example: 'What are the side effects of X?'",
+          },
         },
-        required: ['content'],
+        required: ['text', 'task_context'],
       },
     },
   },
