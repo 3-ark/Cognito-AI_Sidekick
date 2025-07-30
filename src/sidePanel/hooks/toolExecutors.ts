@@ -24,6 +24,10 @@ export interface FetcherArgs {
   url: string;
 }
 
+export interface SummarizerArgs {
+  content: string;
+}
+
 export interface WebSearchArgs {
   queries: {
     query: string;
@@ -523,6 +527,26 @@ export const executeFetcher = async (args: FetcherArgs): Promise<string> => {
         return error;
     }
     return `Error fetching content for ${args.url}: ${error.message || 'Unknown error'}`;
+  }
+};
+
+export const executeSummarizer = async (
+  args: SummarizerArgs,
+  config: Config
+): Promise<string> => {
+  const { content } = args;
+  if (!content || content.trim() === '') {
+    return 'Error: Content cannot be empty for summarizer.';
+  }
+
+  try {
+    const summary = await prompt(
+      `Please summarize the following text. Be concise and accurate, and do not miss important details:\n\n${content}`
+    );
+    return summary;
+  } catch (error: any) {
+    console.error(`Error executing summarizer:`, error);
+    return `Error summarizing content: ${error.message || 'Unknown error'}`;
   }
 };
 
