@@ -323,7 +323,7 @@ export const executeWebSearch = async (
     return 'Error: "queries" must be a non-empty array of objects, each with a non-empty "query" string.';
   }
 
-  const fallbackEngines: ('Google' | 'DuckDuckGo' | 'Brave')[] = ['Google', 'DuckDuckGo', 'Brave'];
+  const fallbackEngines: ('Google' | 'Duckduckgo' | 'Brave')[] = ['Google', 'Duckduckgo', 'Brave'];
 
   const searchPromises = queries.map(async ({ query, engine }) => {
     // This inner logic is mostly correct, but we will let it throw on failure.

@@ -37,7 +37,7 @@ const WebSearchModeSelector = ({ webMode, updateConfig }: WebSearchModeSelectorP
           htmlFor={`webMode-${mode}`}
           className="text-[var(--text)] text-base font-medium cursor-pointer"
         >
-          {mode === 'GoogleCustomSearch' ? 'Google Custom API' : mode}
+          {mode === 'GoogleCustomSearch' ? 'Google Custom API' : mode === 'Duckduckgo' ? 'DuckDuckGo' : mode}
         </Label>
       </div>
     ))}
