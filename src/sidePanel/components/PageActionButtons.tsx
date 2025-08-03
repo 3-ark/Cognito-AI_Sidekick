@@ -42,7 +42,7 @@ export const PageActionButtons = ({ onSend, isPageActionsHovering, setIsPageActi
       <div className="flex items-center space-x-6 max-w-full overflow-x-auto px-0">
         <Tooltip>
           <TooltipTrigger>
-            <MessageTemplate onClick={() => onSend('Provide your summary.')}>
+            <MessageTemplate onClick={() => onSend('Provide the gist without missing important details.')}>
               TLDR
             </MessageTemplate>
           </TooltipTrigger>
