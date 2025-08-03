@@ -48,7 +48,7 @@ export const toolDefinitions: ToolDefinition[] = [
     function: {
       name: 'summarizer',
       description:
-        'Summarizes a given text content. Use this to condense long search results or retrieved content to extract the key information relevant to your task in the planner only.',
+        'Summarizes given text content. Use this to condense long search results or retrieved content to extract the key information relevant to your task in the planner only. **Note:** This tool is not meant to be used outside of tasks in tool <planner>.',
       parameters: {
         type: 'object',
         properties: {
