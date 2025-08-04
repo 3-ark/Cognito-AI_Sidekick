@@ -25,7 +25,7 @@ const Lib = join(Source, 'lib');
 const Options = join(Source, 'options');
 
 const config = {
-  mode: process.env.NODE_ENV,
+  mode: process.env.NODE_ENV || 'development',
   target: 'web',
   devtool: inDev() ? 'source-map' : undefined,
   entry: {
