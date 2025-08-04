@@ -136,7 +136,7 @@ export const EditableMessage: FC<MessageProps> = ({
     <div
       className={cn(
         "text-base my-1",
-        isEditing ? 'editing' : '',
+        isEditing ? 'editing w-full' : 'w-fit',
         config?.paperTexture && turn.role !== 'tool' ? 'chat-message-bubble' : '',
         (config && typeof config.fontSize === 'number' && config.fontSize <= 15 ? 'font-semibold' : ''),
 
