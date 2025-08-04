@@ -492,7 +492,7 @@ const Cognito = () => {
             {turns.length === 0 && !config?.chatMode && config && !message && !retrieverQuery && (
               <ActionButtons config={config} updateConfig={updateConfig} />
             )}
-            {config?.chatMode === "page" && (
+            {config?.chatMode === "page" && turns.length === 0 && (
               <PageActionButtons
                 onSend={onSend}
                 isPageActionsHovering={isPageActionsHovering}
