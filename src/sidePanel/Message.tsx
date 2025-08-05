@@ -41,7 +41,7 @@ const ThinkingBlock = ({ content }: { content: string }) => {
         <CollapsibleContent>
           <div
             className={cn(
-              "p-3 rounded-md border border-dashed",
+              "p-3 rounded-xl border border-dashed",
               "bg-muted",
               "border-muted-foreground",
               "text-muted-foreground" 
@@ -227,11 +227,11 @@ export const EditableMessage: FC<MessageProps> = ({
 
 const COLLAPSIBLE_TOOLS: Record<string, string> = {
   fetcher: 'Fetched Content',
-  web_search: 'Web Search Results',
+  web_search: 'Search Results',
   smart_dispatcher: 'Smart Dispatcher',
   planner: 'The Plan',
   retriever: 'Retrieved Content',
-  wikipedia_search: 'Wikipedia Search Results',
+  wikipedia_search: 'Wikipedia Results',
 };
 
 const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
@@ -258,7 +258,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
           <CollapsibleContent>
             <div
               className={cn(
-                "p-3 rounded-md border border-dashed",
+                "p-3 rounded-xl border border-dashed",
                 "bg-muted",
                 "border-muted-foreground",
                 "text-muted-foreground"
