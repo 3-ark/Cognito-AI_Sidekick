@@ -86,7 +86,7 @@ const GuideLines = ({ t }: { t: (key: string, options?: any) => string }) => [
   t('guideStep3.message'),
   <Trans
     i18nKey="guideStep4.message"
-    t={t}
+    ts={t}
     components={[
       <a
         href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
@@ -369,7 +369,7 @@ const handleChangelogClose = () => {
 
   const handleDeleteAllWithConfirmation = () => {
     toast.custom(
-      (t) => (
+      (ts) => (
         <div
           className={cn(
             "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
@@ -389,7 +389,7 @@ const handleChangelogClose = () => {
                 "bg-transparent text-[var(--text)] border-[var(--text)]",
                 "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]"
               )}
-              onClick={() => toast.dismiss(t.id)}
+              onClick={() => toast.dismiss(ts.id)}
             >
               {t('cancel.message')}
             </Button>
@@ -411,7 +411,7 @@ const handleChangelogClose = () => {
                   console.error("Error during deleteAll execution from header:", error);
                   toast.error("An error occurred while deleting history.");
                 } finally {
-                  toast.dismiss(t.id);
+                  toast.dismiss(ts.id);
                 }
               }}
             >

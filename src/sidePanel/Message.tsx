@@ -242,7 +242,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
     const toolName = COLLAPSIBLE_TOOLS[turn.name];
     return (
       <div className="my-2">
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full flex flex-col items-center">
           <CollapsibleTrigger asChild>
             <Button
               variant="outline"

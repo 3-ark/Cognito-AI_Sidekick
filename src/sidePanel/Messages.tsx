@@ -175,7 +175,9 @@ export const Messages: React.FC<MessagesProps> = ({
               key={turn.timestamp || `turn_${i}`}
               className={cn(
                 "flex w-full mt-1 mb-1 px-2 relative",
-                turn.role === 'user' ? 'justify-start' : 'justify-end'
+                turn.role === 'user' ? 'justify-start' : 'justify-end',
+                turn.role === 'tool' ? 'justify-center' : ''
+
               )}
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(-1)}
