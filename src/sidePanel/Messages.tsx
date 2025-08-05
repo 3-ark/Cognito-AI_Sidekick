@@ -174,7 +174,7 @@ export const Messages: React.FC<MessagesProps> = ({
             <div
               key={turn.timestamp || `turn_${i}`}
               className={cn(
-                "flex w-full mt-1 mb-1 px-2 relative",
+                "flex w-full mb-1 px-2 relative",
                 turn.role === 'user' ? 'justify-start' : 'justify-end',
                 turn.role === 'tool' ? 'justify-center' : ''
 
