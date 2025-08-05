@@ -344,7 +344,7 @@ export const Input: FC<InputProps> = ({
         />
       </div>
       <div className={cn(
-        "flex w-full border border-[var(--text)]/20 items-center mb-1 gap-0 p-0 bg-[var(--input-background)] rounded-lg shadow-md",
+        "flex w-full border border-[var(--text)]/20 items-center mb-1 gap-0 p-1 bg-[var(--input-background)] rounded-lg shadow-md",
         isFocused && "input-breathing"
       )}>
         <AddToChat />
