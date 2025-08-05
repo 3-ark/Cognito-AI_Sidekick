@@ -41,7 +41,7 @@ const ThinkingBlock = ({ content }: { content: string }) => {
         <CollapsibleContent>
           <div
             className={cn(
-              "p-3 rounded-xl border border-dashed",
+              "p-3 rounded-md border border-dashed",
               "bg-muted",
               "border-muted-foreground",
               "text-muted-foreground" 
@@ -249,6 +249,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
               size="sm"
               className={cn(
                 "mb-1",
+                "rounded-xl",
                 "border-foreground text-foreground hover:text-accent-foreground"
               )}
             >
@@ -258,7 +259,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
           <CollapsibleContent>
             <div
               className={cn(
-                "p-3 rounded-xl border border-dashed",
+                "p-3 rounded-md border border-dashed",
                 "bg-muted",
                 "border-muted-foreground",
                 "text-muted-foreground"
