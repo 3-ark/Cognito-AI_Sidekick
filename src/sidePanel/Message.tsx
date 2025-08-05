@@ -150,11 +150,6 @@ export const EditableMessage: FC<MessageProps> = ({
             'chatMessage'
           ]
       )}
-      onDoubleClick={() => {
-        if (!isEditing && turn.role !== 'tool') {
-          onStartEdit(index, turn.content);
-        }
-      }}
     >
       {isEditing ? (
         <div className="flex flex-col space-y-2 items-stretch w-full p-1">

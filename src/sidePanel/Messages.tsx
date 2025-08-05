@@ -1,8 +1,9 @@
 import { useState, useLayoutEffect, useRef, useEffect } from 'react';
-import { FiCopy, FiRepeat, FiPlay, FiPause, FiSquare } from 'react-icons/fi';
+import { FiCopy, FiRepeat, FiEdit } from 'react-icons/fi';
 import { MessageTurn } from '../background/chatHistoryStorage';
 import { EditableMessage } from './Message';
 import { ToolCallMessage } from './components/ToolCallMessage';
+import { TtsButtons } from './components/TtsButtons';
 import {
   speakMessage,
   stopSpeech,
@@ -203,40 +204,41 @@ export const Messages: React.FC<MessagesProps> = ({
                           <FiCopy className="text-[var(--text)]" />
                         </Button>
                       )}
-                      {speakingIndex === i && (
-                        <>
-                          <Button
-                            aria-label={ttsIsPaused ? "Resume" : "Pause"}
-                            variant="message-action"
-                            size="xs"
-                            onClick={ttsIsPaused ? handleResume : handlePause}
-                            title={ttsIsPaused ? "Resume speech" : "Pause speech"}
-                          >
-                            {ttsIsPaused ? <FiPlay className="text-[var(--text)]" /> : <FiPause className="text-[var(--text)]" />}
-                          </Button>
-                          <Button aria-label="Stop" variant="message-action" size="xs" onClick={handleStop} title="Stop speech">
-                            <FiSquare className="text-[var(--text)]" />
-                          </Button>
-                        </>
-                      )}
-                      {speakingIndex !== i && (
-                        <Button aria-label="Speak" variant="message-action" size="xs" onClick={() => handlePlay(i, turn.content)} title="Speak message">
-                          <FiPlay className="text-[var(--text)]" />
-                        </Button>
-                      )}
+                      <TtsButtons
+                        isSpeaking={speakingIndex === i}
+                        isPaused={ttsIsPaused}
+                        onPlay={() => handlePlay(i, turn.content)}
+                        onPause={handlePause}
+                        onStop={handleStop}
+                      />
                       {i === turns.length - 1 && (
                         <Button aria-label="Reload" variant="message-action" size="xs" onClick={onReload} title="Reload last prompt">
                           <FiRepeat className="text-[var(--text)]" />
                         </Button>
                       )}
+                      <Button aria-label="Edit" variant="message-action" size="xs" onClick={() => startEdit(i, turn.content)} title="Edit message">
+                        <FiEdit className="text-[var(--text)]" />
+                      </Button>
                     </>
                   )}
                   {turn.role === 'user' && (
                     <>
                       {editingIndex !== i && (
-                        <Button aria-label="Copy" variant="message-action" size="sm" onClick={() => copyMessage(turn.content)} title="Copy message">
-                          <FiCopy className="text-[var(--text)]" />
-                        </Button>
+                        <>
+                          <Button aria-label="Copy" variant="message-action" size="xs" onClick={() => copyMessage(turn.content)} title="Copy message">
+                            <FiCopy className="text-[var(--text)]" />
+                          </Button>
+                          <Button aria-label="Edit" variant="message-action" size="xs" onClick={() => startEdit(i, turn.content)} title="Edit message">
+                            <FiEdit className="text-[var(--text)]" />
+                          </Button>
+                          <TtsButtons
+                            isSpeaking={speakingIndex === i}
+                            isPaused={ttsIsPaused}
+                            onPlay={() => handlePlay(i, turn.content)}
+                            onPause={handlePause}
+                            onStop={handleStop}
+                          />
+                        </>
                       )}
                     </>
                   )}

@@ -1,11 +1,9 @@
 Find the latest release and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
-### [3.9.5] - 2024-07-25
+### [3.9.6] - 2024-08-05
 
-* Wikipedia is an independent tool from the old web search
+* A new tool for summarize search result within the tool call for better report
 
-* Enhanced web search by adding fallback retry when google search fails as default engine. (It won't record your ID search if you don't use your custom search)
+* Change the double click editing to editing button below the bubble
 
-* Fix language switcher for zh_CN and zh_TW
-
-* Limit MCP to ws (sorry, it's too complicated for support all types and I don't think that's worth it.)
+* Add read aloud to user's message bubble

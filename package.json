@@ -1,6 +1,6 @@
 {
   "name": "Cognito - AI Sidekick",
-  "version": "3.9.5",
+  "version": "3.9.6",
   "description": "Context-aware AI assistant for Chrome. Summarize, save, and search webpages with smart memory and fast recall.",
   "main": "index.js",
   "scripts": {
@@ -67,7 +67,7 @@
     "js-yaml": "^4.1.0",
     "localforage": "^1.10.0",
     "lucide-react": "^0.536.0",
-    "mini-css-extract-plugin": "^2.9.2",
+    "mini-css-extract-plugin": "^2.9.3",
     "motion": "^12.23.12",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^5.4.54",
@@ -107,7 +107,7 @@
     "@types/react-dom": "^19.1.7",
     "@types/tiny-segmenter": "^0.2.0",
     "@types/turndown": "^5.0.5",
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
     "eslint-plugin-react": "^7.37.5",
@@ -120,8 +120,8 @@
     "redux-logger": "^3.0.6",
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.2",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.38.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.0",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
   }
