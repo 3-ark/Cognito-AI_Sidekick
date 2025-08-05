@@ -143,7 +143,7 @@ export const EditableMessage: FC<MessageProps> = ({
         turn.role === 'tool'
         ? 'tool-turn-message'
         : [
-            "border rounded-xl w-95 shadow-lg text-left relative",
+            "border rounded-xl w-[95%] shadow-lg text-left relative",
             !isEditing && "px-3 py-1", 
 
             turn.role === 'assistant' ? 'bg-accent border-[var(--text)]/20' : 'bg-primary/10 border-[var(--text)]/20',
