@@ -143,7 +143,9 @@ export const EditableMessage: FC<MessageProps> = ({
         turn.role === 'tool'
         ? 'tool-turn-message'
         : [
-            "border rounded-2xl w-[calc(100%-2rem)] mx-1 pb-1 pl-4 pr-4 pt-1 shadow-lg text-left relative",
+            "border rounded-xl w-95 shadow-lg text-left relative",
+            !isEditing && "px-3 py-1", 
+
             turn.role === 'assistant' ? 'bg-accent border-[var(--text)]/20' : 'bg-primary/10 border-[var(--text)]/20',
             'chatMessage'
           ]
@@ -162,7 +164,7 @@ export const EditableMessage: FC<MessageProps> = ({
             onChange={(e) => onSetEditText(e.target.value)}
             placeholder="Edit your message..."
             className={cn(
-              "w-full rounded-md border bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground",
+              "rounded-md border bg-background px-1 text-base ring-offset-background placeholder:text-muted-foreground",
               "border-input",
               "text-foreground",
               "hover:border-primary focus-visible:border-primary focus-visible:ring-0",
