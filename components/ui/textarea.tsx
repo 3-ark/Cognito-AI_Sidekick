@@ -1,5 +1,5 @@
 import * as React from "react"
-import AutosizeTextarea from "react-textarea-autosize"
+import AutosizeTextarea, { TextareaAutosizeProps } from "react-textarea-autosize"
 
 import { cn } from "@/src/background/util"
 
@@ -13,6 +13,7 @@ export interface TextareaProps extends Omit<React.ComponentProps<"textarea">, 's
   minRows?: number
   maxRows?: number
   style?: Style
+  onHeightChange?: TextareaAutosizeProps['onHeightChange']
 }
 
 function Textarea({
@@ -21,6 +22,7 @@ function Textarea({
   minRows,
   maxRows,
   style,
+  onHeightChange,
   ...props
 }: TextareaProps) {
   if (autosize) {
@@ -29,8 +31,9 @@ function Textarea({
         minRows={minRows}
         maxRows={maxRows}
         style={style}
+        onHeightChange={onHeightChange}
         className={cn(
-          "flex w-full placeholder:text-muted-foreground break-words whitespace-pre-wrap",
+          "flex w-full placeholder:text-muted-foreground whitespace-pre-wrap break-words",
           "focus-visible:border-ring focus-visible:ring-ring/50",
           "text-sm md:text-sm transition-[color,box-shadow] outline-none focus-visible:ring-[3px]",
           "disabled:cursor-not-allowed disabled:opacity-50",
