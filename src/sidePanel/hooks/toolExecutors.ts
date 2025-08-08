@@ -69,18 +69,53 @@ export const executePromptOptimizer = async (
     return 'Error: Prompt cannot be empty for prompt_optimizer.';
   }
 
+  const systemPrompt = `You are an AI assistant that refines a user's task into a structured JSON object of search queries.
+
+  **RULES:**
+  1.  Analyze the user's prompt to identify the core search intents.
+  2.  Generate a JSON object that is an array of query objects, where each object has a "query" key.
+  3.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
+  4.  If the prompt is simple and requires only one search, the array should contain a single query object.
+  5.  For complex prompts, break it down into multiple, logical search queries.
+
+  **EXAMPLE 1 (Complex Task):**
+  User Prompt: "What are the main arguments for and against using serverless architecture for a high-traffic e-commerce site? I need to prepare a summary for my tech lead."
+  Your Output:
+  [
+    { "query": "pros and cons of serverless architecture for e-commerce" },
+    { "query": "serverless architecture scalability for high-traffic websites" },
+    { "query": "cost-benefit analysis of serverless vs traditional servers for e-commerce" },
+    { "query": "performance benchmarks of serverless e-commerce platforms" }
+  ]
+
+  **EXAMPLE 2 (Simple Task):**
+  User Prompt: "what is the capital of france"
+  Your Output:
+  [
+    { "query": "capital of France" }
+  ]
+
+  Now, process the following user prompt.`;
+
   try {
-    const optimizedPrompt = await prompt(
-      `Optimize the following prompt for a large language model. The optimized prompt should be clear, concise, and effective.
+    const rawJson = await prompt(systemPrompt + `\n\nUser Prompt: "${userPrompt}"`);
 
-Original prompt: "${userPrompt}"
+    // Basic validation and cleaning
+    const cleanJson = rawJson.replace(/```json\n?|```/g, '').trim();
 
-Optimized prompt:`
-    );
-    return optimizedPrompt;
+    // Try to parse to ensure it's valid JSON
+    JSON.parse(cleanJson);
+
+    // Return the clean, stringified JSON
+    return cleanJson;
+
   } catch (error: any) {
     console.error(`Error executing prompt_optimizer for prompt "${userPrompt}":`, error);
-    return `Error optimizing prompt: ${error.message || 'Unknown error'}`;
+    // Return a structured error message
+    return JSON.stringify({
+      error: `Failed to optimize prompt into JSON queries.`,
+      details: error.message || 'Unknown error'
+    });
   }
 };
 
@@ -192,11 +227,18 @@ const replacePlaceholders = (argObject: any, context: Record<string, any>): any 
   if (typeof argObject === 'string') {
     const match = argObject.match(/^\$context\.(step_\d+_result)$/);
     if (match && Object.prototype.hasOwnProperty.call(context, match[1])) {
-      // If the entire string is a placeholder, replace it with the result
-      // This handles cases where the result might be an object/array itself
-      return context[match[1]];
+      // If the entire string is a placeholder, replace it with the result.
+      const resultFromContext = context[match[1]];
+      try {
+        // If the result from context is a JSON string, parse it. This is crucial
+        // for passing structured data (like from prompt_optimizer) to other tools.
+        return JSON.parse(resultFromContext);
+      } catch (e) {
+        // If it's not a valid JSON string, return it as a plain string.
+        return resultFromContext;
+      }
     } else {
-      // Otherwise, do a simple string replacement for partial placeholders
+      // Otherwise, do a simple string replacement for partial placeholders.
       return argObject.replace(/\$context\.step_\d+_result/g, (placeholder) => {
         const contextKey = placeholder.substring(9); // remove "$context."
         
@@ -588,9 +630,16 @@ export const executeSmartDispatcher = async (
       return `Error during planning phase: ${rawPlan}`;
     }
 
-    // 2. Dispatcher parses the string ONCE to get a JS object to work with.
+    // 2. Clean the plan (remove markdown)
+    let cleanPlanJson = rawPlan.trim();
+    const match = cleanPlanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match && match[1]) {
+      cleanPlanJson = match[1];
+    }
+
+    // 3. Try to parse and validate the plan
     try {
-      planObject = JSON.parse(rawPlan); // Using the string from the planner
+      planObject = JSON.parse(cleanPlanJson);
       
       const invalidSteps = planObject.steps.filter(
         (step: any) => !availableTools.includes(step.tool_name)
@@ -602,23 +651,25 @@ export const executeSmartDispatcher = async (
         // Exit the loop and proceed to execution
         break; 
       } else {
-        lastError = `The plan used non-existent tools...`;
+        // The plan is valid JSON but uses the wrong tools.
+        const invalidToolNames = invalidSteps.map((step: any) => step.tool_name).join(', ');
+        lastError = `The plan was invalid because it used non-existent tools: [${invalidToolNames}]. You MUST ONLY use tools from this list: ${JSON.stringify(availableTools)}.`;
         planObject = null; // Invalidate the plan so we don't execute it.
       }
     } catch (e: any) {
-      // This catch block is a fallback in case the planner's guarantee fails.
-      lastError = `The plan was not correctly formatted JSON...`;
+      // The plan is not even valid JSON.
+      lastError = `The plan was invalid because it was not correctly formatted JSON. The error was: ${e.message}. Please provide a single, clean JSON object.`;
       planObject = null; // Invalidate the plan.
     }
   }
 
-  // 3. After the loop, check if we have a valid plan or not
+  // 4. After the loop, check if we have a valid plan or not
   if (!planObject) {
     console.error('[SmartDispatcher] Failed to generate a valid plan after all attempts.');
     return `Error: Failed to create a valid plan. Last known error: ${lastError}`;
   }
 
-  // 4. If we have a valid plan, execute it.
+  // 5. If we have a valid plan, execute it.
   console.log('[SmartDispatcher] Proceeding to execution...');
   return await executeExecutor({ plan: JSON.stringify(planObject) }, executeToolCall);
 };
