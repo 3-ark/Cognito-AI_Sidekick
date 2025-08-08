@@ -182,7 +182,7 @@ export const Messages: React.FC<MessagesProps> = ({
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(-1)}
             >
-              <div className={cn("flex flex-col", turn.role === 'assistant' ? 'items-end' : 'items-start')}>
+              <div className={cn("flex flex-col w-full", turn.role === 'assistant' ? 'items-end' : 'items-start')}>
                 <EditableMessage
                   turn={turn}
                   index={i}
