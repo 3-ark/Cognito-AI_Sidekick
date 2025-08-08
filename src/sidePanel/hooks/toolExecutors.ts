@@ -69,18 +69,53 @@ export const executePromptOptimizer = async (
     return 'Error: Prompt cannot be empty for prompt_optimizer.';
   }
 
+  const systemPrompt = `You are an AI assistant that refines a user's task into a structured JSON object of search queries.
+
+  **RULES:**
+  1.  Analyze the user's prompt to identify the core search intents.
+  2.  Generate a JSON object that is an array of query objects, where each object has a "query" key.
+  3.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
+  4.  If the prompt is simple and requires only one search, the array should contain a single query object.
+  5.  For complex prompts, break it down into multiple, logical search queries.
+
+  **EXAMPLE 1 (Complex Task):**
+  User Prompt: "What are the main arguments for and against using serverless architecture for a high-traffic e-commerce site? I need to prepare a summary for my tech lead."
+  Your Output:
+  [
+    { "query": "pros and cons of serverless architecture for e-commerce" },
+    { "query": "serverless architecture scalability for high-traffic websites" },
+    { "query": "cost-benefit analysis of serverless vs traditional servers for e-commerce" },
+    { "query": "performance benchmarks of serverless e-commerce platforms" }
+  ]
+
+  **EXAMPLE 2 (Simple Task):**
+  User Prompt: "what is the capital of france"
+  Your Output:
+  [
+    { "query": "capital of France" }
+  ]
+
+  Now, process the following user prompt.`;
+
   try {
-    const optimizedPrompt = await prompt(
-      `Optimize the following prompt for a large language model. The optimized prompt should be clear, concise, and effective.
+    const rawJson = await prompt(systemPrompt + `\n\nUser Prompt: "${userPrompt}"`);
 
-Original prompt: "${userPrompt}"
+    // Basic validation and cleaning
+    const cleanJson = rawJson.replace(/```json\n?|```/g, '').trim();
 
-Optimized prompt:`
-    );
-    return optimizedPrompt;
+    // Try to parse to ensure it's valid JSON
+    JSON.parse(cleanJson);
+
+    // Return the clean, stringified JSON
+    return cleanJson;
+
   } catch (error: any) {
     console.error(`Error executing prompt_optimizer for prompt "${userPrompt}":`, error);
-    return `Error optimizing prompt: ${error.message || 'Unknown error'}`;
+    // Return a structured error message
+    return JSON.stringify({
+      error: `Failed to optimize prompt into JSON queries.`,
+      details: error.message || 'Unknown error'
+    });
   }
 };
 
