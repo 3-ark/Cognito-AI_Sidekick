@@ -436,10 +436,14 @@ ${JSON.stringify(toolDescriptions, null, 2)}
                   updateAssistantTurn(callId, `Tool execution failed: ${errorMessage}`, true, true);
                 }
               } else {
-                // **FIX 2: Logic Bug** - Append sources to the final answer
                 let finalContent = assistantResponseContent;
                 if (sourcesStringForAppending) finalContent += `\n\n---\n\n${sourcesStringForAppending}`;
-                updateAssistantTurn(callId, finalContent, true, false);
+
+                if (!finalContent || finalContent.trim() === '') {
+                  updateAssistantTurn(callId, "I was unable to process the tool's result. Please try again.", true, true);
+                } else {
+                  updateAssistantTurn(callId, finalContent, true, false);
+                }
               }
             } else {
               updateAssistantTurn(callId, part, Boolean(isFinished), Boolean(isError), controller.signal.aborted && isFinished);
