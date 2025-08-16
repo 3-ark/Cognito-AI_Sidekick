@@ -3,5 +3,6 @@ Find the latest release and full changelog here [Cognito - AI Sidekick](https://
 ### [4.0.0] - 2024-08-17
 
 * Fix chunks storage cleanup issue
+* Fix embedding url for the 4 API providers
 
 
