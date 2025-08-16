@@ -37,6 +37,24 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
     throw new Error("Embedding service not configured. Please configure it first.");
   }
 
+  // First, clean up all existing chunk-related data
+  console.log("Cleaning up old chunk data...");
+  const allKeys = await localforage.keys();
+  const chunkKeysToDelete = allKeys.filter(key =>
+    key.startsWith(NOTE_CHUNK_TEXT_PREFIX) ||
+    key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) ||
+    key.startsWith(NOTE_CHUNK_INDEX_PREFIX) ||
+    key.startsWith(CHAT_CHUNK_TEXT_PREFIX) ||
+    key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) ||
+    key.startsWith(CHAT_CHUNK_INDEX_PREFIX)
+  );
+
+  for (const key of chunkKeysToDelete) {
+    await localforage.removeItem(key);
+  }
+  console.log(`Cleaned up ${chunkKeysToDelete.length} old chunk-related entries.`);
+
+
   const allNotes = await getAllNotesFromSystem();
   const allChats = await getAllChatMessagesFromStorage();
 
@@ -61,24 +79,6 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
   for (const note of allNotes) {
     try {
       const { chunks: noteChunks, chunkIds } = chunkNoteContent({ id: note.id, content: note.content, title: note.title, url: note.url, tags: note.tags });
-      const currentChunkIds = new Set(chunkIds);
-
-      const allStorageKeys = await localforage.keys();
-      const oldChunkTextKeys = allStorageKeys.filter(key => key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(note.id));
-      const oldChunkEmbeddingKeys = allStorageKeys.filter(key => key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(note.id));
-
-      for (const oldKey of oldChunkTextKeys) {
-        const chunkId = oldKey.substring(NOTE_CHUNK_TEXT_PREFIX.length);
-        if (!currentChunkIds.has(chunkId)) {
-          await localforage.removeItem(oldKey);
-          await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunkId}`);
-        }
-      }
-      for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
-        const chunkId = oldEmbeddingKey.substring(EMBEDDING_NOTE_CHUNK_PREFIX.length);
-        if (!currentChunkIds.has(chunkId)) await localforage.removeItem(oldEmbeddingKey);
-      }
-
       for (const chunk of noteChunks) await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
       await localforage.setItem(`${NOTE_CHUNK_INDEX_PREFIX}${note.id}`, chunkIds);
 
@@ -114,24 +114,6 @@ export const rebuildAllEmbeddings = async (): Promise<{ notesProcessed: number, 
         title: chat.title,
         turns: chat.turns.map(turn => ({ role: turn.role, content: turn.content, timestamp: turn.timestamp }))
       });
-      const currentChunkIds = new Set(chunkIds);
-
-      const allStorageKeys = await localforage.keys();
-      const oldChunkTextKeys = allStorageKeys.filter(key => key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(chat.id));
-      const oldChunkEmbeddingKeys = allStorageKeys.filter(key => key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(chat.id));
-
-      for (const oldKey of oldChunkTextKeys) {
-        const chunkId = oldKey.substring(CHAT_CHUNK_TEXT_PREFIX.length);
-        if (!currentChunkIds.has(chunkId)) {
-          await localforage.removeItem(oldKey);
-          await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunkId}`);
-        }
-      }
-      for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
-        const chunkId = oldEmbeddingKey.substring(EMBEDDING_CHAT_CHUNK_PREFIX.length);
-        if (!currentChunkIds.has(chunkId)) await localforage.removeItem(oldEmbeddingKey);
-      }
-
       for (const chunk of chatChunks) await localforage.setItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
       await localforage.setItem(`${CHAT_CHUNK_INDEX_PREFIX}${chat.id}`, chunkIds);
 

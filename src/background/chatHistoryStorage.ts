@@ -184,31 +184,22 @@ export const deleteChatMessage = async (fullChatId: string): Promise<void> => {
   if (!fullChatId.startsWith(CHAT_STORAGE_PREFIX)) {
     console.warn(`deleteChatMessage called with an ID that does not have the correct prefix: ${fullChatId}.`);
   }
-  
-  // 1. Remove from main search index
+
+  const chunkIds = await localforage.getItem<string[]>(`${CHAT_CHUNK_INDEX_PREFIX}${fullChatId}`);
+
   await removeChatMessageFromIndex(fullChatId);
-  
-  // 2. Remove the core chat object, its whole-chat embedding, and its parent-to-chunk index
+
   await localforage.removeItem(fullChatId);
   await localforage.removeItem(`${EMBEDDING_CHAT_PREFIX}${fullChatId}`);
   await localforage.removeItem(`${CHAT_CHUNK_INDEX_PREFIX}${fullChatId}`);
-  
-  // 3. Find and remove all associated chunk texts and chunk embeddings
-  const allKeys = await localforage.keys();
-  const chunkTextKeysToDelete = allKeys.filter(key =>
-    key.startsWith(CHAT_CHUNK_TEXT_PREFIX) && key.includes(fullChatId)
-  );
-  const chunkEmbeddingKeysToDelete = allKeys.filter(key =>
-    key.startsWith(EMBEDDING_CHAT_CHUNK_PREFIX) && key.includes(fullChatId)
-  );
 
-  for (const key of chunkTextKeysToDelete) {
-    await localforage.removeItem(key);
+  if (chunkIds?.length) {
+    for (const chunkId of chunkIds) {
+      await localforage.removeItem(`${CHAT_CHUNK_TEXT_PREFIX}${chunkId}`);
+      await localforage.removeItem(`${EMBEDDING_CHAT_CHUNK_PREFIX}${chunkId}`);
+    }
   }
-  for (const key of chunkEmbeddingKeysToDelete) {
-    await localforage.removeItem(key);
-  }
-  
+
   console.log(`Deleted chat ${fullChatId} and all associated data.`);
 };
 
