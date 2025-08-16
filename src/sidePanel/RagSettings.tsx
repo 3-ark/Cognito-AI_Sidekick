@@ -25,12 +25,12 @@ export const RagSettings = () => {
 
   const getApiUrlForProvider = (providerName: string, appConfig: AppConfig): string => {
     switch (providerName?.toLowerCase()) {
-      case 'openai': return OPENAI_URL.replace('/chat/completions', '/embeddings');
+      case 'openai': return OPENAI_URL.replace('/models', '/embeddings');
       case 'ollama': return normalizeApiEndpoint(appConfig.ollamaUrl || '') + '/api/embeddings';
       case 'lmstudio': return normalizeApiEndpoint(appConfig.lmStudioUrl || '') + '/v1/embeddings';
-      case 'gemini': return GEMINI_URL.replace(':generateContent', ':embedContent');
-      case 'groq': console.warn("Groq may not support standalone embeddings."); return GROQ_URL.replace('/chat/completions', '/embeddings');
-      case 'openrouter': return OPENROUTER_URL.replace('/chat/completions', '/embeddings');
+      case 'gemini': return GEMINI_URL.replace('/models', '/embeddings');
+      case 'groq': console.warn("Groq may not support standalone embeddings."); return GROQ_URL.replace('/models', '/embeddings');
+      case 'openrouter': return OPENROUTER_URL.replace('/models', '/embeddings');
       case 'custom': return normalizeApiEndpoint(appConfig.customEndpoint || '') + '/v1/embeddings';
       default: console.warn(`Unknown provider for API URL: ${providerName}`); return '';
     }
