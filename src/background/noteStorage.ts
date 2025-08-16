@@ -163,26 +163,19 @@ export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
  * Deletes a note and its associated data (embedding, chunks, index) from localforage.
  */
 export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
+  const chunkIds = await localforage.getItem<string[]>(`${NOTE_CHUNK_INDEX_PREFIX}${noteId}`);
+
   await localforage.removeItem(noteId);
   await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
-  // NEW: Remove the parent-to-chunk index
   await localforage.removeItem(`${NOTE_CHUNK_INDEX_PREFIX}${noteId}`);
-  
+
   await removeNoteFromIndex(noteId);
 
-  const allKeys = await localforage.keys();
-  const chunkTextKeysToDelete = allKeys.filter(key =>
-    key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(noteId)
-  );
-  const chunkEmbeddingKeysToDelete = allKeys.filter(key =>
-    key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(noteId)
-  );
-
-  for (const key of chunkTextKeysToDelete) {
-    await localforage.removeItem(key);
-  }
-  for (const key of chunkEmbeddingKeysToDelete) {
-    await localforage.removeItem(key);
+  if (chunkIds?.length) {
+    for (const chunkId of chunkIds) {
+      await localforage.removeItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunkId}`);
+      await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunkId}`);
+    }
   }
   console.log(`Deleted note ${noteId} and all associated data.`);
 };
