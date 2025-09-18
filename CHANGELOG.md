@@ -1,8 +1,7 @@
 Find the latest release and full changelog here [Cognito - AI Sidekick](https://github.com/3-ark/Cognito-AI_Sidekick/releases).
 
-### [4.0.0] - 2024-08-17
+### [4.0.1] - 2024-09-18
 
-* Fix chunks storage cleanup issue
-* Fix embedding url for the 4 API providers
+* update packages
 
 

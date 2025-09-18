@@ -1,6 +1,6 @@
 {
   "name": "Cognito - AI Sidekick",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Context-aware AI assistant for Chrome. Summarize, save, and search webpages with smart memory and fast recall.",
   "main": "index.js",
   "scripts": {
