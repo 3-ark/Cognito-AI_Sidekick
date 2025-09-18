@@ -27,10 +27,25 @@ export const extractMainContent = (htmlString: string): string => {
     }
 };
 
-export async function scrapeUrlContent(url: string, abortSignal?: AbortSignal): Promise<string> {
+export async function scrapeUrlContent(
+    url: string,
+    webMode: 'Duckduckgo' | 'Brave' | 'Google' | 'Wikipedia' | 'GoogleCustomSearch' | string = 'Google',
+    query?: string,
+    abortSignal?: AbortSignal
+): Promise<string> {
   const controller = new AbortController();
   const signal = abortSignal || controller.signal;
   const timeoutId = !abortSignal ? setTimeout(() => controller.abort(), 12000) : null;
+
+  let referer = 'https://www.google.com/'; // Default referer
+  if (webMode === 'Duckduckgo') {
+    referer = `https://duckduckgo.com/?q=${encodeURIComponent(query || '')}`;
+  } else if (webMode === 'Brave') {
+    referer = `https://search.brave.com/search?q=${encodeURIComponent(query || '')}`;
+  } else if (webMode === 'Google' || webMode === 'GoogleCustomSearch') {
+    referer = `https://www.google.com/search?q=${encodeURIComponent(query || '')}`;
+  }
+
   try {
     const response = await fetch(url, {
       signal: signal,
@@ -39,6 +54,7 @@ export async function scrapeUrlContent(url: string, abortSignal?: AbortSignal): 
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': referer
       }
     });
     if (timeoutId) clearTimeout(timeoutId);

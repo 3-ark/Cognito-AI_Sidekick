@@ -400,22 +400,7 @@ export const webSearch = async (
                 let pageContent = `[Error fetching/processing: Unknown error for ${result.url}]`;
                 let pageStatus: 'success' | 'error' | 'aborted' = 'error';
                 try {
-                    const pageResponse = await fetch(result.url, {
-                        signal: signalForPageFetch,
-                        method: 'GET',
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                            'Accept-Language': 'en-US,en;q=0.9',
-                        }
-                    });
-                    if (!pageResponse.ok) throw new Error(`Failed to fetch ${result.url} - Status: ${pageResponse.status}`);
-                    const contentType = pageResponse.headers.get('content-type');
-                    if (!contentType || !contentType.includes('text/html')) throw new Error(`Skipping non-HTML content (${contentType}) from ${result.url}`);
-                    if (effectiveSignal.aborted) throw new Error("Web search operation aborted by user.");
-
-                    const pageHtml = await pageResponse.text();
-                    pageContent = extractMainContent(pageHtml);
+                    pageContent = await scrapeUrlContent(result.url, webMode, query, signalForPageFetch);
                     pageStatus = 'success';
                     console.log(`[webSearch - ${webMode}] Successfully fetched and extracted content from: ${result.url} (Extracted Length: ${pageContent.length})`);
                 } catch (error: any) {
