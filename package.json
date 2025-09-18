@@ -48,7 +48,6 @@
     "@reduxjs/toolkit": "^2.9.0",
     "@types/js-yaml": "^4.0.9",
     "@types/redux-logger": "^3.0.13",
-    "@types/uuid": "^11.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
