@@ -8,6 +8,28 @@ import { Note } from '../types/noteTypes';
 import { ChatMessage, getAllChatMessages, getChatMessageById } from './chatHistoryStorage'; // Import chat types and functions
 import storage from './storageUtil';
 
+// Custom error for data integrity issues
+class IndexIntegrityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IndexIntegrityError';
+  }
+}
+
+const CURRENT_INDEX_VERSION = '1.1';
+
+// Wrapper for the index to include metadata for integrity checks
+interface IndexMetadata {
+  version: string;
+  docCount: number;
+}
+
+interface WrappedIndex {
+  metadata: IndexMetadata;
+  index: string; // The raw JSON string from the engine
+}
+
+
 type BM25Engine = ReturnType<typeof winkBM25Factory>;
 const nlp = winkNLP(model);
 const its = nlp.its;
@@ -129,17 +151,30 @@ class SearchService {
   private async _saveIndex(consolidated: boolean): Promise<void> {
     console.log(`[SearchService._saveIndex] Attempting to save index. Consolidated: ${consolidated}`);
     try {
-      const json = this.engine.exportJSON();
+      const rawJson = this.engine.exportJSON();
+      const docCount = this.engine.getTotalDocs();
+      
+      const wrappedIndex: WrappedIndex = {
+        metadata: {
+          version: CURRENT_INDEX_VERSION,
+          docCount: docCount,
+        },
+        index: rawJson,
+      };
+
       const key = consolidated ? BM25_CONSOLIDATED_INDEX_KEY : BM25_UNCONSOLIDATED_INDEX_KEY;
+      const dataToStore = JSON.stringify(wrappedIndex);
+
       if (consolidated) {
-        await localforage.setItem(key, json);
-        console.log(`[SearchService._saveIndex] Consolidated index saved to localforage with key: ${key}`);
+        await localforage.setItem(key, dataToStore);
+        console.log(`[SearchService._saveIndex] Consolidated index saved to localforage with key: ${key}. Doc count: ${docCount}`);
       } else {
-        await storage.setItem(key, json); // Unconsolidated remains in chrome.storage.local
-        console.log(`[SearchService._saveIndex] Unconsolidated index saved to chrome.storage.local with key: ${key}`);
+        await storage.setItem(key, dataToStore); // Unconsolidated remains in chrome.storage.local
+        console.log(`[SearchService._saveIndex] Unconsolidated index saved to chrome.storage.local with key: ${key}. Doc count: ${docCount}`);
       }
     } catch (error) {
       console.error(`[SearchService._saveIndex] Error saving index (consolidated: ${consolidated}):`, error);
+      throw error;
     }
   }
 
@@ -186,12 +221,38 @@ class SearchService {
   }
 
   private async _loadUnconsolidatedIndexIntoEngine(): Promise<void> {
-    const unconsolidatedJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+    const rawStoredValue = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
     this.engine.reset(); // Reset before loading to ensure clean state
     this._configureEngine(); // Reapply config after reset
-    if (unconsolidatedJson) {
+
+    if (rawStoredValue) {
       console.log('[SearchService._loadUnconsolidatedIndexIntoEngine] Loading unconsolidated index from storage.');
-      this.engine.importJSON(unconsolidatedJson);
+      try {
+        const wrappedIndex: WrappedIndex = JSON.parse(rawStoredValue);
+
+        if (!wrappedIndex.metadata || !wrappedIndex.metadata.version || typeof wrappedIndex.index !== 'string') {
+          throw new IndexIntegrityError('Unconsolidated index is malformed or missing metadata.');
+        }
+        
+        if (wrappedIndex.metadata.version !== CURRENT_INDEX_VERSION) {
+            console.warn(`[SearchService._loadUnconsolidatedIndexIntoEngine] Index version mismatch. Found: ${wrappedIndex.metadata.version}, Expected: ${CURRENT_INDEX_VERSION}. Proceeding with load.`);
+        }
+
+        this.engine.importJSON(wrappedIndex.index);
+        const loadedDocCount = this.engine.getTotalDocs();
+
+        // The crucial integrity check
+        if (loadedDocCount !== wrappedIndex.metadata.docCount) {
+          throw new IndexIntegrityError(`Unconsolidated index corrupted. Expected ${wrappedIndex.metadata.docCount} docs, but loaded ${loadedDocCount}.`);
+        }
+        console.log(`[SearchService._loadUnconsolidatedIndexIntoEngine] Successfully loaded and verified unconsolidated index with ${loadedDocCount} documents.`);
+      } catch (e) {
+        if (e instanceof IndexIntegrityError) {
+          throw e; // Re-throw our specific error to be caught by the caller
+        }
+        // This catches JSON parsing errors or other unexpected issues
+        throw new IndexIntegrityError(`Failed to parse or validate unconsolidated index. Error: ${(e as Error).message}`);
+      }
     } else {
       console.warn('[SearchService._loadUnconsolidatedIndexIntoEngine] No unconsolidated index found in storage. Engine is fresh.');
     }
@@ -313,32 +374,54 @@ class SearchService {
       let consolidateAfterLoad = false;
 
       // Try loading consolidated index from localforage first
-      const consolidatedIndexJson = await localforage.getItem<string>(BM25_CONSOLIDATED_INDEX_KEY);
-      if (consolidatedIndexJson) {
+      const rawConsolidatedIndex = await localforage.getItem<string>(BM25_CONSOLIDATED_INDEX_KEY);
+      if (rawConsolidatedIndex) {
         console.log('[SearchService._initialize] Found consolidated index in localforage.');
-        this.engine.importJSON(consolidatedIndexJson);
-        loadedIndex = true;
-        this.unconsolidatedChangeCount = 0; // Reset as we loaded a good consolidated state
-        console.log('[SearchService._initialize] Consolidated index loaded successfully from localforage.');
+        try {
+          const wrappedIndex: WrappedIndex = JSON.parse(rawConsolidatedIndex);
 
-        // Optional: Check for and remove any orphaned unconsolidated index from chrome.storage.local
-        const orphanedUnconsolidatedJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-        if (orphanedUnconsolidatedJson) {
-          console.log('[SearchService._initialize] Found orphaned unconsolidated index in chrome.storage.local while a consolidated one exists. Removing it.');
-          await storage.deleteItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+          if (!wrappedIndex.metadata || !wrappedIndex.metadata.version || typeof wrappedIndex.index !== 'string') {
+            throw new IndexIntegrityError('Consolidated index is malformed or missing metadata.');
+          }
+          if (wrappedIndex.metadata.version !== CURRENT_INDEX_VERSION) {
+            console.warn(`[SearchService._initialize] Consolidated index version mismatch. Found: ${wrappedIndex.metadata.version}, Expected: ${CURRENT_INDEX_VERSION}. Proceeding with load.`);
+          }
+
+          this.engine.importJSON(wrappedIndex.index);
+          const loadedDocCount = this.engine.getTotalDocs();
+
+          if (loadedDocCount !== wrappedIndex.metadata.docCount) {
+            throw new IndexIntegrityError(`Consolidated index corrupted. Expected ${wrappedIndex.metadata.docCount} docs, but loaded ${loadedDocCount}.`);
+          }
+
+          loadedIndex = true;
+          this.unconsolidatedChangeCount = 0; // Reset as we loaded a good consolidated state
+          console.log(`[SearchService._initialize] Consolidated index loaded and verified successfully from localforage with ${loadedDocCount} documents.`);
+
+          // Optional: Check for and remove any orphaned unconsolidated index from chrome.storage.local
+          const orphanedUnconsolidatedJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+          if (orphanedUnconsolidatedJson) {
+            console.log('[SearchService._initialize] Found orphaned unconsolidated index in chrome.storage.local while a consolidated one exists. Removing it.');
+            await storage.deleteItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+          }
+        } catch (e) {
+          if (e instanceof IndexIntegrityError) {
+            throw e; // Re-throw our specific error to be caught by the outer try/catch
+          }
+          // This catches JSON parsing errors or other unexpected issues
+        throw new IndexIntegrityError(`Failed to parse or validate consolidated index. Error: ${(e as Error).message}`);
         }
       } else {
-        // If no consolidated index, try loading unconsolidated index from chrome.storage.local
-        const unconsolidatedIndexJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-        if (unconsolidatedIndexJson) {
-          console.log('[SearchService._initialize] Found unconsolidated index in chrome.storage.local.');
-          this.engine.importJSON(unconsolidatedIndexJson); // Load it into the engine
+        // Check for existence only. The loading and validation is now handled by _loadUnconsolidatedIndexIntoEngine
+        const unconsolidatedIndexExists = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
+        if (unconsolidatedIndexExists) {
+          console.log('[SearchService._initialize] Found unconsolidated index key in chrome.storage.local. Attempting to load and validate.');
+          await this._loadUnconsolidatedIndexIntoEngine(); // This will throw on failure
+          
           loadedIndex = true;
           consolidateAfterLoad = true; // Mark for consolidation after loading in-memory store
-          // Set unconsolidatedChangeCount because we've loaded an unconsolidated index.
-          // This ensures that it will be processed and moved to localforage.
           this.unconsolidatedChangeCount = 1;
-          console.log('[SearchService._initialize] Unconsolidated index loaded successfully. unconsolidatedChangeCount set to 1.');
+          console.log('[SearchService._initialize] Unconsolidated index loaded successfully and is pending consolidation.');
         }
       }
 
@@ -363,8 +446,26 @@ class SearchService {
       console.log('[SearchService._initialize] Engine initialization complete.');
     } catch (error) {
       console.error('[SearchService._initialize] Critical error during engine initialization:', error);
+
+      // Check if the error is due to a corrupted index
+      if (error instanceof IndexIntegrityError) {
+        // Data Preservation Mode:
+        // Log a severe warning to the user/dev console.
+        // DO NOT proceed with a fallback re-index, as this would wipe the (potentially recoverable) data.
+        // The search service will remain in a non-initialized state.
+        console.error(
+          '****************************************************************\n' +
+          '[SearchService._initialize] FATAL: Index is corrupted. Halting search initialization to prevent data loss.\n' +
+          'The user should be notified and given options to either restore from backup or re-index from scratch.\n' +
+          `Reason: ${error.message}\n` +
+          '****************************************************************'
+        );
+        throw error;
+      }
+
+      // For other types of errors (e.g., storage API failures), attempt the fallback.
       try {
-        console.warn('[SearchService._initialize] Attempting fallback: full re-index of all items.');
+        console.warn('[SearchService._initialize] Attempting fallback: full re-index of all items due to non-integrity error.');
         this._configureEngine(); // Ensure engine is configured before fallback
         await this.indexAllFullRebuild();
         this._engineConfiguredAndLoaded = true;
