@@ -4,12 +4,13 @@ import {
   createSerializableStateInvariantMiddleware,
   Middleware,
   Slice,
-  UnknownAction
+  UnknownAction,
 } from '@reduxjs/toolkit';
 import { logger } from 'redux-logger';
 import { thunk } from 'redux-thunk';
 import {
- alias, applyMiddleware, Store, createWrapStore
+ alias, applyMiddleware, createWrapStore,
+Store,
 } from 'webext-redux';
 
 import * as contentSlice from 'src/state/slices/content';
@@ -29,7 +30,7 @@ const middleware: Middleware[] = [
   alias(backgroundAliases) as Middleware,
   thunk as Middleware,
   createSerializableStateInvariantMiddleware(),
-  logger as Middleware
+  logger as Middleware,
 ];
 
 const middlewareForProxy: Middleware[] = [
@@ -47,18 +48,19 @@ const additionalMiddlewareForConfigureStore: Middleware[] = [
 const buildStoreWithDefaults = ({ channelName }: BuildStoreOptions = {}) => {
   const reducer = combineReducers({
     sidePanel: sidePanelSlice.reducer,
-    content: contentSlice.reducer
+    content: contentSlice.reducer,
   });
 
   const store = configureStore({
     devTools: true,
     reducer,
-    middleware: (getDefaultMiddleware) =>
+    middleware: getDefaultMiddleware =>
       getDefaultMiddleware().concat(additionalMiddlewareForConfigureStore),
   });
 
   if (channelName) {
     const specificWrapStore = createWrapStore({ channelName });
+
     specificWrapStore(store);
   }
 

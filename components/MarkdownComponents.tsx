@@ -1,6 +1,9 @@
 import type { ComponentPropsWithoutRef, ReactElement, ReactNode, HTMLAttributes } from 'react';
-import { Children, useState } from 'react';
+import {
+ Children, useEffect, useRef, useState,
+} from 'react';
 import { FiCopy, FiCheck } from 'react-icons/fi';
+import mermaid from 'mermaid';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/src/background/util";
 
@@ -57,9 +60,31 @@ export const Pre = (props: CustomPreProps) => {
     ...restPreProps
   } = props;
 
+  const codeElement = Children.only(children) as ReactElement<{ className?: string; children?: ReactNode }> | null;
+  const language = codeElement?.props.className?.replace('language-', '') || '';
+  const code = codeElement?.props.children;
+
+  const mermaidRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (language === 'mermaid' && mermaidRef.current) {
+      mermaid.contentLoaded();
+    }
+  }, [code, language]);
+
+  if (language === 'mermaid') {
+    return (
+      <div
+        ref={mermaidRef}
+        className="mermaid w-full flex justify-center"
+      >
+        {String(code).trim()}
+      </div>
+    );
+  }
+
   const [copied, setCopied] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const codeElement = Children.only(children) as ReactElement<any> | null;
   let codeString = '';
 
   if (codeElement?.props?.children) {
@@ -134,7 +159,7 @@ export const Code = (props: CustomCodeProps) => {
 export const A = ({ children, href, className, ...rest }: AnchorProps) => (
   <a
     href={href}
-    className={cn("text-[var(--link)] hover:underline", className)}
+    className={cn("text-[var(--link)] hover:underline break-all", className)}
     target="_blank"
     rel="noopener noreferrer"
     {...rest}

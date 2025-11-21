@@ -3,13 +3,13 @@
     "message": "Configurações"
   },
   "chatHistory": {
-    "message": "Histórico de bate-papo"
+    "message": "Histórico do chat"
   },
   "noteSystem": {
-    "message": "Sistema de anotações"
+    "message": "Sistema de notas"
   },
   "backToChat": {
-    "message": "Voltar para o bate-papo"
+    "message": "Voltar para o chat"
   },
   "hiSettings": {
     "message": "Olá {{userName}}, configurações?"
@@ -18,22 +18,25 @@
     "message": "Online"
   },
   "typing": {
-    "message": "Digitando…"
+    "message": "Digitando..."
   },
   "thinking": {
-    "message": "Pensando…"
+    "message": "Pensando..."
   },
   "searchingWeb": {
-    "message": "Pesquisando na web…"
+    "message": "Pesquisando na web..."
+  },
+  "setDisplayName": {
+    "message": "Set your display name in Profile"
   },
   "processingSERP": {
-    "message": "Processando SERP…"
+    "message": "Processando SERP..."
   },
   "readingPage": {
-    "message": "Lendo página…"
+    "message": "Lendo página..."
   },
   "analyzing": {
-    "message": "Analisando…"
+    "message": "Analisando..."
   },
   "resetChat": {
     "message": "Redefinir bate-papo"
@@ -54,16 +57,16 @@
     "message": "Excluir todo o histórico"
   },
   "noteOptions": {
-    "message": "Opções de anotação"
+    "message": "Opções de nota"
   },
   "createNote": {
-    "message": "Criar anotação"
+    "message": "Criar nota"
   },
   "importNote": {
-    "message": "Importar anotação"
+    "message": "Importar nota"
   },
   "selectNotes": {
-    "message": "Selecionar anotações"
+    "message": "Selecionar notas"
   },
   "quickGuide": {
     "message": "Guia rápido"
@@ -72,7 +75,7 @@
     "message": "Uma introdução rápida para você começar a usar o Cognito."
   },
   "guideStep1": {
-    "message": "1. Em Configurações, vá para 'Acesso à API' para preencher suas chaves de API ou URLs."
+    "message": "1. Em Configurações, vá para 'Acesso à API' para inserir suas chaves de API ou URLs."
   },
   "guideStep2": {
     "message": "2. Saia das configurações e clique no seletor de modelo no cabeçalho para escolher seu modelo. Você pode definir seu nome de usuário no canto superior direito."
@@ -87,10 +90,10 @@
     "message": "Divirta-se!"
   },
   "gotIt": {
-    "message": "Entendi, ir para as configurações"
+    "message": "Entendi, prossiga para as configurações"
   },
   "editProfile": {
-    "message": "Editar perfil"
+    "message": "Editar Perfil"
   },
   "editProfileDesc": {
     "message": "Defina seu nome de exibição e informações de perfil."
@@ -120,7 +123,7 @@
     "message": "Excluir tudo"
   },
   "searchPlaceholder": {
-    "message": "Pesquise em suas anotações e histórico de bate-papo..."
+    "message": "Pesquise em suas notas e histórico de bate-papo..."
   },
   "searching": {
     "message": "Pesquisando..."
@@ -141,16 +144,16 @@
     "message": "Excluir persona selecionada"
   },
   "history": {
-    "message": "Histórico"
+    "message": "História"
   },
   "notes": {
-    "message": "Anotações"
+    "message": "Notas"
   },
   "embeddings": {
     "message": "Incorporações"
   },
   "manageIndex": {
-    "message": "Gerencie seu índice vetorial"
+    "message": "Gerencie seu índice de vetores"
   },
   "rebuild": {
     "message": "Reconstruir"
@@ -186,9 +189,141 @@
     "message": "Fechar configurações"
   },
   "extName": {
-    "message": "Cognito AI Sidekick"
+    "message": "Assistente de IA Cognito"
   },
   "extShortDesc": {
-    "message": "Um ajudante de IA focado na privacidade, offline-first, para o seu navegador."
+    "message": "Um assistente de navegador de IA com foco na privacidade e que funciona offline."
+  },
+  "speech": {
+    "message": "Speech"
+  },
+  "addWebSearchResultsToLlmContext": {
+    "message": "Add Web Search Results to LLM Context"
+  },
+  "addCurrentWebPageToLlmContext": {
+    "message": "Add Current Web Page to LLM Context"
+  },
+  "tokensPerSecond": {
+    "message": "t/s"
+  },
+  "prompt": {
+    "message": "prompt"
+  },
+  "gen": {
+    "message": "gen"
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "deleteMessage": {
+    "message": "Delete message"
+  },
+  "continueFromHere": {
+    "message": "Continue from here"
+  },
+  "copyMessage": {
+    "message": "Copy message"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resumeSpeech": {
+    "message": "Resume speech"
+  },
+  "pauseSpeech": {
+    "message": "Pause speech"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopSpeech": {
+    "message": "Stop speech"
+  },
+  "speak": {
+    "message": "Speak"
+  },
+  "speakMessage": {
+    "message": "Speak message"
+  },
+  "reload": {
+    "message": "Reload"
+  },
+  "reloadLastPrompt": {
+    "message": "Reload last prompt"
+  },
+  "selectModel": {
+    "message": "Select model..."
+  },
+  "selectedModel": {
+    "message": "Selected model: {{modelName}}. Click to change."
+  },
+  "searchModels": {
+    "message": "Search models..."
+  },
+  "noModelsMatch": {
+    "message": "No models match your search."
+  },
+  "noModelsAvailable": {
+    "message": "No models available. Check configuration."
+  },
+  "ctx": {
+    "message": "ctx"
+  },
+  "provideGist": {
+    "message": "Provide the gist without missing important details."
+  },
+  "tldr": {
+    "message": "TLDR"
+  },
+  "quickSummary": {
+    "message": "Quick Summary"
+  },
+  "extractKeyFigures": {
+    "message": "Extract all key figures, names, locations, and dates mentioned on this page and list them."
+  },
+  "facts": {
+    "message": "Facts"
+  },
+  "numbersEventsNames": {
+    "message": "Numbers, events, names"
+  },
+  "findPositiveDevelopments": {
+    "message": "Find positive developments, achievements, or opportunities mentioned on this page."
+  },
+  "yay": {
+    "message": "Yay!"
+  },
+  "goodNews": {
+    "message": "Good news"
+  },
+  "findConcerningIssues": {
+    "message": "Find concerning issues, risks, or criticisms mentioned on this page."
+  },
+  "oops": {
+    "message": "Oops"
+  },
+  "badNews": {
+    "message": "Bad news"
+  },
+  "googleSearch": {
+    "message": "Google Search"
+  },
+  "duckduckgoSearch": {
+    "message": "DuckDuckGo Search"
+  },
+  "braveSearch": {
+    "message": "Brave Search"
+  },
+  "wikipediaSearch": {
+    "message": "Wikipedia Search"
+  },
+  "googleApiSearch": {
+    "message": "Google API Search"
+  },
+  "language": {
+    "message": "Language"
   }
 }

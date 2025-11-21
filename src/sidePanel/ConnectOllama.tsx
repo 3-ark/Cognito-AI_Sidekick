@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FiCheck } from 'react-icons/fi';
+
+import { useConfig } from './ConfigContext';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useConfig } from './ConfigContext';
 import { cn } from "@/src/background/util";
 
 export const ConnectOllama = () => {
@@ -16,7 +18,7 @@ export const ConnectOllama = () => {
     toast.dismiss();
     toast.loading('Connecting to Ollama...');
 
-    fetch(`${url}/api/tags`)
+    fetch(`${url}/v1/models`)
       .then(res => {
         if (!res.ok) {
           return res.json().then(errData => {
@@ -25,18 +27,23 @@ export const ConnectOllama = () => {
             throw new Error(`Connection failed: ${res.status} ${res.statusText}`);
           });
         }
+
         return res.json();
       })
       .then(data => {
-        if (Array.isArray(data.models)) {
+        if (Array.isArray(data.data)) {
           updateConfig({
             ollamaConnected: true,
             ollamaUrl: url,
             ollamaError: undefined,
-            models: (config?.models || []).filter(m => m.id !== 'ollama_generic').concat([
-              { id: 'ollama_generic', host: 'ollama', active: true, name: 'Ollama Model' }
-            ]),
-            selectedModel: 'ollama_generic'
+            models: (config?.models || [])
+              .filter(m => m.host !== 'ollama')
+              .concat(
+                data.data.map((model: any) => ({
+ id: model.id, name: model.id, host: 'ollama', active: true, 
+})),
+              ),
+            selectedModel: config?.selectedModel && data.data.some((m:any) => m.id === config.selectedModel) ? config.selectedModel : data.data[0]?.id,
           });
           toast.dismiss();
           toast.success("Connected to ollama");
@@ -53,7 +60,7 @@ export const ConnectOllama = () => {
       .catch(err => {
         toast.dismiss();
         toast.error(err.message || "Failed to connect to Ollama");
-        updateConfig({ollamaError: err.message, ollamaConnected: false });
+        updateConfig({ ollamaError: err.message, ollamaConnected: false });
       })
       .finally(() => {
         setIsLoading(false);
@@ -65,28 +72,30 @@ export const ConnectOllama = () => {
   return (
     <div className="flex items-center space-x-3">
       <Input
+        className="pr-8 rounded-full"
+        disabled={isLoading}
         id="ollama-url-input"
+        placeholder="http://localhost:11434"
         value={url}
         onChange={e => setUrl(e.target.value)}
-        placeholder="http://localhost:11434"
-        className="pr-8"
-        disabled={isLoading}
       />
       {!isConnected && (
         <Button
-          onClick={onConnect} 
-          variant="connect"
+          disabled={isLoading} 
           size="sm"
-          disabled={isLoading}
+          variant="connect"
+          onClick={onConnect}
           >
           {isLoading ? "..." : "Connect"}
         </Button>
       )}
       {isConnected && (
         <Button
-          variant="ghost" size="sm" aria-label="Connected to Ollama" 
-          className={cn("w-8 rounded-md text-[var(--success)]")}
-          disabled={isLoading}
+          aria-label="Connected to Ollama"
+className={cn("w-8 rounded-md text-[var(--success)]")}
+disabled={isLoading} 
+          size="sm"
+          variant="ghost"
           onClick={onConnect}
         >
           <FiCheck className="h-5 w-5" />

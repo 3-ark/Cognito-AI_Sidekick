@@ -191,13 +191,13 @@ export default [
            "blankLine": "always", "prev": ["const", "let", "var"], "next": "*" 
           }, // Blank after declarations
         {
-           "blankLine": "unknown", "prev": ["const", "let", "var"], "next": ["const", "let", "var"] 
+           "blankLine": "unknown", "prev": ["const", "let", "var"], "next": ["const", "let", "var"]
           }, // No blank between declarations
         {
            "blankLine": "always", "prev": "directive", "next": "*" 
           }, // Blank after directives (e.g., "use strict")
         {
-           "blankLine": "unknown", "prev": "directive", "next": "directive" 
+           "blankLine": "unknown", "prev": "directive", "next": "directive"
           },
         {
            "blankLine": "always", "prev": ["case", "default"], "next": "*" 

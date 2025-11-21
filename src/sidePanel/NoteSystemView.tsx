@@ -1,39 +1,55 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef, ComponentPropsWithoutRef, FC } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { GoTrash, GoPencil, GoSearch, GoDownload } from "react-icons/go";
-import { LuEllipsis, LuVolume2, LuVolumeX } from "react-icons/lu";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import React, {
+ ComponentPropsWithoutRef, FC,useCallback, useEffect, useMemo, useRef, useState, 
+} from 'react';
 import { toast } from 'react-hot-toast';
-import { Note } from '../types/noteTypes';
-import { 
-  getAllNotesFromSystem, 
-  saveNoteInSystem, 
-  deleteNoteFromSystem,
-  deleteAllNotesFromSystem,
-  exportNotesToObsidianMD,
-  deleteNotesFromSystem,
-} from '../background/noteStorage';
-import { speakMessage, stopSpeech } from '@/src/background/ttsUtils';
-import { generateObsidianMDContent } from './utils/noteUtils';
-import { cn } from '@/src/background/util';
-import { useConfig } from './ConfigContext';
+import {
+ GoDownload,GoPencil, GoPin, GoSearch, GoTrash,
+} from "react-icons/go";
+import {
+ FiSave, FiX,
+} from "react-icons/fi";
+import {
+ LuEllipsis, LuVolume2,LuVolumeX, 
+} from "react-icons/lu";
 import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import * as pdfjsLib from 'pdfjs-dist';
-import TurndownService from 'turndown';
-import { gfm } from 'turndown-plugin-gfm';
-import yaml from 'js-yaml';
-import Defuddle from 'defuddle';
 import { Virtuoso } from 'react-virtuoso';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+
+import { remarkWikiLink } from '../remark/remark-wiki-link.mjs';
 import ChannelNames from '../types/ChannelNames';
+import NoteLink from '../note/components/NoteLink';
+import { Note } from '../types/noteTypes';
+
+import { importFiles } from './utils/noteImporter';
+import { useConfig } from './ConfigContext';
+
 import { markdownComponents, Pre as SharedPre } from '@/components/MarkdownComponents';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+ Dialog, DialogContent, DialogDescription,DialogHeader, DialogTitle, 
+} from '@/components/ui/dialog';
+import {
+ HoverCard, HoverCardContent,HoverCardTrigger, 
+} from "@/components/ui/hover-card";
+import { Input } from '@/components/ui/input';
+import {
+ Popover, PopoverContent,PopoverTrigger, 
+} from "@/components/ui/popover";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import {
+ Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, 
+} from '@/components/ui/tooltip';
+import {
+  speakMessage,
+  speakMessageOpenAI,
+  stopSpeech,
+  stopSpeechOpenAI,
+} from '@/src/background/ttsUtils';
+import { cn } from '@/src/background/util';
 
 interface NoteSystemViewProps {
   triggerOpenCreateModal: boolean;
@@ -44,16 +60,41 @@ interface NoteSystemViewProps {
   onSelectNotesFlowTriggered?: () => void;
 }
 
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
+import { Children } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+
+const HovercardPre = (props: React.ComponentPropsWithoutRef<'pre'>) => {
+  const { children } = props;
+
+  // The `pre` tag rendered by `react-markdown` has a single `code` child element.
+  const codeElement = Children.only(children) as ReactElement<{
+    className?: string;
+    children?: ReactNode;
+  }> | null;
+
+  if (!codeElement) {
+    return <pre {...props} />;
+  }
+
+  // The language is part of the `code` element's class name (e.g., "language-javascript").
+  const language = codeElement.props.className?.replace('language-', '') || '';
+
+  // The actual code content is the child of the `code` element.
+  const code = codeElement.props.children ? String(codeElement.props.children).trim() : '';
+
+  return (
+    <CodeBlock code={code} language={language} showLineNumbers={false} wrapLines={true}>
+      <CodeBlockCopyButton />
+    </CodeBlock>
+  );
+};
+
 const noteSystemMarkdownComponents = {
   ...markdownComponents,
-  pre: (props: ComponentPropsWithoutRef<typeof SharedPre>) => (
-    <SharedPre
-      {...props}
-      wrapperClassName="my-2"
-      className={cn("bg-[var(--code-bg)] text-[var(--code-text)]", props.className)}
-      buttonClassName="h-7 w-7 text-[var(--text)] hover:bg-[var(--text)]/10"
-    />
-  ),
+  pre: HovercardPre,
+  // @ts-ignore
+  wikiLink: ({ value, children }) => <NoteLink href={value}>{children}</NoteLink>,
 };
 
 const VIRTUALIZATION_THRESHOLD_LENGTH = 50000; // Chars, approx 50KB.
@@ -69,14 +110,14 @@ const VirtualizedContent: FC<{ content: string; textClassName?: string }> = ({ c
 
   return (
     <Virtuoso
-      style={{ height: '100%' }}
-      data={lines}
       className="thin-scrollbar"
+      data={lines}
       itemContent={(index, line) => (
         <div className={cn("whitespace-pre-wrap break-words text-sm font-mono px-4 py-0.5", textClassName)}>
           {line || '\u00A0' /* Render a non-breaking space for empty lines to maintain height */}
         </div>
       )}
+      style={{ height: '100%' }}
     />
   );
 };
@@ -85,6 +126,7 @@ interface NoteListItemProps {
   note: Note;
   onEdit: (note: Note) => void;
   onDelete: (noteId: string) => void;
+  onTogglePin: (note: Note) => void;
   isSelected: boolean;
   onToggleSelect: (noteId: string) => void;
   isSelectionModeActive: boolean;
@@ -94,16 +136,21 @@ const NoteListItem: FC<NoteListItemProps> = ({
   note, 
   onEdit, 
   onDelete, 
+  onTogglePin,
   isSelected, 
   onToggleSelect,
-  isSelectionModeActive 
+  isSelectionModeActive, 
 }) => {
+  const handleDoubleClick = () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_NOTE_IN_NEW_TAB', payload: { note } });
+  };
+
   const itemRef = useRef<HTMLDivElement>(null);
   const [dynamicMaxHeight, setDynamicMaxHeight] = useState('50vh');
   const [popoverSide, setPopoverSide] = useState<'top' | 'bottom'>('top');
-  const [isActionPopoverOpen, setIsActionPopoverOpen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  const handleHoverCardOpenChange = (open: boolean) => {
+  const handleHoverOpenChange = (open: boolean) => {
     if (open && itemRef.current) {
       const rect = itemRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -114,6 +161,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
 
       // Prefer the side with more space to avoid the card going off-screen.
       const preferredSide = spaceBelow > spaceAbove ? 'bottom' : 'top';
+
       setPopoverSide(preferredSide);
 
       const availableHeight = (preferredSide === 'top' ? spaceAbove : spaceBelow) - verticalMargin;
@@ -123,20 +171,50 @@ const NoteListItem: FC<NoteListItemProps> = ({
       
       // Enforce a minimum height for small spaces.
       const finalMaxHeight = Math.max(200, newMaxHeight);
+
       setDynamicMaxHeight(`${finalMaxHeight}px`);
     }
   };
 
   const handleDownload = () => {
-    const mdContent = generateObsidianMDContent(note); 
-    
-    // Sanitize title for use as a filename - this could also be part of the shared util or a separate one
-    const sanitizedTitle = note.title.replace(/[<>:"/\\|?*]+/g, '_') || 'Untitled Note';
-    const filename = `${sanitizedTitle}.md`;
+    let mdContent = '---\n';
 
+    // 1. Add title (double-quoted and escaped)
+    mdContent += `title: "${note.title.replace(/"/g, '\\\\"')}"\n`;
+
+    // 2. Add source (if note.url exists, double-quoted and escaped)
+    if (note.url) {
+      mdContent += `source: "${note.url.replace(/"/g, '\\\\"')}"\n`;
+    }
+
+    // 3. Add tags (if note.tags exist and are not empty)
+    if (note.tags && note.tags.length > 0) {
+      mdContent += 'tags:\n';
+      note.tags.forEach(tag => {
+        const trimmedTag = tag.trim();
+
+        // Conditionally double-quote and escape tags if they contain ':' or '"'
+        if (trimmedTag.includes(':') || trimmedTag.includes('"')) {
+          mdContent += `  - "${trimmedTag.replace(/"/g, '\\\\"')}"\n`;
+        } else {
+          mdContent += `  - ${trimmedTag}\n`;
+        }
+      });
+    }
+
+    // 4. Add description (if note.description exists, double-quoted and escaped)
+    if (note.description) {
+      mdContent += `description: "${note.description.replace(/"/g, '\\\\"')}"\n`;
+    }
+
+    // Ensure no date field is added.
+    // Ensure no url field (with key 'url') is added.
+    mdContent += '---\n\n';
+    mdContent += note.content;
     const element = document.createElement('a');
+
     element.setAttribute('href', `data:text/markdown;charset=utf-8,${encodeURIComponent(mdContent)}`);
-    element.setAttribute('download', filename);
+    element.setAttribute('download', `${note.title}.md`);
     element.style.display = 'none';
     document.body.appendChild(element);
     element.click();
@@ -148,41 +226,44 @@ const NoteListItem: FC<NoteListItemProps> = ({
       ref={itemRef}
       className={cn(
         "px-2 border-b border-[var(--text)]/20 rounded-none hover:shadow-lg transition-shadow w-full",
-        isSelected && "bg-[var(--active)]/10" // Highlight if selected
+        isSelected && "bg-[var(--active)]/10", // Highlight if selected
       )}
       onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
     >
-      <HoverCard openDelay={200} closeDelay={100} onOpenChange={handleHoverCardOpenChange}>
+      <HoverCard closeDelay={100} openDelay={200} onOpenChange={handleHoverOpenChange}>
         <div className="flex justify-between overflow-hidden items-center">
           {isSelectionModeActive && (
             <div className="flex-shrink-0 pr-2">
               <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onToggleSelect(note.id)}
                 aria-label={`Select note ${note.title}`}
-                onClick={e => e.stopPropagation()}
+                checked={isSelected}
                 className="border-[var(--text)]/50 data-[state=checked]:bg-[var(--active)] data-[state=checked]:border-[var(--active)]"
+                onCheckedChange={() => onToggleSelect(note.id)}
+                onClick={e => e.stopPropagation()} // <-- Add this line
               />
             </div>
           )}
           <HoverCardTrigger asChild>
-            <h3 className={cn(
-              "flex-1 min-w-0 font-semibold text-md cursor-pointer hover:underline",
-              isSelectionModeActive && "cursor-default hover:no-underline" // No underline when in selection mode
-            )}>{note.title}</h3>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {note.pinned && <GoPin className="flex-shrink-0 text-[var(--active)]" />}
+              <h3 className={cn(
+              "font-semibold text-md cursor-pointer hover:underline whitespace-normal break-words",
+              isSelectionModeActive && "cursor-default hover:no-underline", // No underline when in selection mode
+            )}
+onDoubleClick={handleDoubleClick}>{note.title}</h3>
+            </div>
           </HoverCardTrigger>
-          {!isSelectionModeActive && (
+          {!isSelectionModeActive && ( // Only show ellipsis menu if not in selection mode
             <div className="flex-shrink-0">
-              <Popover open={isActionPopoverOpen} onOpenChange={setIsActionPopoverOpen}>
+              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setIsActionPopoverOpen(true); }}>
-                    <LuEllipsis />
-                  </Button>
+                  <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); setIsPopoverOpen(true); }}><LuEllipsis /></Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/20 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); onEdit(note); setIsActionPopoverOpen(false); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal" onClick={(e) => { e.stopPropagation(); handleDownload(); setIsActionPopoverOpen(false); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
-                  <Button variant="ghost" className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={(e) => { e.stopPropagation(); onDelete(note.id); setIsActionPopoverOpen(false); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
+                  <Button className="w-full justify-start text-md h-8 px-2 font-normal" variant="ghost" onClick={e => { e.stopPropagation(); onTogglePin(note); setIsPopoverOpen(false); }}><GoPin className="mr-2 size-4" /> {note.pinned ? 'Unpin' : 'Pin'}</Button>
+                  <Button className="w-full justify-start text-md h-8 px-2 font-normal" variant="ghost" onClick={e => { e.stopPropagation(); onEdit(note); setIsPopoverOpen(false); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
+                  <Button className="w-full justify-start text-md h-8 px-2 font-normal" variant="ghost" onClick={e => { e.stopPropagation(); handleDownload(); setIsPopoverOpen(false); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
+                  <Button className="w-full justify-start text-md h-8 px-2 font-normal text-red-500 hover:text-red-500 hover:bg-red-500/10" variant="ghost" onClick={e => { e.stopPropagation(); onDelete(note.id); setIsPopoverOpen(false); }}><GoTrash className="mr-2 size-4" /> Delete</Button>
                 </PopoverContent>
               </Popover>
             </div>
@@ -190,25 +271,27 @@ const NoteListItem: FC<NoteListItemProps> = ({
         </div>
         <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)] mt-0.5 mb-1">
           {note.lastUpdatedAt && <span className="mr-2">Last updated: {new Date(note.lastUpdatedAt).toLocaleDateString()}</span>}
-          {note.url && <a href={note.url} target="_blank" rel="noopener noreferrer" className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]" onClick={(e) => e.stopPropagation()}>Link</a>}
-          {note.tags && note.tags.length > 0 ? <span className="truncate max-w-[40%] tag-span">Tags: {note.tags.join(', ')}</span> : <p className="text-xs text-[var(--muted-foreground)]">No tags</p>}
+          {note.url && <a className="text-[var(--link)] hover:underline mr-2 truncate max-w-[30%]" href={note.url} rel="noopener noreferrer" target="_blank" onClick={e => e.stopPropagation()}>Link</a>}
+          {note.tags && note.tags.length > 0 ? <span className="truncate max-w-[40%] tag-span">Tags: {note.tags.slice(0, 2).join(', ')}{note.tags.length > 2 ? ', ...' : ''}</span> : <p className="text-xs text-[var(--muted-foreground)]">No tags</p>}
         </div>
         <HoverCardContent
+          align="start"
           className={cn(
             "bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw] max-w-lg",
-            "p-0 flex flex-col" // Use flexbox for the main layout, remove padding to allow content to fill edges.
+            "p-0 flex flex-col", // Use flexbox for the main layout, remove padding to allow content to fill edges.
           )}
           side={popoverSide}
-          align="start"
           style={
             note.content.length > VIRTUALIZATION_THRESHOLD_LENGTH
-              ? { height: dynamicMaxHeight }
-              : { maxHeight: dynamicMaxHeight }
+              ? { height: dynamicMaxHeight } // Use fixed height for virtualized notes to make flexbox work
+              : { maxHeight: dynamicMaxHeight } // Use max-height for regular notes
           }
         >
           {note.content.length > VIRTUALIZATION_THRESHOLD_LENGTH ? (
+
+            // VIRTUALIZED LAYOUT: Let the virtualizer handle its own scrolling inside a flex container.
             <>
-              <div className="p-4 pb-2 flex-shrink-0">
+              <div className="p-4 pb-2 flex-shrink-0"> {/* Header area with padding */}
                 <h4 className="text-sm font-semibold">{note.title}</h4>
                 <p className="text-xs text-[var(--muted-foreground)]">Date: {new Date(note.lastUpdatedAt).toLocaleString()}</p>
               </div>
@@ -225,13 +308,14 @@ const NoteListItem: FC<NoteListItemProps> = ({
               )}
             </>
           ) : (
+
             // REGULAR MARKDOWN LAYOUT: Make the entire card content scrollable.
             <div className="p-4 overflow-y-auto thin-scrollbar">
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">{note.title}</h4>
                 <p className="text-xs text-[var(--muted-foreground)]">Date: {new Date(note.lastUpdatedAt).toLocaleString()}</p>
                 <div className="text-sm break-words whitespace-pre-wrap">
-                  <Markdown remarkPlugins={[remarkGfm]} components={noteSystemMarkdownComponents}>{note.content}</Markdown>
+                  <Markdown components={noteSystemMarkdownComponents} remarkPlugins={[remarkGfm, remarkMath, remarkWikiLink]} rehypePlugins={[rehypeKatex]}>{note.content}</Markdown>
                 </div>
                 {note.tags && note.tags.length > 0 && (
                   <div className="border-t border-[var(--border)] pt-2 mt-2">
@@ -250,34 +334,9 @@ const NoteListItem: FC<NoteListItemProps> = ({
   );
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 9;
 
-const turndownService = new TurndownService({
-  headingStyle: 'atx',
-  hr: '---',
-  bulletListMarker: '*',
-  codeBlockStyle: 'fenced',
-  emDelimiter: '_',
-  strongDelimiter: '**',
-  linkStyle: 'inlined',
-  linkReferenceStyle: 'full',
-});
-turndownService.use(gfm);
-
-try {
-  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL) {
-    const workerUrl = chrome.runtime.getURL('pdf.worker.mjs');
-    if (workerUrl) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-    } else {
-      console.warn("[NoteSystemView] Could not get worker URL via chrome.runtime.getURL for 'pdf.worker.mjs'. Attempting default path or expecting it to be globally set.");
-    }
-  } else {
-    console.warn("[NoteSystemView] chrome.runtime.getURL is not available. PDF.js worker might not be configured correctly for this environment.");
-  }
-} catch (e) {
-  console.error("[NoteSystemView] Error setting pdf.js worker source:", e);
-}
+// pdfjsLib.GlobalWorkerOptions.workerSrc is expected to be set globally or via direct import in noteImporter.ts if needed by pdfjs-dist
 
 export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   triggerOpenCreateModal,
@@ -299,18 +358,31 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
   const [noteContent, setNoteContent] = useState('');
   const [noteTags, setNoteTags] = useState('');
   const [isEditingNoteContent, setIsEditingNoteContent] = useState(false);
-  const [isDialogSaving, setIsDialogSaving] = useState(false); // Loading state for dialog save
-  const [isProcessingSelectionAction, setIsProcessingSelectionAction] = useState(false); // Loading state for selection delete/export
-  const [isSpeakingDialogNote, setIsSpeakingDialogNote] = useState(false);
+  const [isSpeakingNoteInDialog, setIsSpeakingNoteInDialog] = useState(false);
   
   const [pendingPageData, setPendingPageData] = useState<{title: string, content: string, url?: string} | null>(null);
 
   const { config } = useConfig();
 
   const fetchNotes = useCallback(async () => {
-    const notes = await getAllNotesFromSystem();
-    setAllNotes(notes);
-  }, []);
+    // const notes = await getAllNotesFromSystem();
+    // setAllNotes(notes);
+    chrome.runtime.sendMessage({ type: ChannelNames.GET_ALL_NOTES_REQUEST }, response => {
+      if (chrome.runtime.lastError) {
+        console.error("Error fetching notes:", chrome.runtime.lastError.message);
+        toast.error("Failed to fetch notes.");
+
+        return;
+      }
+
+      if (response.success && response.notes) {
+        setAllNotes(response.notes);
+      } else {
+        console.error("Failed to fetch notes:", response.error);
+        toast.error(response.error || "An unknown error occurred while fetching notes.");
+      }
+    });
+  }, [setAllNotes]); // setAllNotes is stable
 
   useEffect(() => {
     fetchNotes();
@@ -323,15 +395,16 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setNoteTags('');
     setIsCreateModalOpen(true);
     setIsEditingNoteContent(true); // For new notes, always start in editing mode.
-  }, []);
+  }, [setEditingNote, setNoteTitle, setNoteContent, setNoteTags, setIsCreateModalOpen, setIsEditingNoteContent]); // State setters are stable
 
   useEffect(() => {
     const sendReadySignal = async () => {
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
         if (tab?.id) {
           console.log(`[NoteSystemView] Component mounted for tab ${tab.id}. Sending SIDE_PANEL_READY signal.`);
-          chrome.runtime.sendMessage({ type: 'SIDE_PANEL_READY', tabId: tab.id }, (readyResponse) => {
+          chrome.runtime.sendMessage({ type: 'SIDE_PANEL_READY', tabId: tab.id }, readyResponse => {
             if (chrome.runtime.lastError) {
               console.warn('[NoteSystemView] Could not send ready signal:', chrome.runtime.lastError.message);
             } else {
@@ -345,61 +418,59 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         console.error('[NoteSystemView] Error sending ready signal:', e);
       }
     };
+
     sendReadySignal();
   }, []);
 
-  useEffect(() => {
-    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
-      let isHandled = false;
+  const isCreateModalOpenRef = useRef(isCreateModalOpen);
 
-      if (message.type === "CREATE_NOTE_FROM_PAGE_CONTENT" && message.payload) {
-        console.log('[NoteSystemView] Received page data. Storing it in state to trigger auto-save.');
+  useEffect(() => {
+    isCreateModalOpenRef.current = isCreateModalOpen;
+  }, [isCreateModalOpen]);
+
+  // Consolidated listener setup
+  useEffect(() => {
+    const handleRuntimeMessage = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean => {
+      if (message.type === ChannelNames.CREATE_NOTE_FROM_PAGE_CONTENT && message.payload) {
         setPendingPageData(message.payload);
         sendResponse({ status: "PAGE_DATA_QUEUED_FOR_AUTO_SAVE" });
-        isHandled = true;
-      }
-      else if (message.type === "ERROR_OCCURRED" && message.payload) {
-        console.log('[NoteSystemView] Received ERROR_OCCURRED via runtime message.');
+
+        return true;
+      } else if (message.type === ChannelNames.ERROR_OCCURRED && message.payload) {
         toast.error(String(message.payload));
         sendResponse({ status: "ERROR_DISPLAYED_BY_NOTESYSTEM" });
-        isHandled = true;
+
+        return true;
       }
 
-      return isHandled ? true : false;
+      return false;
     };
 
-    chrome.runtime.onMessage.addListener(messageListener);
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
 
     const port = chrome.runtime.connect({ name: ChannelNames.SidePanelPort });
+
     port.postMessage({ type: 'init' });
-    port.onMessage.addListener((message) => {
-        if (message.type === 'ADD_SELECTION_TO_NOTE') {
-            console.log('[NoteSystemView] Handling ADD_SELECTION_TO_NOTE via port');
-            setNoteContent(currentNoteContent => {
-              const newContent = currentNoteContent ? `${currentNoteContent}\n\n${message.payload}` : message.payload;
-              if (isCreateModalOpen) {
-                  return newContent;
-              } else {
-                  // If modal is not open, we need to open it and set its content.
-                  // This part of the logic might need to be re-evaluated if `openCreateModal`
-                  // doesn't immediately reflect `newContent`.
-                  // For now, assuming `openCreateModal` will correctly initialize with passed content.
-                  openCreateModal({ content: newContent, title: `Note with Selection` });
-                  // When the modal was not open, openCreateModal handles setting the
-                  // content for the new modal instance. We don't need to also set it here.
-                  return currentNoteContent; 
-              }
-            });
-            toast.success("Selection added to note draft.");
+
+    const handlePortMessage = (message: any) => {
+      if (message.type === 'ADD_SELECTION_TO_NOTE' && message.payload) {
+        if (isCreateModalOpenRef.current) {
+          setNoteContent(currentContent => currentContent ? `${currentContent}\n\n${message.payload}` : message.payload);
+        } else {
+          openCreateModal({ content: message.payload, title: `Note with Selection` });
         }
-    });
+
+        toast.success("Selection added to note draft.");
+      }
+    };
+
+    port.onMessage.addListener(handlePortMessage);
 
     return () => {
-      console.log('[NoteSystemView] Cleaning up listeners for main setup.'); // Clarified log
-      chrome.runtime.onMessage.removeListener(messageListener);
+      chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
       port.disconnect();
     };
-  }, [isCreateModalOpen, openCreateModal]); // Removed noteContent from dependencies
+  }, [openCreateModal, setNoteContent, setPendingPageData]);
 
   useEffect(() => {
     const autoSaveNote = async () => {
@@ -407,10 +478,12 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         console.log('[NoteSystemView] pendingPageData detected. Attempting automatic save.');
         
         const dataToSave = { ...pendingPageData };
+
         setPendingPageData(null); 
 
         if (!dataToSave.content || dataToSave.content.trim() === "") {
           toast.error("Cannot save note: Content is empty.");
+
           return;
         }
 
@@ -418,26 +491,31 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           title: dataToSave.title.trim() || `Note - ${new Date().toLocaleDateString()}`,
           content: dataToSave.content,
           tags: [],
+          description: "",
           url: dataToSave.url,
         };
 
-        const toastId = toast.loading("Adding page to notes...");
-        try {
-          const result = await saveNoteInSystem(noteToSave);
-          if (result) {
-            toast.success("Page added to notes!", { id: toastId });
-          } else {
-            toast.error("Failed to add page to notes.", { id: toastId });
+        chrome.runtime.sendMessage({ type: ChannelNames.SAVE_NOTE_REQUEST, payload: noteToSave }, response => {
+          if (chrome.runtime.lastError) {
+            console.error("[NoteSystemView] Error auto-saving note:", chrome.runtime.lastError.message);
+            toast.error("Failed to auto-save note.");
+
+            return;
           }
-          await fetchNotes(); // Refresh notes regardless of exact outcome, to show partial success
-        } catch (error) {
-          console.error("[NoteSystemView] Error auto-saving note:", error);
-          toast.error(`Failed to auto-save note: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
-        }
+
+          if (response.success) {
+            toast.success("Page added to notes!");
+            fetchNotes(); // Re-fetch notes to update the list
+          } else {
+            console.error("[NoteSystemView] Error auto-saving note:", response.error);
+            toast.error(response.error || "Failed to auto-save note.");
+          }
+        });
       }
     };
+
     autoSaveNote();
-  }, [pendingPageData, fetchNotes]);
+  }, [pendingPageData, fetchNotes]); // fetchNotes is stable
 
   useEffect(() => {
     if (triggerOpenCreateModal) {
@@ -461,6 +539,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     if (triggerSelectNotesFlow) {
       setIsSelectionModeActive(true);
       setSelectedNoteIds([]); // Clear previous selections
+
       if (onSelectNotesFlowTriggered) {
         onSelectNotesFlowTriggered();
       }
@@ -471,7 +550,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setSelectedNoteIds(prevSelectedIds =>
       prevSelectedIds.includes(noteId)
         ? prevSelectedIds.filter(id => id !== noteId)
-        : [...prevSelectedIds, noteId]
+        : [...prevSelectedIds, noteId],
     );
   };
 
@@ -480,149 +559,70 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
     setSelectedNoteIds([]);
   };
 
-  const handleSelectAll = () => {
-    const allVisibleNoteIds = paginatedNotes.map(note => note.id);
-    const allVisibleSelected = allVisibleNoteIds.every(id => selectedNoteIds.includes(id));
-
-    if (allVisibleSelected) {
-      setSelectedNoteIds(prevSelectedIds => prevSelectedIds.filter(id => !allVisibleNoteIds.includes(id)));
-    } else {
-      setSelectedNoteIds(prevSelectedIds => [...new Set([...prevSelectedIds, ...allVisibleNoteIds])]);
-    }
-  };
-
-  const handleDeleteAllNotes = async () => {
-    if (isProcessingSelectionAction) return;
-
-    toast.custom(
-      (t) => (
-        <div
-          className={cn(
-            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
-            "p-4 rounded-lg shadow-xl max-w-sm w-full",
-            "flex flex-col space-y-3"
-          )}
-        >
-          <h4 className="text-lg font-semibold text-[var(--text)]">Confirm Deletion</h4>
-          <p className="text-sm text-[var(--text)] opacity-90">
-            Are you sure you want to delete ALL notes? This action cannot be undone.
-          </p>
-          <div className="flex justify-end space-x-3 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                "bg-transparent text-[var(--text)] border-[var(--text)]",
-                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]"
-              )}
-              onClick={() => toast.dismiss(t.id)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className={cn(
-                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]"
-              )}
-              onClick={async () => {
-                toast.dismiss(t.id);
-                setIsProcessingSelectionAction(true);
-                const deleteToastId = toast.loading(`Deleting all notes...`);
-                try {
-                  await deleteAllNotesFromSystem();
-                  toast.success(`All notes deleted.`, { id: deleteToastId });
-                  await fetchNotes();
-                } catch (error) {
-                  console.error("Error deleting all notes:", error);
-                  toast.error(`Failed to delete all notes. Error: ${error instanceof Error ? error.message : String(error)}`, { id: deleteToastId });
-                  await fetchNotes();
-                } finally {
-                  setIsProcessingSelectionAction(false);
-                  handleCancelSelectionMode();
-                }
-              }}
-            >
-              Delete All
-            </Button>
-          </div>
-        </div>
-      ),
-      {
-        duration: Infinity,
-        position: 'top-center',
-      }
-    );
-  };
-
-  const handleExportAllNotes = async () => {
-    if (allNotes.length === 0) {
-      toast.error("No notes to export.");
-      return;
-    }
-    const toastId = toast.loading(`Exporting all ${allNotes.length} note(s)...`);
-    try {
-      const allNoteIds = allNotes.map(note => note.id);
-      const result = await exportNotesToObsidianMD(allNoteIds);
-      if (result.successCount > 0) {
-        toast.success(`${result.successCount} note(s) exported successfully.`, { id: toastId });
-      }
-      if (result.errorCount > 0) {
-        toast.error(`${result.errorCount} note(s) failed to export. Check console for details.`, {
-          id: result.successCount === 0 ? toastId : undefined,
-          duration: 5000,
-        });
-      }
-    } catch (error) {
-      console.error("Error exporting all notes:", error);
-      toast.error("An unexpected error occurred during export.", { id: toastId });
-    } finally {
-      handleCancelSelectionMode();
-    }
-  };
-
   const handleExportSelectedNotes = async () => {
     if (selectedNoteIds.length === 0) {
       toast.error("No notes selected to export.");
+
       return;
     }
+
     const toastId = toast.loading(`Exporting ${selectedNoteIds.length} note(s)...`);
-    try {
-      const result = await exportNotesToObsidianMD(selectedNoteIds);
-      if (result.successCount > 0) {
-        toast.success(`${result.successCount} note(s) exported successfully.`, { id: toastId });
-      }
-      if (result.errorCount > 0) {
-        toast.error(`${result.errorCount} note(s) failed to export. Check console for details.`, {
-          id: result.successCount === 0 ? toastId : undefined, // Use new toast if some succeeded
-          duration: 5000,
-        });
-      }
-      if (result.successCount === 0 && result.errorCount === 0) {
-        toast.dismiss(toastId); // Should not happen if selectedNoteIds is not empty
-      }
-    } catch (error) {
-      console.error("Error exporting notes:", error);
-      toast.error("An unexpected error occurred during export.", { id: toastId });
-    } finally {
-      handleCancelSelectionMode();
-    }
+
+    chrome.runtime.sendMessage(
+      { type: ChannelNames.EXPORT_NOTES_REQUEST, payload: { noteIds: selectedNoteIds } },
+      response => {
+        if (chrome.runtime.lastError) {
+          console.error("Error exporting notes:", chrome.runtime.lastError.message);
+          toast.error("An unexpected error occurred during export.", { id: toastId });
+          handleCancelSelectionMode();
+
+          return;
+        }
+
+        if (response.success && response.result) {
+          const { successCount, errorCount } = response.result;
+
+          if (successCount > 0) {
+            toast.success(`${successCount} note(s) exported successfully.`, { id: toastId });
+          }
+
+          if (errorCount > 0) {
+            toast.error(`${errorCount} note(s) failed to export. Check console for details.`, {
+              id: successCount === 0 ? toastId : undefined,
+              duration: 5000,
+            });
+          }
+
+          if (successCount === 0 && errorCount === 0 && selectedNoteIds.length > 0) {
+             // This case implies something went wrong if notes were selected but none processed
+            toast.error("Export completed but no notes were processed.", { id: toastId });
+          } else if (successCount === 0 && errorCount === 0 && selectedNoteIds.length === 0) {
+            toast.dismiss(toastId); // No notes were selected initially
+          }
+        } else {
+          console.error("Error exporting notes:", response.error);
+          toast.error(response.error || "An unexpected error occurred during export.", { id: toastId });
+        }
+
+        handleCancelSelectionMode();
+      },
+    );
   };
 
   const handleDeleteSelectedNotes = async () => {
     if (selectedNoteIds.length === 0) {
       toast.error("No notes selected to delete.");
+
       return;
     }
-    if (isProcessingSelectionAction) return; // Prevent multiple clicks
 
     toast.custom(
-      (t) => (
+      t => (
         <div
           className={cn(
             "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
-            "p-4 rounded-lg shadow-xl max-w-sm w-full",
-            "flex flex-col space-y-3"
+            "p-4 rounded-xl shadow-xl max-w-sm w-full",
+            "flex flex-col space-y-3",
           )}
         >
           <h4 className="text-lg font-semibold text-[var(--text)]">Confirm Deletion</h4>
@@ -631,57 +631,48 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           </p>
           <div className="flex justify-end space-x-3 pt-2">
             <Button
-              variant="outline"
-              size="sm"
               className={cn(
                 "bg-transparent text-[var(--text)] border-[var(--text)]",
-                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]"
+                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]",
               )}
+              size="sm"
+              variant="outline"
               onClick={() => toast.dismiss(t.id)}
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              size="sm"
               className={cn(
-                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]"
+                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]",
               )}
+              size="sm"
+              variant="destructive"
               onClick={async () => {
                 toast.dismiss(t.id); // Dismiss confirmation toast
-                setIsProcessingSelectionAction(true);
                 const deleteToastId = toast.loading(`Deleting ${selectedNoteIds.length} note(s)...`);
-                let successCount = 0;
-                let errorCount = 0;
-                const warnings: string[] = [];
 
-                // deleteNotesFromSystem was not modified to return detailed results per note,
-                // so we'll iterate here to get per-note feedback if needed, or rely on its console logs.
-                // For now, let's assume deleteNotesFromSystem handles its own logging well enough
-                // and we'll use a generic success/error for the batch.
-                // A more granular approach would be to call deleteNoteFromSystem for each and aggregate results.
-                try {
-                  // Assuming deleteNotesFromSystem is a void promise or throws an error for any failure.
-                  // To get detailed results, we'd need to change it or call deleteNoteFromSystem in a loop.
-                  // For simplicity with the current structure of deleteNotesFromSystem:
-                  await deleteNotesFromSystem(selectedNoteIds);
-                  successCount = selectedNoteIds.length; // Assume all succeeded if no error thrown
-                  toast.success(`${successCount} note(s) deleted.`, { id: deleteToastId });
-                  await fetchNotes();
-                } catch (error) {
-                  console.error("Error deleting selected notes:", error);
-                  // This catch might not be hit if deleteNotesFromSystem internally handles errors
-                  // and doesn't rethrow for individual failures.
-                  // The current deleteNotesFromSystem calls deleteNoteFromSystem which now returns DeleteNoteResult.
-                  // We should ideally refactor deleteNotesFromSystem to aggregate these results.
-                  // For now, this is a simplification.
-                  toast.error(`Failed to delete some or all notes. Error: ${error instanceof Error ? error.message : String(error)}`, { id: deleteToastId });
-                  // Attempt to refresh notes anyway, as some might have been deleted.
-                  await fetchNotes();
-                } finally {
-                  setIsProcessingSelectionAction(false);
-                  handleCancelSelectionMode();
-                }
+                chrome.runtime.sendMessage(
+                  { type: ChannelNames.DELETE_NOTE_REQUEST, payload: { noteIds: selectedNoteIds } },
+                  response => {
+                    if (chrome.runtime.lastError) {
+                      console.error("Error deleting notes:", chrome.runtime.lastError.message);
+                      toast.error("Failed to delete notes.", { id: deleteToastId });
+                      handleCancelSelectionMode();
+
+                      return;
+                    }
+
+                    if (response.success) {
+                      toast.success(`${selectedNoteIds.length} note(s) deleted successfully.`, { id: deleteToastId });
+                      fetchNotes(); // Refresh the notes list
+                    } else {
+                      console.error("Error deleting notes:", response.error);
+                      toast.error(response.error || "Failed to delete notes.", { id: deleteToastId });
+                    }
+
+                    handleCancelSelectionMode();
+                  },
+                );
               }}
             >
               Delete Selected
@@ -692,355 +683,274 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       {
         duration: Infinity, 
         position: 'top-center',
-      }
+      },
     );
   };
 
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files ? Array.from(event.target.files) : [];
+
     if (files.length === 0) return;
 
     let importSuccessCount = 0;
     let importErrorCount = 0;
 
-    const readFileAsArrayBuffer = (inputFile: File): Promise<ArrayBuffer> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as ArrayBuffer);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsArrayBuffer(inputFile);
-      });
-    };
+    const importResults = await importFiles(files);
 
-    const readFileAsText = (inputFile: File): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsText(inputFile);
-      });
-    };
-
-    for (const file of files) {
-      try {
-        const fileType = file.name.split('.').pop()?.toLowerCase();
-        let defaultTitleFromFile = file.name.replace(/\.[^/.]+$/, "");
-        let rawContentFromFile = "";
-        let potentialTitle = defaultTitleFromFile;
-
-        if (fileType === 'pdf') {
-          const arrayBuffer = await readFileAsArrayBuffer(file);
-          const typedarray = new Uint8Array(arrayBuffer);
-          const pdfDoc = await pdfjsLib.getDocument({ data: typedarray }).promise;
-          let pdfText = "";
-          for (let i = 1; i <= pdfDoc.numPages; i++) {
-            const page = await pdfDoc.getPage(i);
-            const textContent = await page.getTextContent();
-            pdfText += textContent.items.map(item => {
-              if ('str' in item) {
-                return item.str;
-              }
-              return '';
-            }).join(" ") + "\n";
-          }
-          rawContentFromFile = pdfText.trim();
-        } else {
-          rawContentFromFile = await readFileAsText(file); // This is the text content for HTML, MD, TXT
-          if (fileType === 'html' || fileType === 'htm') {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(rawContentFromFile, 'text/html'); // Parse the raw HTML string
-            
-            let finalHtmlToConvert = doc.body.innerHTML; // Default to original body HTML
-
-            try {
-              if (typeof Defuddle === 'function') {
-                const defuddleInstance = new Defuddle(doc, { markdown: false, url: file.name });
-                const defuddleResult = defuddleInstance.parse();
-                
-                if (defuddleResult.content) {
-                  finalHtmlToConvert = defuddleResult.content; // Use Defuddle's cleaned HTML string
-                }
-                potentialTitle = defuddleResult.title || doc.title || potentialTitle;
-                console.log(`[NoteSystemView] Defuddle processed HTML for: ${file.name}. Title: ${potentialTitle}`);
-              } else {
-                console.warn(`[NoteSystemView] Defuddle library not available for ${file.name}. Using raw HTML body.`);
-                potentialTitle = doc.title || potentialTitle; // Still try to get title from doc
-              }
-            } catch (defuddleError) {
-              console.error(`[NoteSystemView] Error using Defuddle for ${file.name}:`, defuddleError);
-              potentialTitle = doc.title || potentialTitle; // Fallback title from doc
-            }
-            
-            rawContentFromFile = turndownService.turndown(finalHtmlToConvert);
-          }
-        }
-
-        if (!rawContentFromFile.trim()) {
-          toast.error(`Cannot import '${file.name}': Content is empty.`);
-          importErrorCount++;
-          continue; 
-        }
-
-        let noteTitleToSave = potentialTitle;
-        let noteContentToSave = rawContentFromFile;
-        let noteTagsToSave = ['imported'];
-        let noteUrlToSave: string | undefined = undefined;
-
-        if (fileType === 'md' || fileType === 'txt' || fileType === 'html' || fileType === 'htm') {
-          const frontmatterRegex = /^---\s*([\s\S]*?)\s*---\s*([\s\S]*)$/;
-          const match = frontmatterRegex.exec(rawContentFromFile);
-          if (match) {
-            const yamlString = match[1];
-            const mainContent = match[2];
-            try {
-              const frontmatter = yaml.load(yamlString) as any;
-              if (frontmatter && typeof frontmatter === 'object') {
-                if (typeof frontmatter.title === 'string' && frontmatter.title.trim()) {
-                  noteTitleToSave = frontmatter.title.trim();
-                }
-                if (Array.isArray(frontmatter.tags) && frontmatter.tags.every((tag: unknown): tag is string => typeof tag === 'string')) {
-                  noteTagsToSave = frontmatter.tags.map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                } else if (typeof frontmatter.tags === 'string') {
-                  noteTagsToSave = [frontmatter.tags.trim()].filter(tag => tag);
-                }
-                if (noteTagsToSave.length === 0) noteTagsToSave = ['imported'];
-                if (typeof frontmatter.source === 'string' && frontmatter.source.trim()) {
-                  noteUrlToSave = frontmatter.source.trim();
-                } else if (typeof frontmatter.url === 'string' && frontmatter.url.trim()) {
-                  // Fallback to 'url' if 'source' is not found
-                  noteUrlToSave = frontmatter.url.trim();
-                }
-                noteContentToSave = mainContent.trim();
-              }
-            } catch (yamlError) {
-              let errorMessage = `Failed to parse YAML frontmatter for ${file.name}.`;
-              if (yamlError instanceof Error) {
-                errorMessage += ` Details: ${yamlError.message}`;
-              } else {
-                errorMessage += ` Details: ${String(yamlError)}`;
-              }
-              console.warn(errorMessage, yamlError); // Log the full error object too for more context
-            }
-          }
-        }
-
-        if (!noteContentToSave.trim() && fileType !== 'pdf') {
-          toast.error(`Cannot import '${file.name}': Main content empty after frontmatter.`);
-          importErrorCount++;
-          continue;
-        }
-
-        const newNote: Partial<Note> & { content: string } = {
-          title: noteTitleToSave,
-          content: noteContentToSave,
-          tags: noteTagsToSave,
-          url: noteUrlToSave,
-        };
-
-        // Send message to background to save and index
-        const response = await new Promise<any>((resolve) => {
-          chrome.runtime.sendMessage({ type: 'SAVE_NOTE_REQUEST', payload: newNote }, (res) => {
+    for (const result of importResults) {
+      if (result.success && result.note) {
+        const savePromise = new Promise<void>((resolveSave, rejectSave) => {
+          chrome.runtime.sendMessage({ type: ChannelNames.SAVE_NOTE_REQUEST, payload: result.note }, response => {
             if (chrome.runtime.lastError) {
-              console.error(`Error importing note ${file.name} during sendMessage:`, chrome.runtime.lastError.message);
-              resolve({ success: false, error: `Failed to communicate with background: ${chrome.runtime.lastError.message}` });
+              console.error(`Error saving imported note ${result.fileName} via message:`, chrome.runtime.lastError.message);
+              rejectSave(new Error(chrome.runtime.lastError.message));
+
+              return;
+            }
+
+            if (response.success) {
+              toast.success(`Note imported: ${result.fileName}`);
+              importSuccessCount++;
+              resolveSave();
             } else {
-              resolve(res);
+              console.error(`Error saving imported note ${result.fileName} via message:`, response.error);
+              rejectSave(new Error(response.error || `Failed to save imported note ${result.fileName}`));
             }
           });
         });
 
-        if (response && response.success) {
-          toast.success(`Note imported: ${file.name}`);
-          importSuccessCount++;
-        } else {
-          console.error(`Error importing note ${file.name}:`, response?.error);
-          toast.error(response?.error || `Failed to import ${file.name}.`);
+        try {
+          await savePromise;
+        } catch (saveError: any) {
+          toast.error(`Failed to save imported note ${result.fileName}. Reason: ${saveError.message}`);
           importErrorCount++;
         }
-
-      } catch (error) {
-        console.error(`Error importing note ${file.name}:`, error);
-        let errorMessage = `Failed to import ${file.name}.`;
-        if (error instanceof Error && error.message) {
-            errorMessage += ` Reason: ${error.message}`;
-        }
-        toast.error(errorMessage);
+      } else {
+        toast.error(`Cannot import '${result.fileName}': ${result.error}`);
         importErrorCount++;
       }
     }
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = ''; // Clear the file input
     }
 
     if (importSuccessCount > 0) {
-      await fetchNotes();
+      fetchNotes(); // Refresh the notes list
     }
-    
+
     if (files.length > 1) {
-        if (importSuccessCount === files.length) {
-            toast.success(`All ${files.length} notes imported successfully!`);
-        } else if (importErrorCount === files.length) {
-            toast.error(`Failed to import any of the ${files.length} notes.`);
-        } else {
-            toast.loading(`Imported ${importSuccessCount} of ${files.length} notes. See other notifications for details.`, { duration: 4000 });
-        }
+      if (importSuccessCount === files.length) {
+        toast.success(`All ${files.length} notes imported successfully!`);
+      } else if (importErrorCount === files.length) {
+        toast.error(`Failed to import any of the ${files.length} notes.`);
+      } else {
+        toast.loading(`Imported ${importSuccessCount} of ${files.length} notes. See other notifications for details.`, { duration: 4000 });
+      }
+    } else if (files.length === 1 && importErrorCount === 1 && importSuccessCount === 0) {
+      // Error toast for single file import already handled by the loop
+    } else if (files.length === 1 && importSuccessCount === 1) {
+      // Success toast for single file import already handled by the loop
     }
   };
 
   const filteredNotes = useMemo(() => {
-    if (!searchQuery) return allNotes;
+    let notesToFilter = [...allNotes];
+
+    // Sort by pinned status first, then by last updated date
+    notesToFilter.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.lastUpdatedAt - a.lastUpdatedAt;
+    });
+
+    if (!searchQuery) {
+      return notesToFilter;
+    }
+
     const lowerCaseQuery = searchQuery.toLowerCase();
-    return allNotes.filter(note => {
+
+    return notesToFilter.filter(note => {
       const titleMatch = note.title.toLowerCase().includes(lowerCaseQuery);
       const contentMatch = note.content.toLowerCase().includes(lowerCaseQuery);
       const tagsMatch = note.tags && note.tags.some(tag => tag.toLowerCase().includes(lowerCaseQuery));
+
       return titleMatch || contentMatch || tagsMatch;
     });
   }, [allNotes, searchQuery]);
 
   const paginatedNotes = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+
     return filteredNotes.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredNotes, currentPage]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNotes.length / ITEMS_PER_PAGE)), [filteredNotes]);
 
   const handleSaveNote = async () => {
-    if (!noteContent.trim() && !noteTitle.trim()) { // Require at least title or content
-      toast.error("Note title or content cannot be empty.");
+    if (!noteContent.trim()) {
+      toast.error("Note content cannot be empty.");
+
       return;
     }
-    if (isDialogSaving) return; // Prevent multiple clicks
-
-    setIsDialogSaving(true);
-    const toastId = toast.loading(editingNote ? "Updating note..." : "Creating note...");
 
     const parsedTags = noteTags.trim() === '' ? [] : noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    const notePayload: Partial<Note> & { content: string } = { // Changed variable name for clarity
+
+    const noteToSave: Partial<Note> & { content: string } = {
       id: editingNote?.id,
-      title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      title: noteTitle.trim() || `Note - ${new Date().toLocaleDateString()}`,
       content: noteContent,
       tags: parsedTags,
+      description: '', // Description is not currently used in the UI, but can be added later
       url: editingNote?.url,
+
     };
 
-    try {
-      chrome.runtime.sendMessage({ type: 'SAVE_NOTE_REQUEST', payload: notePayload }, async (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Error sending SAVE_NOTE_REQUEST:", chrome.runtime.lastError.message);
-          toast.error(`Failed to send save request: ${chrome.runtime.lastError.message}`, { id: toastId });
-          setIsDialogSaving(false);
-          return;
-        }
+    chrome.runtime.sendMessage({ type: ChannelNames.SAVE_NOTE_REQUEST, payload: noteToSave }, response => {
+      if (chrome.runtime.lastError) {
+        console.error("Error saving note:", chrome.runtime.lastError.message);
+        toast.error(editingNote ? "Failed to update note." : "Failed to create note.");
 
-        if (response && response.success) {
-          toast.success(editingNote ? "Note updated!" : "Note created!", { id: toastId });
-          if (response.warning) {
-            toast(response.warning, { duration: 5000, icon: '⚠️' });
-          }
-          await fetchNotes();
-          setIsCreateModalOpen(false);
-          setEditingNote(null);
-          setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
-        } else {
-          toast.error(response?.error || (editingNote ? "Failed to update note." : "Failed to create note."), { id: toastId });
-          if (response?.warning) {
-            toast(response.warning, { duration: 5000, icon: '⚠️' });
-          }
-        }
-        setIsDialogSaving(false);
-      });
-    } catch (error) { // Catch unexpected errors during message sending itself (less likely)
-      console.error("Error in handleSaveNote during sendMessage:", error);
-      toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
-      setIsDialogSaving(false);
-    }
+        return;
+      }
+
+      if (response.success) {
+        toast.success(editingNote ? "Note updated!" : "Note created!");
+        fetchNotes(); // Refresh notes
+        setIsCreateModalOpen(false);
+        setEditingNote(null);
+        setNoteTitle(''); setNoteContent(''); setNoteTags(''); setIsEditingNoteContent(false);
+      } else {
+        console.error("Error saving note:", response.error);
+        toast.error(response.error || (editingNote ? "Failed to update note." : "Failed to create note."));
+      }
+    });
+  };
+
+  const handleTogglePin = (note: Note) => {
+    const updatedNote = { ...note, pinned: !note.pinned, lastUpdatedAt: note.lastUpdatedAt };
+
+    chrome.runtime.sendMessage({ type: ChannelNames.SAVE_NOTE_REQUEST, payload: updatedNote }, response => {
+      if (response.success) {
+        toast.success(updatedNote.pinned ? 'Note pinned!' : 'Note unpinned!');
+        fetchNotes();
+      } else {
+        toast.error(`Error: ${response.error}`);
+      }
+    });
   };
 
   const openEditModal = (note: Note) => {
     const newNoteTags = note.tags ? note.tags.join(', ') : '';
+
     setEditingNote(note);
     setNoteTitle(note.title);
     setNoteContent(note.content);
     setNoteTags(newNoteTags);
     setIsCreateModalOpen(true);
     setIsEditingNoteContent(note.content.length <= VIRTUALIZATION_THRESHOLD_LENGTH);
-    if (isSpeakingDialogNote) {
+
+    if (isSpeakingNoteInDialog) { // Stop speech if it was active
       stopSpeech();
-      setIsSpeakingDialogNote(false);
+      setIsSpeakingNoteInDialog(false);
     }
   };
-
-  const handleReadAloudInDialog = () => {
-    if (!noteContent.trim()) {
-      toast("Nothing to read.", { icon: 'ℹ️' });
-      return;
-    }
-
-    if (isSpeakingDialogNote) {
-      stopSpeech();
-      setIsSpeakingDialogNote(false);
-    } else {
-      stopSpeech(); // Stop any previous speech just in case
-      setIsSpeakingDialogNote(true);
-      speakMessage(noteContent, config?.tts?.selectedVoice, config?.tts?.rate, {
-        onEnd: () => {
-          setIsSpeakingDialogNote(false);
-        },
-      });
-    }
-  };
-
-  useEffect(() => {
-    // Cleanup speech when modal is closed
-    if (!isCreateModalOpen && isSpeakingDialogNote) {
-      stopSpeech();
-      setIsSpeakingDialogNote(false);
-    }
-  }, [isCreateModalOpen, isSpeakingDialogNote]);
-
-  // Ensure speech stops when component unmounts
-  useEffect(() => {
-    return () => {
-      stopSpeech();
-    };
-  }, []);
 
   const handleDeleteNote = async (noteId: string) => {
-    // No specific loading state for individual delete button in item, relies on toast
-    const toastId = toast.loading("Deleting note...");
-    try {
-      await deleteNoteFromSystem(noteId);
-      toast.success("Note deleted!", { id: toastId });
-    } catch (error) { // Catch unexpected errors
-      console.error("Error deleting note:", error);
-      toast.error(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`, { id: toastId });
-    } finally {
-      await fetchNotes(); // Refresh notes regardless of outcome
+    chrome.runtime.sendMessage({ type: ChannelNames.DELETE_NOTE_REQUEST, payload: { noteId } }, response => {
+      if (chrome.runtime.lastError) {
+        console.error("Error deleting note:", chrome.runtime.lastError.message);
+        toast.error("Failed to delete note.");
+
+        return;
+      }
+
+      if (response.success) {
+        toast.success("Note deleted!");
+        fetchNotes(); // Refresh notes
+      } else {
+        console.error("Error deleting note:", response.error);
+        toast.error(response.error || "Failed to delete note.");
+      }
+    });
+  };
+
+  const handleReadNoteInDialog = () => {
+    if (!noteContent.trim()) return;
+
+    if (isSpeakingNoteInDialog) {
+      if (config.tts?.provider === 'openai') {
+        stopSpeechOpenAI();
+      } else {
+        stopSpeech();
+      }
+      setIsSpeakingNoteInDialog(false);
+    } else {
+      setIsSpeakingNoteInDialog(true);
+      const onEndCallback = () => setIsSpeakingNoteInDialog(false);
+
+      if (config.tts?.provider === 'openai') {
+        if (config.openAiApiKey) {
+          speakMessageOpenAI(
+            noteContent,
+            config.openAiApiKey,
+            config.tts.selectedVoice,
+            config.tts.model,
+            config.tts.endpoint,
+            { onEnd: onEndCallback },
+          );
+        } else {
+          console.error('OpenAI API key not found');
+          setIsSpeakingNoteInDialog(false);
+        }
+      } else {
+        speakMessage(noteContent, config?.tts?.selectedVoice, config?.tts?.rate, {
+          onEnd: onEndCallback,
+        });
+      }
     }
   };
 
+  useEffect(() => {
+    const stopSpeechIfNeeded = () => {
+      if (config.tts?.provider === 'openai') {
+        stopSpeechOpenAI();
+      } else {
+        stopSpeech();
+      }
+      setIsSpeakingNoteInDialog(false);
+    };
+
+    if (!isCreateModalOpen && isSpeakingNoteInDialog) {
+      stopSpeechIfNeeded();
+    }
+
+    if (isCreateModalOpen && isSpeakingNoteInDialog && noteContent.trim() === '') {
+      stopSpeechIfNeeded();
+    }
+  }, [isCreateModalOpen, noteContent, isSpeakingNoteInDialog, config.tts?.provider]);
+
   return (
+    <TooltipProvider delayDuration={500}>
     <div className="flex flex-col h-full text-[var(--text)]">
       <input
-        type="file"
         ref={fileInputRef}
+        accept=".txt,.md,.html,.htm,.pdf,.csv,.tsv,.json,.jsonl,.zip,.epub"
         style={{ display: 'none' }}
-        onChange={handleFileSelected}
-        accept=".txt,.md,.html,.htm,.pdf"
+        type="file"
         multiple
+        onChange={handleFileSelected}
       />
       <div className="pb-3">
         <div className="relative">
           <Input
-            type="text"
-            placeholder="Search notes (titles & content & tags)..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
-              "w-full bg-background text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10 rounded-none",
+              "w-full bg-background border-b border-[var(--text)]/20 text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10 rounded-none",
             )}
+            placeholder="Search notes (titles & content & tags)..."
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
           />
           <GoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </div>
@@ -1056,73 +966,54 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
             {paginatedNotes.map(note => (
               <NoteListItem
                 key={note.id}
-                note={note}
-                onEdit={openEditModal}
-                onDelete={handleDeleteNote}
                 isSelected={selectedNoteIds.includes(note.id)}
-                onToggleSelect={handleToggleSelectNote}
                 isSelectionModeActive={isSelectionModeActive}
+                note={note}
+                onDelete={handleDeleteNote}
+                onEdit={openEditModal}
+                onTogglePin={handleTogglePin}
+                onToggleSelect={handleToggleSelectNote}
               />
             ))}
           </div>
         )}
       </ScrollArea>
 
-      {isSelectionModeActive && (
+      {isSelectionModeActive && selectedNoteIds.length > 0 && (
         <div className="sticky bottom-0 z-10 p-2 bg-[var(--bg)] border-t border-[var(--text)]/20 shadow-md">
-          {selectedNoteIds.length > 0 && (
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[var(--text)]">
-                {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
-              </span>
-              <div className="space-x-2">
-                 <Button variant="outline" size="sm" onClick={handleExportSelectedNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
-                   {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Export"}
-                 </Button>
-                 <Button variant="destructive" size="sm" onClick={handleDeleteSelectedNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
-                   {isProcessingSelectionAction && selectedNoteIds.length > 0 && !isDialogSaving ? "Processing..." : "Delete"}
-                 </Button>
-              </div>
-            </div>
-          )}
           <div className="flex items-center justify-between">
+            <span className="text-sm text-[var(--text)]">
+              {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
+            </span>
             <div className="space-x-2">
-                <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={isProcessingSelectionAction} className="h-6 text-xs">
-                    Select All
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleExportAllNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
-                    Export All
-                </Button>
-                <Button variant="destructive" size="sm" onClick={handleDeleteAllNotes} disabled={isProcessingSelectionAction} className="h-6 text-xs">
-                    Delete All
-                </Button>
+              <Button size="sm" variant="outline-subtle" onClick={handleExportSelectedNotes}>Export</Button>
+              <Button size="sm" variant="destructive-outline" onClick={handleDeleteSelectedNotes}>Delete</Button>
+              <Button size="sm" variant="ghost" onClick={handleCancelSelectionMode}>Done</Button>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleCancelSelectionMode} disabled={isProcessingSelectionAction} className="h-6 text-xs">
-              Done
-            </Button>
           </div>
         </div>
       )}
 
       {!isSelectionModeActive && totalPages > 1 && (
-        <div className="flex justify-center items-center h-10 space-x-2 p-2 font-['Space_Mono',_monospace]">
+        <div className="flex justify-center items-center h-8 space-x-2 p-2 font-['Space_Mono',_monospace]">
           <Button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            className="h-8 font-['Space_Mono',_monospace]"
             disabled={currentPage === 1}
             variant="ghost"
-            className="font-['Space_Mono',_monospace]"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
           >Prev</Button>
           <span className="text-md">Page {currentPage} of {totalPages}</span>
           <Button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            className="h-8 font-['Space_Mono',_monospace]"
             disabled={currentPage === totalPages}
             variant="ghost"
-            className="font-['Space_Mono',_monospace]"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
           >Next</Button>
         </div>
       )}
 
-      <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => {
+      <Dialog open={isCreateModalOpen}
+onOpenChange={isOpen => {
         if (!isOpen) {
           setIsCreateModalOpen(false);
           setEditingNote(null);
@@ -1138,7 +1029,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           className={cn(
             "bg-[var(--bg)] border-[var(--text)]/20 w-[90vw] max-w-3xl text-[var(--text)] overflow-hidden",
             "flex flex-col max-h-[85vh]",
-            "p-6"
+            "p-4",
           )}
         >
           <DialogHeader>
@@ -1151,18 +1042,18 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
           {/* Main content area: Title, scrollable Textarea, Tags */}
           <div className="flex flex-col min-h-0 space-y-4">
             <div>
-            <Input
-              placeholder="Note Title (optional)"
-              value={noteTitle}
-              onChange={(e) => setNoteTitle(e.target.value)}
-              className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
-            />
+              <Input
+                className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                placeholder="Note Title (optional)"
+                value={noteTitle}
+                onChange={e => setNoteTitle(e.target.value)}
+              />
             </div>
 
             {editingNote && !isEditingNoteContent ? (
               <div className="flex flex-col min-h-0 space-y-2">
                 <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditingNoteContent(true)} className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Edit Content</Button>
+                  <Button className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]" size="sm" variant="outline" onClick={() => setIsEditingNoteContent(true)}>Edit Content</Button>
                 </div>
                 <div className="h-full border rounded-md border-[var(--text)]/20 bg-[var(--input-background)]">
                   <VirtualizedContent
@@ -1172,61 +1063,82 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
                 </div>
               </div>
             ) : (
-                <Textarea
-                  placeholder="Your note content..."
-                  value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  minRows={5}
-                  className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] resize-none focus-visible:ring-1 focus-visible:ring-[var(--active)]"
-                />
+              <Textarea
+                className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] resize-none"
+                minRows={5}
+                placeholder="Your note content..."
+                value={noteContent}
+                onChange={e => setNoteContent(e.target.value)}
+              />
             )}
             <div>
-            <Input
-              placeholder="Tags (comma-separated)"
-              value={noteTags}
-              onChange={(e) => {
-                setNoteTags(e.target.value);
-              }}
-              className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
-            />
+              <Input
+                className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                placeholder="Tags (comma-separated)"
+                value={noteTags}
+                onChange={e => setNoteTags(e.target.value)}
+              />
             </div>
           </div>
-          {/* Overriding default DialogFooter styling for custom layout */}
+          {/* Footer */}
           <div className="flex justify-between items-center"> 
-            <div> {/* Left-aligned group - Read Aloud Button */}
+            <div>
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="ghost"
-                      size="sm" 
+                      aria-label={isSpeakingNoteInDialog ? "Stop reading note" : "Read note aloud"}
                       className={cn(
                         "p-1.5 rounded-md h-8 w-8", 
                         "text-[var(--text)] hover:bg-[var(--text)]/10",
-                        "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]"
-                      )}
-                      onClick={handleReadAloudInDialog}
-                      disabled={!noteContent.trim() || isDialogSaving}
-                      aria-label={isSpeakingDialogNote ? "Stop reading note" : "Read note aloud"}
+                        "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]",
+                      )} 
+                      disabled={!noteContent.trim()}
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleReadNoteInDialog}
                     >
-                      {isSpeakingDialogNote ? <LuVolumeX className="h-5 w-5" /> : <LuVolume2 className="h-5 w-5" />}
+                      {isSpeakingNoteInDialog ? <LuVolumeX className="h-5 w-5" /> : <LuVolume2 className="h-5 w-5" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-secondary/50 text-foreground">
-                    <p>{isSpeakingDialogNote ? "Stop Reading" : "Read Note Aloud"}</p>
+                  <TooltipContent className="bg-secondary/50 text-foreground" side="top">
+                    <p>{isSpeakingNoteInDialog ? "Stop Reading" : "Read Note Aloud"}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="space-x-2"> {/* Right-aligned group - Cancel and Save Buttons */}
-              <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setEditingNote(null); if (isSpeakingDialogNote) { stopSpeech(); setIsSpeakingDialogNote(false); } }} disabled={isDialogSaving} className="h-8 border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]">Cancel</Button>
-              <Button onClick={handleSaveNote} className="h-8 bg-[var(--active)] text-[var(--active-foreground)] hover:bg-[var(--active)]/90 focus-visible:ring-1 focus-visible:ring-[var(--active)]" disabled={isDialogSaving}>
-                {isDialogSaving ? (editingNote ? 'Saving...' : 'Creating...') : (editingNote ? 'Save Changes' : 'Create Note')}
+            <div className="space-x-2">
+              <Button
+                size="persona"
+                type="button"
+                variant="outline-subtle"
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setEditingNote(null);
+
+                  if (isSpeakingNoteInDialog) {
+                    stopSpeech();
+                    setIsSpeakingNoteInDialog(false);
+                  }
+                }}
+              >
+                <FiX />
+                Cancel
+              </Button>
+              <Button
+                size="persona"
+                type="button"
+                variant="save"
+                onClick={handleSaveNote}
+              >
+                <FiSave />
+                {editingNote ? 'Save Changes' : 'Create Note'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 };

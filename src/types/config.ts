@@ -13,7 +13,12 @@ export interface Model {
   host?: 'groq' | 'ollama' | 'gemini' | 'lmStudio' | 'openai' | 'openrouter' | 'custom' | string;
   active?: boolean;
   context_length?: number;
+  context_window?: number;
+  inputTokenLimit?: number;
+  num_ctx?: number;
+  host_display_name?: string;
   name?: string;
+  supportedGenerationMethods?: string[];
 }
 export interface Tool {
   name: string;
@@ -22,16 +27,35 @@ export interface Tool {
 export type Tools = Tool[];
 
 export interface TtsSettings {
+  provider?: string;
   selectedVoice?: string;
   rate?:number;
   pitch?:number;
   volume?:number;
+  endpoint?: string;
+  model?: string;
+  customVoices?: string;
+}
+
+export interface AsrSettings {
+  stopWord?: string;
+  language?: string;
+}
+
+export interface CustomEndpoint {
+  id: string;
+  name: string;
+  endpoint: string;
+  apiKey: string;
+  connected: boolean;
+  error?: string;
 }
 
 export const CHAT_MODE_OPTIONS = [
   { value: "chat", label: "Chat" },
   { value: "page", label: "Page" },
   { value: "web", label: "Web" },
+  { value: "file", label: "File" },
 ] as const;
 
 export type ChatMode = typeof CHAT_MODE_OPTIONS[number]['value'];
@@ -61,8 +85,7 @@ export interface Config {
   temperature: number;
   maxTokens: number;
   topP: number;
-  presencepenalty: number;
-  useTools?: boolean;
+  presencePenalty: number;
   lmStudioUrl?: string;
   lmStudioConnected?: boolean;
   lmStudioError?: string | unknown;
@@ -81,10 +104,7 @@ export interface Config {
   openRouterApiKey?: string;
   openRouterConnected?: boolean;
   openRouterError?: string | unknown;
-  customEndpoint?: string;
-  customApiKey?: string;
-  customConnected?: boolean;
-  customError?: string | unknown;
+  customEndpoints?: CustomEndpoint[];
   googleApiKey?: string;
   googleCx?: string;
   visibleApiKeys?: boolean;
@@ -115,36 +135,45 @@ export interface Config {
   };
   paperTexture?: boolean;
   panelOpen: boolean;
+  showFloatingButton?: boolean;
+  windowPosition?: { x: number; y: number };
+  windowSize?: { width: number; height: number };
   tts?: TtsSettings;
+  asr?: AsrSettings;
   userName?: string;
   userProfile?: string;
   popoverTitleDraft?: string;
   popoverTagsDraft?: string;
+  popoverDescriptionDraft?: string;
   tools?: Tools;
-  rag?: {
-    bm25?: {
-      k1?: number;
-      b?: number;
-      topK?: number;
-    };
-    embedding_model?: string;
-    semantic_threshold?: number;
-    semantic_top_k?: number; // For initial semantic retrieval
-    final_top_k?: number; // For the final number of reranked chunks to return
-    bm25_weight?: number;
-    vectorDimension?: number;
-    embeddingMode?: 'manual' | 'automatic';
-    bm25LastRebuild?: string;
-    embeddingsLastRebuild?: string;
-    embeddingsLastUpdate?: string;
-  };
+  ragConfig?: RagConfig;
+  latexEnabled?: boolean;
+  readerLens?: string;
 }
 
-export interface EmbeddingModelConfig {
-  providerName: string;
-  modelId: string;
-  apiUrl: string;
-  apiKey?: string;
+export interface RagConfig {
+  model: string;
+  use_gpu: boolean;
+  semantic_top_k: number;
+  similarity_threshold: number;
+  BM25_top_k: number;
+  k: number; // Corresponds to BM25 k
+  b: number;  // Corresponds to BM25 b
+  d?: number; // Corresponds to BM25+ d (optional, defaults will be applied if not set)
+  bm25_weight: number;
+  autoEmbedOnSave: boolean;
+  final_top_k?: number;
+
+  // Chunking parameters
+  maxChunkChars: number;
+  minChunkChars: number;
+  overlapChars: number;
+
+  // MMR Reranking
+  lambda: number;
+
+  // Contextual Retrieval
+  useContextualSummaries?: boolean;
 }
 
 export interface ConfigContextType {

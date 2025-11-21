@@ -1,523 +1,161 @@
 import { toast } from 'react-hot-toast';
+
+import type { Config } from 'src/types/config';
+import ChannelNames from '../../types/ChannelNames';
+import type {
+ FetcherArgs, OpenTabArgs, SaveNoteArgs, UpdateMemoryArgs, WebSearchArgs,
+} from '../../types/toolTypes';
 import { webSearch } from '../network';
 import { scrapeUrlContent } from '../utils/scrapers';
-import { Config } from '../../types/config';
-import ChannelNames from '../../types/ChannelNames';
-import { prompt } from '../../background/prompt';
+import { executeExecutor, executePlanner, executePromptOptimizer } from './subToolExecutors';
 
-export type UpdateConfig = (newConfig: Partial<Config>) => void;
+export { executeExecutor, executePlanner, executePromptOptimizer };
 
-export interface SaveNoteArgs {
-  content: string;
-  title?: string;
-  tags?: string[] | string;
-  id?: string;
-  url?: string;
-}
-
-export interface UpdateMemoryArgs {
-  summary: string;
-}
-
-export interface FetcherArgs {
-  url: string;
-}
-
-export interface SummarizerArgs {
-  text: string;
-  task_context?: string;
-}
-
-export interface WebSearchArgs {
-  queries: {
-    query: string;
-    engine?: 'Google' | 'DuckDuckGo' | 'Brave' | 'GoogleCustomSearch';
-  }[];
-}
-
-export interface WikipediaSearchArgs {
-  query: string;
-}
-
-export interface RetrieverArgs {
-  query: string;
-}
-
-export interface PromptOptimizerArgs {
-  prompt: string;
-}
-
-export interface PlannerArgs {
-  task: string;
-  feedback?: string;
-}
-
-export interface SmartDispatcherArgs {
-  task: string;
-}
-
-export interface ExecutorArgs {
-  plan: string;
-}
-
-export const executePromptOptimizer = async (
-  args: PromptOptimizerArgs,
-  config: Config
-): Promise<string> => {
-  const { prompt: userPrompt } = args;
-  if (!userPrompt || userPrompt.trim() === '') {
-    return 'Error: Prompt cannot be empty for prompt_optimizer.';
-  }
-
-  const systemPrompt = `You are an AI assistant that refines a user's task into a structured JSON object of search queries.
-
-  **RULES:**
-  1.  Analyze the user's prompt to identify the core search intents.
-  2.  Generate a JSON object that is an array of query objects, where each object has a "query" key.
-  3.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
-  4.  If the prompt is simple and requires only one search, the array should contain a single query object.
-  5.  For complex prompts, break it down into multiple, logical search queries.
-
-  **EXAMPLE 1 (Complex Task):**
-  User Prompt: "What are the main arguments for and against using serverless architecture for a high-traffic e-commerce site? I need to prepare a summary for my tech lead."
-  Your Output:
-  [
-    { "query": "pros and cons of serverless architecture for e-commerce" },
-    { "query": "serverless architecture scalability for high-traffic websites" },
-    { "query": "cost-benefit analysis of serverless vs traditional servers for e-commerce" },
-    { "query": "performance benchmarks of serverless e-commerce platforms" }
-  ]
-
-  **EXAMPLE 2 (Simple Task):**
-  User Prompt: "what is the capital of france"
-  Your Output:
-  [
-    { "query": "capital of France" }
-  ]
-
-  Now, process the following user prompt.`;
-
+export const extractAndParseJsonArguments = (argsString: string): any => {
   try {
-    const rawJson = await prompt(systemPrompt + `\n\nUser Prompt: "${userPrompt}"`);
-
-    // Basic validation and cleaning
-    const cleanJson = rawJson.replace(/```json\n?|```/g, '').trim();
-
-    // Try to parse to ensure it's valid JSON
-    JSON.parse(cleanJson);
-
-    // Return the clean, stringified JSON
-    return cleanJson;
-
-  } catch (error: any) {
-    console.error(`Error executing prompt_optimizer for prompt "${userPrompt}":`, error);
-    // Return a structured error message
-    return JSON.stringify({
-      error: `Failed to optimize prompt into JSON queries.`,
-      details: error.message || 'Unknown error'
-    });
-  }
-};
-
-export const executePlanner = async (
-  args: PlannerArgs,
-  config: Config
-): Promise<string> => {
-  const { task, feedback } = args;
-
-  // --- REFINED TOOL SCHEMAS ---
-  // Descriptions are more explicit to guide the LLM's choices.
-  const toolSchemas = `
-    - "prompt_optimizer": Refines a complex user task into a set of precise, actionable search queries for other tools. Use this as the first step for research tasks. **The output of this tool is a JSON object compatible with the 'web_search' tool's 'queries' argument.**
-      - "tool_arguments": { "prompt": "The original, complex user task" }
-    - "summarizer": Summarizes given text content. Use this to condense long search results or retrieved content. The 'task_context' is crucial for guiding the summary to focus on the most relevant aspects of the text.
-      - "tool_arguments": { "text": "$context.step_N_result", "task_context": "The original user task, e.g., 'Research the pros and cons of X'" }
-    - "web_search": Searches the web for information using a list of queries. Best used with queries generated by 'prompt_optimizer'.
-      - "tool_arguments": { "queries": [{ "query": "your search query" }] }
-    - "wikipedia_search": Searches Wikipedia. Use for well-defined topics, names, or events.
-      - "tool_arguments": { "query": "your search query" }
-    - "save_note": Saves a final, processed result to a note. Do not save raw search results or un-summarized content. This should be a final step.
-      - "tool_arguments": { "title": "Note Title", "content": "$context.step_N_result", "tags": ["tag1"] }
-    - "fetcher": Fetches the raw content of a single URL.
-      - "tool_arguments": { "url": "http://example.com" }
-    - "retriever": Searches your personal saved notes to see if you already have information on a topic.
-      - "tool_arguments": { "query": "your search query" }
-  `;
-
-  const feedbackInstruction = feedback
-    ? `\n**IMPORTANT FEEDBACK ON PREVIOUS FAILED PLAN:** ${feedback}\nYou MUST correct the plan based on this feedback.`
-    : '';
-
-  const systemPrompt = `You are a meticulous AI planning agent. Your task is to create a step-by-step plan in JSON format to accomplish a user's request.
-
-  **RULES:**
-  1.  You MUST ONLY use tools with the exact schemas provided below. Do not invent arguments or tools.
-  2.  The output MUST be a single, clean JSON object, without any markdown formatting like \`\`\`json.
-  3.  Use placeholders like "$context.step_1_result" to pass the output from one step as an argument to a subsequent step.
-  4.  Think step-by-step. For complex research, first optimize the user's request into specific search queries, then search, then summarize, and finally save the result.
-
-  **AVAILABLE TOOLS AND THEIR SCHEMAS:**
-  ${toolSchemas}
-
-  **EXAMPLE PLAN**
-  User Task: "What are the main arguments for and against using serverless architecture for a high-traffic e-commerce site? I need to prepare a summary for my tech lead."
-  Your Output:
-  {
-    "steps": [
-      {
-        "step_id": 1,
-        "tool_name": "prompt_optimizer",
-        "tool_arguments": {
-          "prompt": "What are the main arguments for and against using serverless architecture for a high-traffic e-commerce site?"
-        }
-      },
-      {
-        "step_id": 2,
-        "tool_name": "web_search",
-        "tool_arguments": {
-          "queries": "$context.step_1_result"
-        }
-      },
-      {
-        "step_id": 3,
-        "tool_name": "summarizer",
-        "tool_arguments": {
-          "text": "$context.step_2_result",
-          "task_context": "Summarize the pros and cons of serverless architecture for high-traffic e-commerce sites, focusing on scalability, cost, and performance."
-        }
-      },
-      {
-        "step_id": 4,
-        "tool_name": "save_note",
-        "tool_arguments": {
-          "title": "Serverless for High-Traffic E-commerce: Pros & Cons",
-          "content": "$context.step_3_result",
-          "tags": ["serverless", "architecture", "e-commerce", "scalability"]
-        }
-      }
-    ]
+    return JSON.parse(argsString);
+  } catch (e) {
+    console.warn('Attempt 1: Failed to parse argsString directly. It may not be a valid JSON string.', e);
   }
 
-  Now, create a plan for the following user task.
-  ${feedbackInstruction}`;
+  const jsonFenceMatch = argsString.match(/```json\n([\s\S]*?)\n```/);
 
-  try {
-    const rawPlan = await prompt(systemPrompt + `User Task: "${task}"`);
-
-    // JSON Parsing
+  if (jsonFenceMatch && jsonFenceMatch[1]) {
     try {
-      // Clean potential markdown fences before parsing
-      const cleanJson = rawPlan.replace(/```json\n?|```/g, '').trim();
-      const parsedPlan = JSON.parse(cleanJson);
-      // Return a non-prettified string for transport efficiency
-      return JSON.stringify(parsedPlan);
-    } catch (parseError: any) {
-      console.error(`Error: Planner returned invalid JSON for task "${task}". Raw output:`, rawPlan);
-      throw new Error(`Planner outputted malformed JSON. Original error: ${parseError.message}`);
+      return JSON.parse(jsonFenceMatch[1]);
+    } catch (e) {
+      console.warn('Attempt 2: Failed to parse content within json code fence.', e);
     }
-
-  } catch (error: any) {
-    console.error(`Error executing planner for task "${task}":`, error);
-    throw new Error(`Error creating plan: ${error.message || 'Unknown error'}`);
   }
-};
 
-// Helper function to recursively replace placeholders in an object/array
-const replacePlaceholders = (argObject: any, context: Record<string, any>): any => {
-  if (typeof argObject === 'string') {
-    const match = argObject.match(/^\$context\.(step_\d+_result)$/);
-    if (match && Object.prototype.hasOwnProperty.call(context, match[1])) {
-      // If the entire string is a placeholder, replace it with the result.
-      const resultFromContext = context[match[1]];
+  const genericFenceMatch = argsString.match(/```\n([\s\S]*?)\n```/);
+
+  if (genericFenceMatch && genericFenceMatch[1]) {
+    try {
+      return JSON.parse(genericFenceMatch[1]);
+    } catch (e) {
+      console.warn('Attempt 3: Failed to parse content within generic code fence.', e);
+    }
+  }
+
+  const firstBrace = argsString.indexOf('{');
+  const lastBrace = argsString.lastIndexOf('}');
+
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    let potentialJson = argsString.substring(firstBrace, lastBrace + 1);
+
+    try {
+      return JSON.parse(potentialJson);
+    } catch (e) {
+      console.warn('Initial JSON parse failed, attempting to fix:', e);
+
+      potentialJson = potentialJson
+        .replace(/([{,])\s*([^"{}\s:,]+)\s*:/g, '$1 "$2":')
+        .replace(/'/g, '"');
+
       try {
-        // If the result from context is a JSON string, parse it. This is crucial
-        // for passing structured data (like from prompt_optimizer) to other tools.
-        return JSON.parse(resultFromContext);
+        return JSON.parse(potentialJson);
       } catch (e) {
-        // If it's not a valid JSON string, return it as a plain string.
-        return resultFromContext;
-      }
-    } else {
-      // Otherwise, do a simple string replacement for partial placeholders.
-      return argObject.replace(/\$context\.step_\d+_result/g, (placeholder) => {
-        const contextKey = placeholder.substring(9); // remove "$context."
-        
-        // Check for the key's EXISTENCE, not its truthiness.
-        if (Object.prototype.hasOwnProperty.call(context, contextKey)) {
-          // If the key exists (even if its value is "" or null), use its value.
-          return context[contextKey];
-        }
-        // Only if the key is truly missing, leave the placeholder.
-        return placeholder;
-      });
-    }
-  }
-
-  if (Array.isArray(argObject)) {
-    return argObject.map(item => replacePlaceholders(item, context));
-  }
-
-  if (argObject && typeof argObject === 'object') {
-    const newObj: Record<string, any> = {};
-    for (const key in argObject) {
-      if (Object.prototype.hasOwnProperty.call(argObject, key)) {
-        newObj[key] = replacePlaceholders(argObject[key], context);
+        console.error('Failed to parse even after fixing potential issues:', potentialJson, e);
+        throw new Error(`Failed to parse extracted JSON-like string: "${potentialJson}". This could be due to syntax errors like missing quotes, invalid characters, or incorrect formatting. Check the LLM's output to ensure it's valid JSON.`);
       }
     }
-    return newObj;
   }
 
-  return argObject;
+  throw new Error('Failed to parse arguments string as JSON after multiple attempts.');
 };
 
-export const executeExecutor = async (
-  args: ExecutorArgs,
-  executeToolCall: (toolCall: {
-    id: string;
-    name: string;
-    arguments: string;
-  }) => Promise<{
-    toolCallId: string;
-    name: string;
-    result: string;
-  }>
-): Promise<string> => {
-  const { plan } = args;
-  if (!plan || plan.trim() === '') {
-    return 'Error: Plan cannot be empty for executor.';
-  }
-  try {
-    const planObject = JSON.parse(plan);
-    if (!Array.isArray(planObject.steps)) {
-      return 'Error: Invalid plan format. The plan must have a "steps" array.';
-    }
-
-    const context: Record<string, any> = {};
-    let finalResult = '';
-
-    for (let i = 0; i < planObject.steps.length; i++) {
-      const step = planObject.steps[i];
-      const { tool_name, tool_arguments } = step;
-
-      if (!tool_name || !tool_arguments) {
-        finalResult += `Skipping invalid step: ${JSON.stringify(step)}\n`;
-        continue;
-      }
-
-      // Replace placeholders by operating on the JS object, not the JSON string.
-      const processedArgsObject = replacePlaceholders(tool_arguments, context);
-      const processedArgsString = JSON.stringify(processedArgsObject);
-
-      const toolCallId = `executor_${tool_name}_${Date.now()}`;
-      const executionResult = await executeToolCall({
-        id: toolCallId,
-        name: tool_name,
-        arguments: processedArgsString, // Pass the correctly formatted JSON string
-      });
-
-      const contextKey = `step_${i + 1}_result`;
-      // Store the raw result. The helper function will handle injection.
-      const resultToStore = typeof executionResult.result === 'string' 
-        ? executionResult.result
-        : JSON.stringify(executionResult.result, null, 2); // Pretty-print objects/arrays
-      context[contextKey] = resultToStore;
-      finalResult += `${executionResult.name} result for step ${i + 1} stored.\n`;
-    }
-    // Return the result of the final step, or a summary
-    const lastStepKey = `step_${planObject.steps.length}_result`;
-    return `Execution finished. Final result:\n${context[lastStepKey] || 'No final result was produced.'}`;
-  } catch (error: any) {
-    console.error(`Error executing executor for plan "${plan}":`, error);
-    return `Error executing plan: ${error.message || 'Unknown error'}`;
-  }
-};
-
-export const executeRetriever = async (
-  args: RetrieverArgs,
-  config: Config
-): Promise<string> => {
-  const { query } = args;
-  if (!query || query.trim() === '') {
-    return 'Error: Query cannot be empty for retriever.';
-  }
-
-  try {
-    return await new Promise<string>((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        {
-          type: 'GET_HYBRID_SEARCH_RESULTS',
-          payload: { query, config }
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else if (response && response.success && response.results) {
-            resolve(JSON.stringify(response.results));
-          } else {
-            reject(new Error(response?.error || 'Unknown error from background retriever'));
-          }
-        }
-      );
-    });
-  } catch (error: any) {
-    console.error(`Error executing retriever for query "${query}":`, error);
-    return `Error performing retrieval: ${error.message || 'Unknown error'}`;
-  }
-};
-
-export const executeWebSearch = async (
-  args: WebSearchArgs,
-  config: Config
-): Promise<string> => {
-  const { queries } = args;
-
-  if (!Array.isArray(queries) || queries.length === 0 || !queries.every(q => q.query && q.query.trim() !== '')) {
-    return 'Error: "queries" must be a non-empty array of objects, each with a non-empty "query" string.';
-  }
-
-  const fallbackEngines: ('Google' | 'Duckduckgo' | 'Brave')[] = ['Google', 'Duckduckgo', 'Brave'];
-
-  const searchPromises = queries.map(async ({ query, engine }) => {
-    // This inner logic is mostly correct, but we will let it throw on failure.
-    const enginesToTry: (string | undefined)[] = [engine];
-    if (!engine) {
-      if (config.googleApiKey && config.googleCx) {
-        enginesToTry.push('GoogleCustomSearch');
-      }
-    }
-    enginesToTry.push(...fallbackEngines);
-    const uniqueEngines = [...new Set(enginesToTry.filter(Boolean))];
-
-    for (const currentEngine of uniqueEngines) {
-      for (let i = 0; i < 2; i++) { // Retry loop
-        try {
-          const searchConfig: Config = { ...config, webMode: currentEngine };
-          const result = await webSearch(query, searchConfig);
-          // On success, return the result string
-          return `Results for "${query}" (using ${currentEngine}):\n${result}`;
-        } catch (error: any) {
-          console.warn(`Web search with ${currentEngine} for query "${query}" failed. Attempt ${i + 1} of 2. Error: ${error.message}`);
-        }
-      }
-    }
-
-    // If the entire loop completes without returning, it means all engines failed.
-    // Instead of returning a string, we throw an error to make the promise reject.
-    throw new Error(`All search engines failed for the query: "${query}"`);
-  });
-
-  // Use Promise.allSettled to run all searches and collect all results,
-  // whether they succeeded or failed.
-  const settledResults = await Promise.allSettled(searchPromises);
-
-  // Now, map over the settled results to create a clean, final output string.
-  const finalResults = settledResults.map((result, index) => {
-    const query = queries[index].query;
-    if (result.status === 'fulfilled') {
-      // If the promise was fulfilled, the value is the success message.
-      return result.value;
-    } else {
-      // If the promise was rejected, the reason is the error.
-      // We format it into a user-friendly error message.
-      console.error(`Error executing web_search for query "${query}":`, result.reason);
-      return `Error performing web search for "${query}": ${result.reason.message || 'Unknown error'}`;
-    }
-  });
-
-  return finalResults.join('\n\n---\n\n');
-};
-
-export const executeWikipediaSearch = async (
-  args: WikipediaSearchArgs,
-  config: Config
-): Promise<string> => {
-  const { query } = args;
-
-  if (!query || query.trim() === '') {
-    return 'Error: "query" must be a non-empty string.';
-  }
-
-  try {
-    const searchConfig: Config = { ...config, webMode: 'Wikipedia' };
-    const result = await webSearch(query, searchConfig);
-    return `Results for "${query}" (using Wikipedia):\n${result}`;
-  } catch (error: any) {
-    console.error(
-      `Error executing wikipedia_search for query "${query}":`,
-      error
-    );
-    return `Error performing Wikipedia search: ${error.message || 'Unknown error'}`;
-  }
-};
-
-export const executeSaveNote = async (
-  args: SaveNoteArgs
-): Promise<{ success: boolean; message: string; noteId?: string }> => {
+export const executeSaveNote = async (args: SaveNoteArgs): Promise<{ success: boolean; message: string; note?: any }> => {
   const { content, title } = args;
   const llmTagsInput = args.tags;
 
   if (!content || content.trim() === '') {
     const msg = 'Note content cannot be empty for saving to system.';
+
     toast.error(msg);
+
     return { success: false, message: msg };
   }
 
   let parsedTags: string[] = [];
+
   if (typeof llmTagsInput === 'string') {
-    parsedTags = llmTagsInput
-      .split(',')
-      .map((tag: string) => tag.trim())
-      .filter((tag) => tag.length > 0);
+    parsedTags = llmTagsInput.split(',').map((tag: string) => tag.trim()).filter(tag => tag.length > 0);
   } else if (Array.isArray(llmTagsInput)) {
-    parsedTags = llmTagsInput
-      .map((tag: any) => String(tag).trim()) // Ensure tag is string before trim
-      .filter((tag) => tag.length > 0);
+    parsedTags = llmTagsInput.map((tag: string) => String(tag).trim()).filter(tag => tag.length > 0);
   }
 
   const timestamp = new Date().toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+ year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', 
+});
   const finalTitle = title?.trim() || `Note from AI - ${timestamp}`;
-
+  
   const noteToSave = {
-    // id will be generated by saveNoteInSystem if not provided or if it's a new note.
-    // For LLM creating a new note, id should typically be undefined.
-    // If LLM intends to update an existing note, it *could* provide an id,
-    // though current tool definition for save_note seems geared towards new notes.
-    id: args.id, 
     title: finalTitle,
     content: content,
     tags: parsedTags,
-    url: args.url, // Allow LLM to specify a URL if relevant
+
+    // id, createdAt, lastUpdatedAt will be handled by the background script or saveNoteInSystem
   };
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     chrome.runtime.sendMessage(
       {
         type: ChannelNames.SAVE_NOTE_REQUEST,
         payload: noteToSave,
       },
-      (response) => {
+      response => {
         if (chrome.runtime.lastError) {
-          console.error('Error sending SAVE_NOTE_REQUEST from toolExecutor:', chrome.runtime.lastError.message);
-          const msg = 'Failed to save note: Communication error with background script.';
+          console.error('Error sending SAVE_NOTE_REQUEST:', chrome.runtime.lastError.message);
+          const msg = 'Failed to save note: Communication error.';
+
           toast.error(msg);
           resolve({ success: false, message: msg });
-        } else if (response && response.success && response.note) {
-          const msg = 'Note saved to system successfully by tool!';
+
+          return;
+        }
+
+        if (response && response.success) {
+          const msg = 'Note saved to system successfully!';
+
           toast.success(msg);
-          resolve({ success: true, message: msg, noteId: response.note.id });
+          resolve({
+ success: true, message: msg, note: response.note, 
+});
         } else {
-          const errorMsg = response?.error || 'Unknown error saving note via background script.';
-          const warningMsg = response?.warning || null;
-          console.error('Failed to save note via background script from tool:', errorMsg, warningMsg ? `Warning: ${warningMsg}` : '');
-          const displayMsg = `Failed to save note: ${errorMsg}${warningMsg ? ` (${warningMsg})` : ''}`;
-          toast.error(displayMsg);
-          resolve({ success: false, message: displayMsg });
+          console.error('Failed to save note, background error:', response?.error);
+          const msg = `Failed to save note: ${response?.error || 'Unknown error'}`;
+
+          toast.error(msg);
+          resolve({ success: false, message: msg });
+        }
+      },
+    );
+  });
+};
+
+export const executeBrowsePage = (args: { url: string }): Promise<string> => {
+  const { url } = args;
+  if (!url) {
+    return Promise.resolve('Error: URL is required to browse a page.');
+  }
+
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        type: 'BROWSE_PAGE',
+        payload: { url },
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending BROWSE_PAGE message:', chrome.runtime.lastError.message);
+          resolve(`Error: Failed to browse page. Communication error: ${chrome.runtime.lastError.message}`);
+          return;
+        }
+        if (response.success) {
+          resolve(response.content);
+        } else {
+          resolve(`Error: ${response.error}`);
         }
       }
     );
@@ -526,150 +164,94 @@ export const executeSaveNote = async (
 
 export const executeUpdateMemory = (
   args: UpdateMemoryArgs,
-  currentNoteContent: string | undefined, // Passed from useTools
-  updateConfig: UpdateConfig // Passed from useTools
+  currentNoteContent: string | undefined,
+  updateConfig: (newConfig: Partial<Config>) => void,
 ): { success: boolean; message: string } => {
   const { summary } = args;
 
   if (!summary || summary.trim() === '') {
     const msg = 'Memory summary cannot be empty.';
+
     toast.error(msg);
+
     return { success: false, message: msg };
   }
 
   try {
     const today = new Date().toLocaleDateString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+ year: 'numeric', month: 'short', day: 'numeric', 
+});
     const memoryEntry = `${summary.trim()} (on ${today})`;
 
-    const separator = currentNoteContent && memoryEntry ? '\n\n' : '';
-    const newNoteContent = (currentNoteContent || '') + separator + memoryEntry;
+    const currentNote = currentNoteContent || '';
+    const separator = currentNote && memoryEntry ? '\n\n' : '';
+    const newNoteContent = currentNote + separator + memoryEntry;
 
     updateConfig({ noteContent: newNoteContent });
     const msg = 'Memory updated in popover note.';
+
     toast.success(msg);
+
     return { success: true, message: msg };
   } catch (error) {
     console.error('Error updating memory in popover note:', error);
     const msg = 'Failed to update memory.';
+
     toast.error(msg);
+
     return { success: false, message: msg };
   }
 };
 
-export const executeFetcher = async (args: FetcherArgs): Promise<string> => {
-  try {
-    const content = await scrapeUrlContent(args.url);
-    return content;
-  } catch (error: any) {
-    console.error(`Error executing fetcher for URL ${args.url}:`, error);
-    // Rethrow or return a specific error message string
-    if (typeof error === 'string' && error.startsWith('[Error scraping URL:')) {
-        return error;
-    }
-    return `Error fetching content for ${args.url}: ${error.message || 'Unknown error'}`;
-  }
+export const executeFetch = async (args: FetcherArgs): Promise<string> => {
+  return scrapeUrlContent(args.url);
 };
 
-export const executeSummarizer = async (
-  args: SummarizerArgs,
-  config: Config
-): Promise<string> => {
-  const { text, task_context } = args;
-  if (!text || text.trim() === '') {
-    return 'Error: Content cannot be empty for summarizer.';
+export const executeWebSearch = async (args: WebSearchArgs, config: Config): Promise<string> => {
+  const configCopy = { ...config };
+
+  if (args.engine) {
+    configCopy.webMode = args.engine;
   }
 
-  // Provide context to the LLM so it knows what's important
-  const contextInstruction = task_context 
-    ? `The user's original goal was: "${task_context}". Focus the summary on information relevant to this goal.`
-    : 'Create a concise and informative summary of the following text.';
-
-  try {
-    const summaryPrompt = `
-      ${contextInstruction}
-
-      TEXT TO SUMMARIZE:
-      ---
-      ${text}
-      ---
-
-      SUMMARY:
-    `;
-    const summary = await prompt(summaryPrompt);
-    return summary;
-  } catch (error: any) {
-    console.error(`Error executing summarize for text:`, error);
-    return `Error summarizing text: ${error.message || 'Unknown error'}`;
-  }
+  return webSearch(args.query, configCopy);
 };
-// This can be used as a fallback if the planner fails to generate a valid plan.
-// It will try to generate a plan based on the task and feedback, then execute it.
-export const executeSmartDispatcher = async (
-  args: SmartDispatcherArgs,
-  config: Config,
-  executeToolCall: (toolCall: any) => Promise<any>
-): Promise<string> => {
-  const { task } = args;
-  const MAX_REPAIR_ATTEMPTS = 2; // Try to generate a plan, then repair it once.
-  const availableTools = ['web_search', 'wikipedia_search', 'summarizer', 'retriever', 'save_note', 'fetcher', 'prompt_optimizer', 'update_memory'];
 
-  let lastError = '';
-  let planObject: any = null;
+export const executeOpenTab = (args: OpenTabArgs): Promise<{ success: boolean; message: string }> => {
+  const { url } = args;
 
-  for (let attempt = 0; attempt < MAX_REPAIR_ATTEMPTS; attempt++) {
-    console.log(`[SmartDispatcher] Planning attempt ${attempt + 1}...`);
-
-    // 1. Generate a plan (with feedback from the previous failed attempt if any)
-    const rawPlan = await executePlanner({ task, feedback: lastError }, config);
-
-    if (rawPlan.startsWith('Error:')) {
-      return `Error during planning phase: ${rawPlan}`;
-    }
-
-    // 2. Clean the plan (remove markdown)
-    let cleanPlanJson = rawPlan.trim();
-    const match = cleanPlanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (match && match[1]) {
-      cleanPlanJson = match[1];
-    }
-
-    // 3. Try to parse and validate the plan
-    try {
-      planObject = JSON.parse(cleanPlanJson);
-      
-      const invalidSteps = planObject.steps.filter(
-        (step: any) => !availableTools.includes(step.tool_name)
-      );
-
-      if (invalidSteps.length === 0) {
-        // SUCCESS! The plan is valid.
-        console.log('[SmartDispatcher] Successfully generated a valid plan:', JSON.stringify(planObject, null, 2));
-        // Exit the loop and proceed to execution
-        break; 
-      } else {
-        // The plan is valid JSON but uses the wrong tools.
-        const invalidToolNames = invalidSteps.map((step: any) => step.tool_name).join(', ');
-        lastError = `The plan was invalid because it used non-existent tools: [${invalidToolNames}]. You MUST ONLY use tools from this list: ${JSON.stringify(availableTools)}.`;
-        planObject = null; // Invalidate the plan so we don't execute it.
-      }
-    } catch (e: any) {
-      // The plan is not even valid JSON.
-      lastError = `The plan was invalid because it was not correctly formatted JSON. The error was: ${e.message}. Please provide a single, clean JSON object.`;
-      planObject = null; // Invalidate the plan.
-    }
+  if (!url || !url.trim()) {
+    const msg = 'URL is required to open a tab.';
+    toast.error(msg);
+    return Promise.resolve({ success: false, message: msg });
   }
 
-  // 4. After the loop, check if we have a valid plan or not
-  if (!planObject) {
-    console.error('[SmartDispatcher] Failed to generate a valid plan after all attempts.');
-    return `Error: Failed to create a valid plan. Last known error: ${lastError}`;
-  }
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage(
+      {
+        type: ChannelNames.OPEN_TAB,
+        payload: { url },
+      },
+      response => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending OPEN_TAB message:', chrome.runtime.lastError.message);
+          const msg = 'Failed to open tab: Communication error.';
+          toast.error(msg);
+          resolve({ success: false, message: msg });
+          return;
+        }
 
-  // 5. If we have a valid plan, execute it.
-  console.log('[SmartDispatcher] Proceeding to execution...');
-  return await executeExecutor({ plan: JSON.stringify(planObject) }, executeToolCall);
+        if (response && response.success) {
+          const msg = `Tab opened with URL: ${url}`;
+          toast.success(msg);
+          resolve({ success: true, message: msg });
+        } else {
+          console.error('Failed to open tab, background error:', response?.error);
+          const msg = `Failed to open tab: ${response?.error || 'Unknown error'}`;
+          toast.error(msg);
+          resolve({ success: false, message: msg });
+        }
+      },
+    );
+  });
 };

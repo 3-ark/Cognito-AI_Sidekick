@@ -1,55 +1,67 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { toast, Toaster } from 'react-hot-toast';
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/src/background/util";
+import {
+ useCallback,useEffect, useRef, useState, 
+} from 'react';
+import { toast } from 'react-hot-toast';
 
+import {
+ downloadImage, downloadJson, downloadMarkdown,downloadText, 
+} from '../background/messageUtils';
+import ChannelNames from '../types/ChannelNames';
+import { Conversation, MessageTurn } from '../types/chatTypes';
+import type {
+ ChatMode, ChatStatus, 
+} from '../types/config';
+import { Note } from '../types/noteTypes';
+
+import { ActionButtons } from './components/ActionButtons';
+import { PageActionButtons } from './components/PageActionButtons';
+import { WebSearchModeButtons } from './components/WebSearchModeButtons';
+import { useAddToNote } from './hooks/useAddToNote';
 import { useChatTitle } from './hooks/useChatTitle';
+import { useRetriever } from './hooks/useRetriever';
 import useSendMessage from './hooks/useSendMessage';
-import { useUpdateModels } from './hooks/useUpdateModels';
+import { injectBridge } from './utils/contentExtraction';
+import { clearPageContextFromStorage } from './utils/storageUtils';
 import { Background } from './Background';
 import { ChatHistory } from './ChatHistory'; 
 import { useConfig } from './ConfigContext';
-import type { Config, ChatMode, ChatStatus } from '../types/config';
+import { Connect as ApiSettingsPanel } from './Connect';
+import { Customize } from './Customize';
 import { Header } from './Header';
-import { 
-    saveChatMessage,
-    generateChatId as storageGenerateChatId,
-    ChatMessage as StorageChatMessage,
-    MessageTurn as StorageMessageTurn,
-    ChatMessageWithEmbedding,
-    deleteAllChatMessages as storageDeleteAllChatMessages // Import service deleteAll
-} from '../background/chatHistoryStorage';
 import { Input } from './Input';
 import { Messages } from './Messages';
-import { downloadImage, downloadJson, downloadText, downloadMarkdown } from '../background/messageUtils';
-import { Settings } from './Settings';
-import { clearPageContextFromStorage } from './utils/storageUtils';
-import { ActionButtons } from './components/ActionButtons';
-// localforage is no longer needed here if deleteAllChatMessages service is used.
-// import localforage from 'localforage'; 
-import { PageActionButtons } from './components/PageActionButtons';
-import { WebSearchModeButtons } from './components/WebSearchModeButtons';
-import { injectBridge } from './utils/contentExtraction';
-import ChannelNames from '../types/ChannelNames';
-import { useAddToNote } from './hooks/useAddToNote';
-import { NoteSystemView } from './NoteSystemView';
-import { Note } from '../types/noteTypes';
 
-// Local generateChatId removed, storageGenerateChatId from import will be used.
+// Import the new panel components that will be rendered as pages
+import { ModelSettingsPanel } from './ModelSettingsPanel';
+import { NoteSystemView } from './NoteSystemView';
+import { RagSettingsPanel } from './RagSettingsPanel';
+import { Settings } from './Settings';
+import { WebSearchPage } from './WebSearchPage';
+import { PageSettings } from './PageSettings';
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { cn } from "@/src/background/util";
 
 const Cognito = () => {
-  const [turns, setTurns] = useState<StorageMessageTurn[]>([]); 
-  const [message, setMessage] = useState('');
-  const [retrieverQuery, setRetrieverQuery] = useState('');
-  const [chatId, setChatId] = useState(storageGenerateChatId()); 
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [turns, setTurns] = useState<MessageTurn[]>([]);
+  const [message, setMessage] = useState(''); 
   const [webContent, setWebContent] = useState('');
   const [pageContent, setPageContent] = useState('');
-  const [isLoading, setLoading] = useState(false);
-  const [settingsMode, setSettingsMode] = useState(false);
-  const [historyMode, setHistoryMode] = useState(false);
+  const [isLoading, setLoading] = useState(false); 
   const { config, updateConfig } = useConfig();
-  const [noteSystemMode, setNoteSystemMode] = useState(false);
   const [currentTabInfo, setCurrentTabInfo] = useState<{ id: number | null, url: string }>({ id: null, url: '' });
+
+  // Page mode states
+  const [settingsMode, setSettingsMode] = useState(false); // Legacy settings page
+  const [historyMode, setHistoryMode] = useState(false);
+  const [noteSystemMode, setNoteSystemMode] = useState(false);
+  const [modelSettingsPageMode, setModelSettingsPageMode] = useState(false); // New
+  const [apiSettingsPageMode, setApiSettingsPageMode] = useState(false);     // New
+  const [ragSettingsPageMode, setRagSettingsPageMode] = useState(false);       // New
+  const [customizePageMode, setCustomizePageMode] = useState(false);
+  const [webSearchPageMode, setWebSearchPageMode] = useState(false);
+  const [pageSettingsPageMode, setPageSettingsPageMode] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedRef = useRef<{ id: number | null, url: string }>({ id: null, url: '' });
@@ -59,10 +71,23 @@ const Cognito = () => {
   const [chatStatus, setChatStatus] = useState<ChatStatus>('idle');
   const [triggerNoteCreation, setTriggerNoteCreation] = useState(false);
   const [triggerImportNoteFlow, setTriggerImportNoteFlow] = useState(false);
-  const [triggerSelectNotesFlow, setTriggerSelectNotesFlow] = useState(false); // New state for select notes flow
+  const [triggerSelectNotesFlow, setTriggerSelectNotesFlow] = useState(false); 
   const [selectedNotesForContext, setSelectedNotesForContext] = useState<Note[]>([]);
+  const [chatHistoryRefreshKey, setChatHistoryRefreshKey] = useState(0);
+  const [sessionContext, setSessionContext] = useState("");
+  const [tempContext, setTempContext] = useState("");
+
+  // Retriever state and functions
+  const {
+    retrieverResults,
+    isRetrieving, // Loading state for retriever
+    retrieve,
+    clearRetrieverResults,
+  } = useRetriever();
+  const processedRetrieverQueryRef = useRef<string | null>(null); // To avoid re-processing same retriever results
 
   const toastIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
       if (containerRef.current) {
@@ -74,7 +99,9 @@ const Cognito = () => {
         });
       }
     });
+
     if (containerRef.current) resizeObserver.observe(containerRef.current);
+
     return () => resizeObserver.disconnect();
   }, []);
 
@@ -83,14 +110,17 @@ const Cognito = () => {
 
     const checkAndInject = async () => {
       const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+
       if (!tab?.id || !tab.url) return;
 
       if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
           if (lastInjectedRef.current.id !== tab.id || lastInjectedRef.current.url !== tab.url) {
               await clearPageContextFromStorage();
           }
+
           lastInjectedRef.current = { id: tab.id, url: tab.url };
           setCurrentTabInfo({ id: tab.id, url: tab.url });
+
           return;
       }
 
@@ -98,18 +128,19 @@ const Cognito = () => {
         lastInjectedRef.current = { id: tab.id, url: tab.url };
         setCurrentTabInfo({ id: tab.id, url: tab.url });
         await injectBridge();
-      } else {
       }
     };
 
     checkAndInject();
 
     const handleTabActivated = (activeInfo: chrome.tabs.OnActivatedInfo) => {
-      chrome.tabs.get(activeInfo.tabId, (tab) => {
+      chrome.tabs.get(activeInfo.tabId, tab => {
         if (chrome.runtime.lastError) {
           console.warn(`[Cognito ] Error getting tab info on activation: ${chrome.runtime.lastError.message}`);
+
           return;
         }
+
         checkAndInject();
       });
     };
@@ -132,7 +163,6 @@ const Cognito = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-
       if (settingsMode || historyMode || noteSystemMode) {
         return;
       }
@@ -156,31 +186,36 @@ const Cognito = () => {
         if (toastIdRef.current) {
           toast.dismiss(toastIdRef.current);
         }
+
         toastIdRef.current = toast(toastMessage);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [config?.chatMode, updateConfig, settingsMode, historyMode]);
+  }, [config?.chatMode, updateConfig, settingsMode, historyMode, noteSystemMode]);
 
   useEffect(() => {
     const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void): boolean | undefined => {
+
       if (message.type === "ACTIVATE_NOTE_SYSTEM_VIEW") {
-        console.log('[Cognito.tsx] Received ACTIVATE_NOTE_SYSTEM_VIEW. Switching to Note System mode.');
+        console.log('[cognito.tsx] Received ACTIVATE_NOTE_SYSTEM_VIEW. Switching to Note System mode.');
         setSettingsMode(false);
         setHistoryMode(false);
         setNoteSystemMode(true);
-        
         sendResponse({ status: "ACTIVATING_NOTE_SYSTEM_VIEW_ACK" });
+
         return true;
       }
+
       return false;
     };
 
     chrome.runtime.onMessage.addListener(messageListener);
+
     return () => {
       chrome.runtime.onMessage.removeListener(messageListener);
     };
@@ -190,7 +225,6 @@ const Cognito = () => {
 
   useEffect(() => {
     const port = chrome.runtime.connect({ name: ChannelNames.SidePanelPort });
-
     const messageListener = (message: any) => {
       if (message.type === "ADD_SELECTION_TO_NOTE" && message.payload) {
         appendToNote(message.payload);
@@ -198,7 +232,6 @@ const Cognito = () => {
     };
 
     port.onMessage.addListener(messageListener);
-
     port.postMessage({ type: 'init' });
 
     return () => {
@@ -211,40 +244,212 @@ const Cognito = () => {
     setNoteSystemMode(true); 
     setTriggerImportNoteFlow(true);
   };
-
-  const handleImportTriggered = () => {
+  const handleImportTriggered = useCallback(() => {
     setTriggerImportNoteFlow(false);
-  };
+  }, [setTriggerImportNoteFlow]);
 
   const handleSelectNotesRequest = () => {
     setNoteSystemMode(true);
-    setTriggerSelectNotesFlow(true); // Trigger the select notes flow
+    setTriggerSelectNotesFlow(true); 
+  };
+  const handleSelectNotesFlowTriggered = useCallback(() => {
+    setTriggerSelectNotesFlow(false); 
+  }, [setTriggerSelectNotesFlow]);
+
+  const handleTitleGenerated = useCallback((updatedConversation: Conversation) => {
+    setCurrentConversation(updatedConversation);
+  }, []);
+
+  const { chatTitle, setChatTitle } = useChatTitle(isLoading, currentConversation, turns, handleTitleGenerated);
+
+  const handleTitleChange = (newTitle: string) => {
+    if (currentConversation) {
+      const updatedConversation = { ...currentConversation, title: newTitle };
+
+      setCurrentConversation(updatedConversation);
+      setChatTitle(newTitle);
+
+      chrome.runtime.sendMessage({
+        type: ChannelNames.SAVE_CHAT_REQUEST,
+        payload: { conversation: updatedConversation },
+      });
+    }
   };
 
-  const handleSelectNotesFlowTriggered = () => {
-    setTriggerSelectNotesFlow(false); // Reset the trigger
-  };
-
-  const { chatTitle, setChatTitle } = useChatTitle(isLoading, turns, message);
-  const { onSend, onStop } = useSendMessage(
+  const { onSend: sendToLLMHook, onStop } = useSendMessage(
     isLoading,
     message,
+    currentConversation,
     turns,
-    webContent,
+    setTurns,
     config,
     selectedNotesForContext,
-    retrieverQuery, // Pass retrieverQuery
-    setTurns,
+    retrieverResults,
     setMessage,
-    setRetrieverQuery, // Pass setRetrieverQuery
     setWebContent,
     setPageContent,
     setLoading,
-    setChatStatus
+    setChatStatus,
+    sessionContext,
+    setSessionContext,
   );
-  useUpdateModels();
 
-  const reset = () => {
+  // Handler for /r command submitted from Input.tsx
+  const handleRetrieveFromInput = async (query: string) => {
+    if (isRetrieving || isLoading) return;
+
+    const conv = await ensureConversation();
+
+    const userTurn: MessageTurn = {
+        id: `user_${Date.now()}`,
+        role: 'user',
+        content: `/r ${query}`,
+        status: 'complete',
+        timestamp: Date.now(),
+        conversationId: conv.id,
+    };
+
+    // Immediately add the user's turn to the display
+    setTurns(prev => [...prev, userTurn]);
+
+    // Save the user's turn to storage and update the conversation state
+    chrome.runtime.sendMessage(
+      {
+        type: ChannelNames.SAVE_CHAT_REQUEST,
+        payload: { conversation: conv, message: userTurn },
+      },
+      (response) => {
+        if (response.success && response.conversation) {
+          setCurrentConversation(response.conversation);
+          const savedUserTurn = response.message;
+          if (savedUserTurn) {
+            setTurns(prev => prev.map(t => (t.id === userTurn.id ? savedUserTurn : t)));
+          }
+        }
+      }
+    );
+
+    setMessage(''); // Clear input bar
+    await retrieve(query); // This is async, from useRetriever. It will set retrieverResults.
+  };
+  
+  // Effect to automatically send message to LLM when retriever results are ready
+  useEffect(() => {
+    if (
+      retrieverResults &&
+      retrieverResults.query && 
+      retrieverResults.formattedResults && // Make sure there's some formatted context
+      retrieverResults.query !== processedRetrieverQueryRef.current && // Only process new queries
+      !isRetrieving && // Ensure retrieval itself is complete
+      !isLoading    // Ensure we are not already waiting for an LLM response from a previous send
+    ) {
+      const queryToSend = retrieverResults.query; // This is the clean query, e.g., "tell me about bm25"
+      
+      const hasActualResults = retrieverResults.results && retrieverResults.results.length > 0;
+      const isErrorFormattedResult = retrieverResults.formattedResults.toLowerCase().startsWith("error performing search");
+      
+      if (hasActualResults && !isErrorFormattedResult) {
+        console.log(`[Cognito DEBUG] useEffect about to call sendToLLMHook with query: "${queryToSend}"`);
+        console.log(`[Cognito] useEffect: Retriever results ready for query "${queryToSend}". Auto-sending to LLM.`);
+        (async () => {
+          const updatedConversation = await sendToLLMHook(queryToSend, currentConversation || undefined, { skipUserTurn: true });
+          if (updatedConversation) {
+            setCurrentConversation(updatedConversation);
+          }
+          clearRetrieverResults();
+        })();
+        processedRetrieverQueryRef.current = queryToSend;
+      } else if (retrieverResults.formattedResults) {
+        console.log(`[Cognito] useEffect: Retriever found no actual results or an error for query "${queryToSend}". Displaying info turn and not sending to LLM.`);
+        const infoTurn: MessageTurn = {
+            id: `info_${Date.now()}`,
+            role: 'assistant',
+            content: retrieverResults.formattedResults,
+            status: 'complete',
+            timestamp: Date.now(),
+            conversationId: currentConversation?.id || '',
+        };
+
+        setTurns(prevTurns => [...prevTurns, infoTurn]);
+        chrome.runtime.sendMessage({ type: ChannelNames.SAVE_CHAT_REQUEST, payload: { conversation: currentConversation, message: infoTurn } });
+        processedRetrieverQueryRef.current = queryToSend;
+        clearRetrieverResults();
+      }
+    }
+  }, [retrieverResults, isRetrieving, isLoading, sendToLLMHook, clearRetrieverResults, currentConversation]);
+
+  useEffect(() => {
+    if ((chatStatus === 'idle' || chatStatus === 'done') && retrieverResults) {
+      clearRetrieverResults();
+    }
+  }, [chatStatus, retrieverResults, clearRetrieverResults]);
+
+  const ensureConversation = async () => {
+    if (currentConversation) {
+      return currentConversation;
+    }
+
+    // Don't save yet, just create in memory
+    const newConversation: Conversation = {
+      id: `temp-${Date.now()}`,
+      title: "",
+      createdAt: Date.now(),
+      lastUpdatedAt: Date.now(),
+      ...(config?.chatMode === 'page' && { url: currentTabInfo.url }),
+    };
+
+    setCurrentConversation(newConversation);
+
+    return newConversation;
+  };
+
+  const handleSendMessage = async (messageToSend: string) => {
+    if (isLoading || isRetrieving) return;
+
+    let conversationToUse = currentConversation;
+    if (!conversationToUse) {
+      conversationToUse = await ensureConversation();
+    }
+
+    let finalContext = sessionContext;
+
+    if (tempContext) {
+      finalContext += tempContext;
+      setTempContext("");
+    }
+
+    if (conversationToUse && !conversationToUse.id.startsWith('temp-')) {
+      const contextKey = `session_context_${conversationToUse.id}`;
+
+      chrome.storage.local.set({ [contextKey]: finalContext });
+      setSessionContext(finalContext);
+    }
+
+    const trimmedMessage = messageToSend.trim();
+
+    if (trimmedMessage) {
+      setMessage('');
+      setSelectedNotesForContext([]);
+      const updatedConversation = await sendToLLMHook(trimmedMessage, conversationToUse, { context: finalContext });
+      if (updatedConversation) {
+        setCurrentConversation(updatedConversation);
+      }
+    }
+  };
+
+  const handleSendFromInput = (messageFromInputBar: string) => {
+    handleSendMessage(messageFromInputBar);
+  };
+
+  const reset = async () => {
+    if (currentConversation && !currentConversation.id.startsWith('temp-')) {
+      const contextKey = `session_context_${currentConversation.id}`;
+
+      chrome.storage.local.remove(contextKey);
+    }
+
+    await clearPageContextFromStorage();
+    setCurrentConversation(null);
     setTurns([]);
     setPageContent('');
     setWebContent('');
@@ -252,121 +457,111 @@ const Cognito = () => {
     updateConfig({ chatMode: undefined });
     setChatStatus('idle');    
     setMessage('');
-    setRetrieverQuery(''); // Clear retriever query on reset
     setChatTitle('');
-    setChatId(storageGenerateChatId());
     setHistoryMode(false);
     setSettingsMode(false); 
     setNoteSystemMode(false);
     setSelectedNotesForContext([]);
+    setSessionContext("");
+    setTempContext("");
+    clearRetrieverResults();
+    processedRetrieverQueryRef.current = null;
+
     if (containerRef.current) {
         containerRef.current.scrollTop = 0;
     }
   };
 
   const onReload = () => {
-    setTurns(prevTurns => {
-      if (prevTurns.length < 2) return prevTurns;
-      const last = prevTurns[prevTurns.length - 1];
-      const secondLast = prevTurns[prevTurns.length - 2];
-      if (last.role === 'assistant' && secondLast.role === 'user') {
-        setMessage(secondLast.content);
-        return prevTurns.slice(0, -2);
-      }
-      return prevTurns;
-    });
-    setLoading(false);
-    setChatStatus('idle');
+    const lastUserTurn = [...turns].reverse().find(t => t.role === 'user');
+
+    if (lastUserTurn) {
+      handleContinueTurn(lastUserTurn.id);
+    }
   };
 
-  const loadChat = async (chat: StorageChatMessage) => { // Use aliased type
-    setChatTitle(chat.title || '');
-    setTurns(chat.turns); // Ensure turns are compatible with StorageMessageTurn[]
-    setChatId(chat.id); // This ID comes from storage, should be prefixed.
+  const loadChat = (conversation: Conversation) => {
+    setCurrentConversation(conversation);
+    chrome.runtime.sendMessage({ type: ChannelNames.GET_CHAT_MESSAGES_REQUEST, payload: { conversationId: conversation.id } }, response => {
+      if (response.success) {
+        setTurns(response.messages);
+      }
+    });
     setHistoryMode(false);
     setChatStatus('idle');
     setSettingsMode(false);
+    setMessage('');
+    setSelectedNotesForContext([]);
+    clearRetrieverResults();
+    processedRetrieverQueryRef.current = null;
 
     updateConfig({
-      useNote: chat.useNoteActive ?? false,
-      selectedModel: chat.model || config.selectedModel,
-      chatMode: chat.chatMode === 'page' || chat.chatMode === 'web' ? chat.chatMode : undefined, // Ensure valid chatMode
-      webMode: chat.webMode || config.webMode,
+      useNote: conversation.useNoteActive ?? false,
+      selectedModel: conversation.model || config.selectedModel,
+      chatMode: conversation.chatMode === 'page' || conversation.chatMode === 'web' ? conversation.chatMode : undefined,
+      webMode: conversation.webMode || config.webMode,
     });
 
-    if (chat.chatMode !== 'page') {
-      await clearPageContextFromStorage();
+    if (conversation.chatMode !== 'page') {
+      clearPageContextFromStorage();
       lastInjectedRef.current = { id: null, url: '' };
     }
   }
 
   const deleteAll = async () => {
-    try {
-        // Use the imported service function for deleting all chats
-        await storageDeleteAllChatMessages();
+    chrome.runtime.sendMessage({ type: ChannelNames.DELETE_ALL_CHATS_REQUEST }, response => {
+      if (response.success) {
+        reset();
+        setChatHistoryRefreshKey(k => k + 1);
         toast.success("Deleted all chats");
-        reset(); // This will clear local state like 'turns'
-    } catch (error) {
-        console.error("[Cognito] Error deleting all chats via service:", error);
-        toast.error("Failed to delete chats");
-    }
+      } else {
+        toast.error("Failed to delete all chats.");
+      }
+    });
   };
 
-  useEffect(() => {
-    if (turns.length > 0 && !historyMode && !settingsMode && !noteSystemMode) {
-      // Ensure the object passed to saveChatMessage matches ChatMessageWithEmbedding
-      const chatToSave: ChatMessageWithEmbedding = {
-        id: chatId, // This ID is now generated by storageGenerateChatId, includes prefix.
-        title: chatTitle || `Chat ${new Date(Date.now()).toLocaleString()}`,
-        turns,
-        last_updated: Date.now(), // saveChatMessage handles this for existing chats.
-        model: config?.selectedModel,
-        chatMode: config?.chatMode,
-        webMode: config?.chatMode === 'web' ? config.webMode : undefined,
-        useNoteActive: config?.useNote,
-        noteContentUsed: config?.useNote ? config.noteContent : undefined,
-        // embedding property is optional; saveChatMessage handles if it's undefined.
-      };
-      // Send message to background to save and index the chat
-      chrome.runtime.sendMessage({ type: 'SAVE_CHAT_REQUEST', payload: chatToSave }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error(`[Cognito] Error sending SAVE_CHAT_REQUEST for chat ${chatId}:`, chrome.runtime.lastError.message);
-          // Optionally, handle UI feedback for save failure here
-        } else if (response && !response.success) {
-          console.error(`[Cognito] Background failed to save/index chat ${chatId}:`, response.error);
-          // Optionally, handle UI feedback for save failure here
-        } else {
-          // console.log(`[Cognito] Chat ${chatId} save request sent and acknowledged.`);
+  const handleDeleteSingleChat = useCallback((chatIdToDelete: string) => {
+    chrome.runtime.sendMessage({ type: ChannelNames.DELETE_CHAT_REQUEST, payload: { chatId: chatIdToDelete } }, response => {
+      if (response.success) {
+        if (currentConversation?.id === chatIdToDelete) {
+          reset();
         }
-      });
-    }
-  }, [chatId, turns, chatTitle, config?.selectedModel, config?.chatMode, config?.webMode, config?.useNote, config?.noteContent, historyMode, settingsMode, noteSystemMode]); // Added noteSystemMode to dependencies
+
+        setChatHistoryRefreshKey(k => k + 1);
+        toast.success("Chat deleted.");
+      } else {
+        toast.error("Failed to delete chat.");
+      }
+    });
+  }, [currentConversation]);
 
    useEffect(() => {
-    if (chatStatus === 'done' || chatStatus === 'idle') {
+    if (chatStatus === 'done' || chatStatus === 'idle') { 
       const timer = setTimeout(() => {
         setChatStatus('idle');
       }, 1500);
+
       return () => clearTimeout(timer);
     }
-  }, [chatStatus]);
+  }, [chatStatus, setChatStatus]); 
 
   useEffect(() => {
     let cancelled = false;
 
     const handlePanelOpen = async () => {
       if (cancelled) return;
+
       reset();
 
       try {
         const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+
         if (!cancelled && tab?.id && tab.url) {
             setCurrentTabInfo({ id: tab.id, url: tab.url });
 
             if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
                 await clearPageContextFromStorage();
                 lastInjectedRef.current = { id: null, url: '' };
-            } else {
             }
         } else if (!cancelled) {
             lastInjectedRef.current = { id: null, url: '' };
@@ -388,7 +583,6 @@ const Cognito = () => {
     return () => {
       cancelled = true;
       clearPageContextFromStorage();
-      reset();
       lastInjectedRef.current = { id: null, url: '' };
     };
   }, []);
@@ -398,31 +592,66 @@ const Cognito = () => {
   }, []);
 
   const handleEditTurn = (index: number, newContent: string) => {
-    setTurns(prevTurns => {
-      const updatedTurns = [...prevTurns];
-      if (updatedTurns[index]) {
-        updatedTurns[index] = { ...updatedTurns[index], content: newContent };
+    const turn = turns[index];
+
+    if (turn) {
+      const updatedTurn = { ...turn, content: newContent };
+
+      chrome.runtime.sendMessage({ type: ChannelNames.SAVE_CHAT_REQUEST, payload: { conversation: currentConversation, message: updatedTurn } }, response => {
+        if (response.success) {
+          const newTurns = [...turns];
+
+          newTurns[index] = response.message;
+          setTurns(newTurns);
+        }
+      });
+    }
+  };
+
+  const handleDeleteTurn = (messageId: string) => {
+    chrome.runtime.sendMessage({ type: ChannelNames.DELETE_CHAT_MESSAGE_REQUEST, payload: { messageId: messageId } }, response => {
+      if (response.success) {
+        setTurns(turns.filter(turn => turn.id !== messageId));
       }
-      return updatedTurns;
     });
   };
 
-  useEffect(() => {
-    // If the last visible message is hidden (assistant with tool_calls), set status to idle after a delay
-    const lastTurn = turns[turns.length - 1];
-    if (
-      lastTurn &&
-      lastTurn.role === 'assistant' &&
-      (
-        (lastTurn.tool_calls && lastTurn.tool_calls.length > 0) ||
-        lastTurn.status === 'streaming'
-      ) &&
-      !isLoading // Only set idle if not loading
-    ) {
-      const timer = setTimeout(() => setChatStatus('idle'), 1200);
-      return () => clearTimeout(timer);
+  const handleContinueTurn = (messageId: string) => {
+    const turnIndex = turns.findIndex(turn => turn.id === messageId);
+
+    if (turnIndex === -1) return;
+
+    const newTurns = turns.slice(0, turnIndex + 1);
+    const assistantTurnToDelete = turns[turnIndex + 1];
+
+    const options: { turns: MessageTurn[]; deleteMessageId?: string } = {
+        turns: newTurns,
+    };
+
+    if (assistantTurnToDelete && assistantTurnToDelete.role === 'assistant') {
+        options.deleteMessageId = assistantTurnToDelete.id;
     }
-  }, [turns, isLoading]);
+
+    sendToLLMHook(newTurns[newTurns.length - 1].content, undefined, options);
+  };
+  
+  const isAnyPageModeActive = settingsMode || historyMode || noteSystemMode || modelSettingsPageMode || apiSettingsPageMode || ragSettingsPageMode || customizePageMode || webSearchPageMode || pageSettingsPageMode;
+
+  const handleClearContext = () => {
+    if (currentConversation && !currentConversation.id.startsWith('temp-')) {
+      const contextKey = `session_context_${currentConversation.id}`;
+
+      chrome.storage.local.remove(contextKey, () => {
+        setSessionContext("");
+        toast.success("Context cleared.");
+      });
+    }
+
+    if (tempContext) {
+      setTempContext("");
+      toast.success("Context cleared.");
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -430,138 +659,137 @@ const Cognito = () => {
         ref={containerRef}
         className={cn(
           "w-full h-dvh p-0 overflow-hidden",
-          "flex flex-col bg-[var(--bg)]"
+          "flex flex-col bg-[var(--bg)]",
         )}
       >
           <Header
+            apiSettingsPageMode={apiSettingsPageMode}
+            chatMode={(config?.chatMode as ChatMode) || 'chat'}
+            chatStatus={chatStatus}
             chatTitle={chatTitle}
+            onTitleChange={handleTitleChange}
+            customizePageMode={customizePageMode}
             deleteAll={deleteAll}
             downloadImage={() => downloadImage(turns)}
             downloadJson={() => downloadJson(turns)}
-            downloadText={() => downloadText(turns)}
             downloadMarkdown={() => downloadMarkdown(turns)}
+            downloadText={() => downloadText(turns)}
             historyMode={historyMode}
+            modelSettingsPageMode={modelSettingsPageMode}
+            noteSystemMode={noteSystemMode}
+            ragSettingsPageMode={ragSettingsPageMode}
             reset={reset}
+            setApiSettingsPageMode={setApiSettingsPageMode}
+            setCustomizePageMode={setCustomizePageMode}
             setHistoryMode={setHistoryMode}
+            setModelSettingsPageMode={setModelSettingsPageMode}
+            setNoteSystemMode={setNoteSystemMode}
+            setRagSettingsPageMode={setRagSettingsPageMode}
             setSettingsMode={setSettingsMode}
             settingsMode={settingsMode}
-            noteSystemMode={noteSystemMode}
+            setWebSearchPageMode={setWebSearchPageMode}
+            webSearchPageMode={webSearchPageMode}
+            pageSettingsPageMode={pageSettingsPageMode}
+            setPageSettingsPageMode={setPageSettingsPageMode}
             onAddNewNoteRequest={() => {
               setNoteSystemMode(true);
               setTriggerNoteCreation(true);
-            }}
+            }} 
             onImportNoteRequest={handleImportNoteRequest}
-            onSelectNotesRequest={handleSelectNotesRequest} // Pass the handler
-            setNoteSystemMode={setNoteSystemMode}
-            chatMode={(config?.chatMode as ChatMode) || 'chat'}
-            chatStatus={chatStatus}
+            onSelectNotesRequest={handleSelectNotesRequest}
           />
         <div className="flex flex-col flex-1 min-h-0 no-scrollbar overflow-y-auto relative">
-          {settingsMode && (
-            <Settings />
-          )}
-
-          {!settingsMode && historyMode && !noteSystemMode && (
-            <ChatHistory
-              className="flex-1 w-full min-h-0"
-              loadChat={loadChat}
-              onDeleteAll={deleteAll}
-            />
-          )}
-
-          {!settingsMode && !historyMode && noteSystemMode && (
-            <NoteSystemView
-              triggerOpenCreateModal={triggerNoteCreation}
-              onModalOpened={handleNoteModalOpened}
-              triggerImportNoteFlow={triggerImportNoteFlow}
-              onImportTriggered={handleImportTriggered}
-              triggerSelectNotesFlow={triggerSelectNotesFlow} // Pass down the new prop
-              onSelectNotesFlowTriggered={handleSelectNotesFlowTriggered} // Pass down the handler
-            />
-          )}
-
-          {!settingsMode && !historyMode && !noteSystemMode && (
+          {isAnyPageModeActive ? (
+            <>
+              {settingsMode && <Settings />}
+              {historyMode && (
+                <ChatHistory
+                  key={chatHistoryRefreshKey}
+                  className="flex-1 w-full min-h-0"
+                  loadChat={loadChat}
+                  onDeleteAll={deleteAll}
+                  onDeleteChat={handleDeleteSingleChat}
+                />
+              )}
+              {noteSystemMode && (
+                <NoteSystemView
+                  triggerImportNoteFlow={triggerImportNoteFlow}
+                  triggerOpenCreateModal={triggerNoteCreation}
+                  triggerSelectNotesFlow={triggerSelectNotesFlow}
+                  onImportTriggered={handleImportTriggered}
+                  onModalOpened={handleNoteModalOpened}
+                  onSelectNotesFlowTriggered={handleSelectNotesFlowTriggered}
+                />
+              )}
+              {modelSettingsPageMode && <ModelSettingsPanel />}
+              {apiSettingsPageMode && <ApiSettingsPanel />}
+              {ragSettingsPageMode && <RagSettingsPanel />}
+              {customizePageMode && <Customize />}
+              {webSearchPageMode && <WebSearchPage />}
+              {pageSettingsPageMode && <PageSettings />}
+            </>
+          ) : (
             <div className="flex flex-col flex-1 min-h-0 relative">
-                  <Messages
-                    isLoading={isLoading}
-                    turns={turns}
-                    settingsMode={settingsMode}
-                    onReload={onReload}
-                    onEditTurn={handleEditTurn}
-                  />
-            {turns.length === 0 && !config?.chatMode && config && !message && !retrieverQuery && (
+              <Messages
+                isLoading={isLoading || isRetrieving}
+                sessionContext={sessionContext || tempContext}
+                settingsMode={settingsMode}
+                turns={turns}
+                onClearContext={handleClearContext}
+                onContinueTurn={handleContinueTurn}
+                onDeleteTurn={handleDeleteTurn}
+                onEditTurn={handleEditTurn}
+                onReload={onReload}
+                onLoadChat={loadChat}
+              />
+            </div>
+          )}
+        </div>
+        {!isAnyPageModeActive && (
+          <div className="p-2 relative z-[10]">
+            {turns.length === 0 && !config?.chatMode && config && !message && (
               <ActionButtons config={config} updateConfig={updateConfig} />
             )}
             {config?.chatMode === "page" && turns.length === 0 && (
               <PageActionButtons
-                onSend={onSend}
                 isPageActionsHovering={isPageActionsHovering}
                 setIsPageActionsHovering={setIsPageActionsHovering}
+                onSend={handleSendMessage}
               />
             )}
             {config?.chatMode === "web" && config && (
               <WebSearchModeButtons
                 config={config}
-                updateConfig={updateConfig}
                 isWebSearchHovering={isWebSearchHovering}
                 setIsWebSearchHovering={setIsWebSearchHovering}
+                updateConfig={updateConfig}
               />
             )}
-            </div>
-          )}
-        </div>
-        {!settingsMode && !historyMode && !noteSystemMode && (
-          <div className="p-2 relative z-[10]">
             <Input
-              isLoading={isLoading}
+              conversation={currentConversation}
+              ensureConversation={ensureConversation}
+              isLoading={isLoading || isRetrieving}
+              isRetrieving={isRetrieving}
               message={message}
-              setMessage={setMessage}
-              retrieverQuery={retrieverQuery}
-              setRetrieverQuery={setRetrieverQuery}
-              onSend={async () => {
-                // onSend in useSendMessage now handles retrieverQuery
-                // It will also clear retrieverQuery internally via setRetrieverQuery
-                await onSend(message); 
-                // setSelectedNotesForContext([]); // Keep this if notes should be cleared after any send
-                                                // Or move it inside onSend if it depends on notes being used
-              }}
-              onStopRequest={onStop}
               selectedNotesForContext={selectedNotesForContext}
+              setMessage={setMessage}
               setSelectedNotesForContext={setSelectedNotesForContext}
+              setSessionContext={setSessionContext}
+              setTempContext={setTempContext}
+              onRetrieve={handleRetrieveFromInput}
+              onSend={handleSendFromInput}
+              onStopRequest={() => {
+                onStop();
+                clearRetrieverResults();
+              }}
             />
           </div>
         )}
 
         {config?.backgroundImage ? <Background /> : null}
-        <Toaster
-          containerStyle={{
-            borderRadius: 16,
-            bottom: '60px',
-          }}
-          toastOptions={{
-            duration: 500,
-            position: "bottom-center",
-            style: {
-              background: 'var(--bg)',
-              color: 'var(--text)',
-              fontSize: "1rem",
-              border: '1px solid var(--text)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            },
-            success: {
-              duration: 500,
-              style: {
-                background: 'var(--bg)',
-                color: 'var(--text)',
-                fontSize: "1.25rem"
-              }
-            }
-          }}
-        />
       </div>
     </TooltipProvider>
   );
 };
-
 
 export default Cognito;

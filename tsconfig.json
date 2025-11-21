@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": ["vitest/globals", "chrome"],
     "lib": [
       "dom",
       "dom.iterable",
@@ -22,25 +23,22 @@
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
-    "sourceMap": true,        
+    "sourceMap": true,
     "paths": {
-      "src/*": ["src/*"],
-      "@/*": ["./*"], 
-      "@/utils": ["src/background/util"],
-
+      "src/*": [
+        "src/*"
+      ],
+      "@/*": [
+        "./*"
+      ],
+      "@/utils": [
+        "src/background/util"
+      ]
     }
   },
-
   "include": [
     "src",
     "config",
-    "components",
-    "src/types"
-  ],
-  "exclude": [
-    "test",
-    "jest.config.js",
-    "node_modules",
-    "dist"
+    "components"
   ]
 }

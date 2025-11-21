@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaEye, FaEyeSlash, FaCheck } from 'react-icons/fa';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+ FaCheck,FaEye, FaEyeSlash, 
+} from 'react-icons/fa';
+
 import { useConfig } from './ConfigContext';
 import { GROQ_URL } from './constants';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from "@/src/background/util";
 
 export const ConnectGroq = () => {
@@ -16,8 +20,10 @@ export const ConnectGroq = () => {
   const onConnect = () => {
     if (!apiKey) {
       toast.error("API key is required for Groq.");
+
       return;
     }
+
     setIsLoading(true);
     toast.dismiss();
     toast.loading('Connecting to Groq...');
@@ -31,6 +37,7 @@ export const ConnectGroq = () => {
             throw new Error(`Connection failed: ${res.status} ${res.statusText}`);
           });
         }
+
         return res.json();
       })
       .then(data => {
@@ -40,7 +47,9 @@ export const ConnectGroq = () => {
             groqConnected: true,
             groqError: undefined,
             models: (config?.models || []).filter(m => !m.id.startsWith('groq_')).concat(
-              data.data.map((model: any) => ({ id: `groq_${model.id}`, name: model.id, host: 'groq', active: true }))
+              data.data.map((model: any) => ({
+ id: `groq_${model.id}`, name: model.id, host: 'groq', active: true, 
+})),
             ),
             selectedModel: config?.selectedModel || `groq_${data.data[0].id}`,
           });
@@ -73,25 +82,25 @@ export const ConnectGroq = () => {
     <div className="flex items-center space-x-3">
       <div className="relative flex-grow">
         <Input
-          id="groq-api-key"
           autoComplete="off"
+          className="pr-8 rounded-full"
+          disabled={isLoading}
+          id="groq-api-key"
           placeholder="GROQ_API_KEY"
           type={visibleApiKey ? 'text' : 'password'}
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
-          className="pr-8"
-          disabled={isLoading}
         />
         <Button
-            variant="ghost"
-            size="sm"
+            aria-label={visibleApiKey ? "Hide API key" : "Show API key"}
             className={cn(
                 "absolute inset-y-0 right-0 flex items-center justify-center",
-                "w-8 text-[var(--text)]/70 hover:text-[var(--text)]"
+                "w-8 text-[var(--text)]/70 hover:text-[var(--text)]",
             )}
-            onClick={() => setVisibleApiKey(!visibleApiKey)}
-            aria-label={visibleApiKey ? "Hide API key" : "Show API key"}
             disabled={isLoading}
+            size="sm"
+            variant="ghost"
+            onClick={() => setVisibleApiKey(!visibleApiKey)}
         >
             {visibleApiKey ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
         </Button>
@@ -99,22 +108,22 @@ export const ConnectGroq = () => {
 
       {!isConnected && (
         <Button
-          onClick={onConnect}
-          variant="connect"
-          size="sm"
           disabled={connectButtonDisabled}
+          size="sm"
+          variant="connect"
+          onClick={onConnect}
         >
           {isLoading ? "..." : "Save"}
         </Button>
       )}
       {isConnected && (
         <Button
-          variant="ghost"
-          size="sm"
           aria-label="Connected to Groq"
           className={cn("w-8 rounded-md text-[var(--success)]")}
-          onClick={onConnect}
           disabled={isLoading}
+          size="sm"
+          variant="ghost"
+          onClick={onConnect}
         >
           <FaCheck className="h-5 w-5" />
         </Button>

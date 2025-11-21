@@ -1,0 +1,138 @@
+#cognito-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background-color: #f15439;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.2s ease-in-out;
+}
+
+#cognito-fab:hover {
+  transform: scale(1.1);
+}
+
+#cognito-fab img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+#cognito-window {
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+
+  /* reduce flicker by promoting to its own GPU layer and hinting changes */
+  will-change: width, height, transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  overflow: hidden; /* avoid gaps showing underlying page during resize */
+}
+
+#cognito-window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: #2b616d;
+  color: white;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  cursor: grab;
+}
+
+#cognito-window-title {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#cognito-window-close {
+  border: none;
+  background: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+#cognito-window-iframe {
+  flex-grow: 1;
+  border: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+
+  /* slightly improve compositor behavior */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* overlay that sits over iframe while resizing to capture pointer and avoid hover repaints */
+.cognito-resize-overlay {
+  position: absolute;
+  /* leave a gap for the resize handle so it remains clickable/visible */
+  inset: 0 16px 16px 0; /* top:0; right:32px; bottom:32px; left:0; */
+  z-index: 2147483649; /* below the handle (2147483650) but above iframe */
+  pointer-events: auto; /* capture pointer so iframe doesn't receive hover */
+  background: transparent; /* keep visually transparent */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* keep the resize handle large / high above iframe (if not already set) */
+.react-resizable-handle {
+  position: absolute;
+  bottom: 0px; /* moved slightly closer to bottom-right */
+  right: 0px;
+  width: 20px;           /* big hit area */
+  height: 20px;
+  z-index: 2147483650;   /* above overlay */
+  touch-action: none;
+  cursor: se-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* visible grip inside the handle (keeps hit area large but draws a small UI) */
+.react-resizable-handle::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(0,0,0,0.35) 0 2px,
+    transparent 2px 4px
+  );
+  opacity: 0.95;
+  transition: transform 120ms ease, opacity 120ms ease;
+  pointer-events: none; /* make sure the pseudo element doesn't steal pointer events */
+}
+
+/* small hover feedback so the handle looks interactive */
+.react-resizable-handle:hover::after {
+  transform: scale(1.08);
+  opacity: 1;
+}

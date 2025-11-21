@@ -16,7 +16,7 @@ export interface TextareaProps extends Omit<React.ComponentProps<"textarea">, 's
   onHeightChange?: TextareaAutosizeProps['onHeightChange']
 }
 
-function Textarea({
+const Textarea = ({
   className,
   autosize = false,
   minRows,
@@ -24,23 +24,30 @@ function Textarea({
   style,
   onHeightChange,
   ...props
-}: TextareaProps) {
+}: TextareaProps) => {
+  const commonClasses = cn(
+    "flex w-full rounded-md border border-[var(--text)]/20 bg-[var(--input-background)]",
+    "px-3 py-2 text-sm placeholder:text-muted-foreground",
+    "transition-all duration-200 ease-in-out",
+    "outline-none focus:border-[var(--active)] hover:border-[var(--active)]/70",
+    "focus:ring-1 focus:ring-[var(--active)]/30",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+    "whitespace-pre-wrap break-words",
+    "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  );
+
   if (autosize) {
     return (
       <AutosizeTextarea
-        minRows={minRows}
+        className={cn(
+          commonClasses,
+          "thin-scrollbar",
+          className,
+        )}
         maxRows={maxRows}
+        minRows={minRows}
         style={style}
         onHeightChange={onHeightChange}
-        className={cn(
-          "flex w-full placeholder:text-muted-foreground whitespace-pre-wrap break-words",
-          "focus-visible:border-ring focus-visible:ring-ring/50",
-          "text-sm md:text-sm transition-[color,box-shadow] outline-none focus-visible:ring-[3px]",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "bg-[var(--input-background)]",
-          "thin-scrollbar",
-          className
-        )}
         {...props}
       />
     )
@@ -48,11 +55,12 @@ function Textarea({
 
   return (
     <textarea
-      data-slot="textarea-default"
       className={cn(
-        "border-[var(--text)]/20 bg-[var(--input-background)] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        className
+        commonClasses,
+        "min-h-16 field-sizing-content",
+        className,
       )}
+      data-slot="textarea-default"
       {...props}
     />
   )

@@ -1,4 +1,4 @@
-import { UnknownAction, ThunkAction } from '@reduxjs/toolkit';
+import { ThunkAction,UnknownAction } from '@reduxjs/toolkit';
 
 import { ContentState } from "src/state/slices/content";
 import { SidePanelState } from "src/state/slices/sidePanel";

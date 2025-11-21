@@ -9,5 +9,5 @@ const { createWebpackAliases } = require('./helpers');
  */
 module.exports = createWebpackAliases({
   'src': 'src',
-  'public': 'public'
+  'public': 'public',
 });

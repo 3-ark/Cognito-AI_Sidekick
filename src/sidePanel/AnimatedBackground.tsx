@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+
 import { useConfig } from '../sidePanel/ConfigContext';
 
 const AnimatedBackground: React.FC = () => {
@@ -12,15 +13,19 @@ const AnimatedBackground: React.FC = () => {
     }
 
     const container = containerRef.current;
+
     if (!container) return;
 
     container.innerHTML = '';
 
     if (config?.theme === 'dark') {
       const canvas = document.createElement('canvas');
+
       container.appendChild(canvas);
 
-      const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;      if (!ctx) return;
+      const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+
+      if (!ctx) return;
 
       const fontSize = 16;
       const columnWidth = fontSize * 1.2;
@@ -45,14 +50,15 @@ const AnimatedBackground: React.FC = () => {
       let rows = Math.floor(canvas.height / rowHeight);
 
       let drops: number[] = Array(columns).fill(0);
+
       type TrailCell = { char: string; color: string };
-      let trails: TrailCell[][] = Array(columns).fill(null).map(() => Array(rows).fill({ char: '', color: '' }));
+      const trails: TrailCell[][] = Array(columns).fill(null).map(() => Array(rows).fill({ char: '', color: '' }));
 
       // Each column gets its own speed (higher = slower)
-      let speeds: number[] = Array(columns)
+      const speeds: number[] = Array(columns)
         .fill(0)
         .map(() => Math.floor(Math.random() * 2) + 1); // frame lower = faster
-      let columnFrames: number[] = Array(columns).fill(0);
+      const columnFrames: number[] = Array(columns).fill(0);
 
       const TRAIL_LENGTH = 12;
 
@@ -67,10 +73,13 @@ const AnimatedBackground: React.FC = () => {
           // Draw the trail for this column
           for (let j = 0; j < TRAIL_LENGTH; j++) {
             const y = drops[i] - j;
+
             if (y < 0) continue;
+
             if (y >= rows) continue;
 
-            let cell = trails[i][y];
+            const cell = trails[i][y];
+
             if (!cell || !cell.char) continue;
 
             ctx.fillStyle = j === 0
@@ -80,24 +89,29 @@ const AnimatedBackground: React.FC = () => {
             ctx.fillText(
               cell.char,
               i * columnWidth + columnWidth / 2,
-              y * rowHeight
+              y * rowHeight,
             );
           }
+
           ctx.globalAlpha = 1;
 
           // Only increment this column's drop if its frame counter hits its speed
           columnFrames[i]++;
+
           if (columnFrames[i] >= speeds[i]) {
             const newChar = MATRIX_CHARACTERS[Math.floor(Math.random() * MATRIX_CHARACTERS.length)];
             const color = GREENS[Math.floor(Math.random() * GREENS.length)];
+
             trails[i][drops[i]] = { char: newChar, color };
 
             drops[i]++;
+
             if (drops[i] >= rows + TRAIL_LENGTH) {
               drops[i] = 0;
               trails[i] = Array(rows).fill({ char: '', color: '' });
               speeds[i] = Math.floor(Math.random() * 10) + 10;
             }
+
             columnFrames[i] = 0;
           }
         }
@@ -130,6 +144,7 @@ const AnimatedBackground: React.FC = () => {
 
       for (let i = 0; i < numBalls; i++) {
         const ball = document.createElement('div');
+
         ball.classList.add('ball');
         ball.style.background = colors[Math.floor(Math.random() * colors.length)];
         ball.style.left = `${Math.floor(Math.random() * 100)}vw`;
@@ -159,12 +174,12 @@ const AnimatedBackground: React.FC = () => {
             fill: 'both',
             iterations: Infinity,
             easing: 'ease-in-out',
-          }
+          },
         );
       });
 
       return () => {
-        balls.forEach((ball) => container.removeChild(ball));
+        balls.forEach(ball => container.removeChild(ball));
       };
     }
   }, [config?.theme, config?.animatedBackground]);

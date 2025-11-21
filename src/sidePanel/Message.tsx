@@ -1,39 +1,67 @@
-import '../content/index.css';
 import type { FC } from 'react';
-import { useState, useEffect } from 'react';
-import Markdown from 'react-markdown';
+import { useEffect, useState } from 'react';
 import { FiCheck, FiX } from 'react-icons/fi';
-import { Textarea } from "@/components/ui/textarea";
+import Markdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import remarkSupersub from 'remark-supersub';
 
+import 'katex/dist/katex.min.css';
+import type { MessageTurn, RetrieverResult } from '../types/chatTypes';
+import type { Config } from '../types/config';
+
+import { useConfig } from './ConfigContext';
+
+import '../content/index.css';
+
+import { markdownComponents } from '@/components/MarkdownComponents';
 import { Button } from "@/components/ui/button";
-import { cn } from "@/src/background/util";
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
+import type { ReactElement, ReactNode } from 'react';
+import { Children } from 'react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/src/background/util";
+import { remarkCitation } from '../remark/remark-citation.mjs';
 
-import remarkGfm from 'remark-gfm';
-import remarkSupersub from 'remark-supersub';
+const getMarkdownPlugins = (config: Config) => {
+  const remarkPlugins: any[] = [[remarkGfm, { singleTilde: false }], remarkSupersub, remarkCitation];
+  const rehypePlugins: any[] = [];
 
-import { useConfig } from './ConfigContext';
-import { markdownComponents, Pre } from '@/components/MarkdownComponents';
-import type { MessageTurn } from '../background/chatHistoryStorage';
+  if (config.latexEnabled) {
+    remarkPlugins.push([remarkMath, { singleDollarTextMath: false }]);
+    rehypePlugins.push(rehypeKatex);
+  }
+
+  return { remarkPlugins, rehypePlugins };
+};
 
 const ThinkingBlock = ({ content }: { content: string }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { config } = useConfig();
+  const { remarkPlugins, rehypePlugins } = getMarkdownPlugins(config);
 
   return (
     <div className="mb-2">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+      <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <Button
-            variant="outline" 
-            size="sm"
             className={cn(
-              "mb-1", 
-              "border-foreground text-foreground hover:text-accent-foreground" 
+              "border-[var(--text)]/20 text-foreground hover:text-accent-foreground",
             )}
+            size="sm"
+            variant="outline"
           >
             {isOpen ? 'Hide Thoughts' : 'Show Thoughts'}
           </Button>
@@ -44,13 +72,14 @@ const ThinkingBlock = ({ content }: { content: string }) => {
               "p-3 rounded-md border border-dashed",
               "bg-muted",
               "border-muted-foreground",
-              "text-muted-foreground" 
+              "text-muted-foreground",
             )}
           >
             <div className="markdown-body">
               <Markdown
-                remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
-                components={messageMarkdownComponents}
+                components={createMessageMarkdownComponents()}
+                remarkPlugins={remarkPlugins}
+                rehypePlugins={rehypePlugins}
               >
                 {content}
               </Markdown>
@@ -62,10 +91,126 @@ const ThinkingBlock = ({ content }: { content: string }) => {
   );
 };
 
-const messageMarkdownComponents = {
+import ChannelNames from '../types/ChannelNames';
+
+const Citation: FC<any> = ({ node, retrieverResults, ...props }) => {
+  const citationNumber = parseInt(node.value, 10);
+  const source = retrieverResults?.results[citationNumber - 1];
+
+  if (!source) {
+    return <sup {...props}>{`[${citationNumber}]`}</sup>;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <sup className="cursor-pointer text-blue-500" {...props}>{`[${citationNumber}]`}</sup>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="p-2 text-xs">
+            <p className="font-bold">Source {citationNumber}: {source.parentTitle || 'Untitled'}</p>
+            <p className="truncate"><span className="font-semibold">Content:</span> {source.content}</p>
+            <p><span className="font-semibold">Score:</span> {source.score.toFixed(2)}</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+const SourcesDisplay: FC<{ retrieverResults: RetrieverResult; onLoadChat: (conversation: Conversation) => void; }> = ({ retrieverResults, onLoadChat }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSourceClick = (result: any) => {
+    if (result.originalType === 'note' || result.originalType === 'json') {
+      chrome.runtime.sendMessage({ type: ChannelNames.GET_NOTE_REQUEST, payload: { noteId: result.parentId } }, response => {
+        if (response.success) {
+          chrome.runtime.sendMessage({ type: 'OPEN_NOTE_IN_NEW_TAB', payload: { note: response.note } });
+        }
+      });
+    } else if (result.originalType === 'chat') {
+        chrome.runtime.sendMessage({ type: ChannelNames.GET_CONVERSATION_REQUEST, payload: { conversationId: result.parentId } }, response => {
+            if (response.success) {
+                onLoadChat(response.conversation);
+            }
+        });
+    }
+  };
+
+  if (!retrieverResults || retrieverResults.results.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2">
+      <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button
+            className="border-[var(--text)]/20 text-foreground hover:text-accent-foreground"
+            size="sm"
+            variant="outline"
+          >
+            {isOpen ? 'Hide Sources' : `Show Sources (${retrieverResults.results.length})`}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-2 mt-2 rounded-md border border-dashed bg-muted border-muted-foreground text-muted-foreground">
+            <div className="space-y-2">
+              {retrieverResults.results.map((result, index) => (
+                <div key={index} className="text-xs p-2 bg-background rounded-md cursor-pointer hover:bg-accent" onClick={() => handleSourceClick(result)}>
+                  <p className="font-bold">
+                    Source {index + 1}: {result.parentTitle || 'Untitled'}
+                  </p>
+                  <p className="truncate">
+                    <span className="font-semibold">Content:</span> {result.content}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Score:</span> {result.score.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+};
+
+const MessagePre = (props: React.ComponentPropsWithoutRef<'pre'>) => {
+  const { children } = props;
+
+  // The `pre` tag rendered by `react-markdown` has a single `code` child element.
+  const codeElement = Children.only(children) as ReactElement<{
+    className?: string;
+    children?: ReactNode;
+  }> | null;
+
+  if (!codeElement) {
+    return <pre {...props} />;
+  }
+
+  // The language is part of the `code` element's class name (e.g., "language-javascript").
+  const language = codeElement.props.className?.replace('language-', '') || '';
+
+  // The actual code content is the child of the `code` element.
+  const code = codeElement.props.children ? String(codeElement.props.children).trim() : '';
+
+  return (
+    <CodeBlock code={code} language={language} showLineNumbers wrapLines>
+      <CodeBlockCopyButton />
+    </CodeBlock>
+  );
+};
+
+const createMessageMarkdownComponents = (retrieverResults?: RetrieverResult) => ({
   ...markdownComponents,
-  pre: (props: React.ComponentPropsWithoutRef<typeof Pre>) => <Pre {...props} buttonVariant="copy-button" />,
-}
+  pre: MessagePre,
+  citation: (props: any) => <Citation {...props} retrieverResults={retrieverResults} />,
+});
+
+import { Conversation } from '../types/chatTypes';
 
 interface MessageProps {
   turn: MessageTurn;
@@ -76,18 +221,24 @@ interface MessageProps {
   onSetEditText: (text: string) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
+  onDelete: (messageId: string) => void;
+  onContinue: (messageId: string) => void;
+  onLoadChat: (conversation: Conversation) => void;
 }
 
 export const EditableMessage: FC<MessageProps> = ({
-  turn, index, isEditing, editText, onStartEdit, onSetEditText, onSaveEdit, onCancelEdit
+  turn, index, isEditing, editText, onStartEdit, onSetEditText, onSaveEdit, onCancelEdit, onDelete, onContinue, onLoadChat
 }) => {
   const { config } = useConfig();
+  const { remarkPlugins, rehypePlugins } = getMarkdownPlugins(config);
 
   const showToolCallBlock = turn.role === 'assistant' && turn.tool_calls && turn.tool_calls.length > 0 && !isEditing;
 
   let shouldRendercontentAsMain = true;
+
   if (showToolCallBlock) {
     const trimmedcontent = (turn.content || '').trim();
+
     if (trimmedcontent === '') {
       shouldRendercontentAsMain = false;
     } else if (
@@ -127,6 +278,7 @@ export const EditableMessage: FC<MessageProps> = ({
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };
@@ -142,46 +294,49 @@ export const EditableMessage: FC<MessageProps> = ({
 
         turn.role === 'tool'
         ? 'tool-turn-message'
+        : turn.role === 'assistant'
+        ? ''
         : [
-            "border rounded-xl w-[95%] shadow-lg text-left relative",
+            "border rounded-xl max-w-[95%] w-fit shadow-md text-left relative",
             !isEditing && "px-3 py-1", 
 
-            turn.role === 'assistant' ? 'bg-accent border-[var(--text)]/20' : 'bg-primary/10 border-[var(--text)]/20',
-            'chatMessage'
-          ]
+            'bg-gradient-to-br from-primary/60 to-primary/30 border-[var(--active)]/20 rounded-br-none',
+            'chatMessage',
+          ],
       )}
     >
       {isEditing ? (
-        <div className="flex flex-col space-y-2 items-stretch w-full p-1">
+        <div className="flex flex-col space-y-2 items-stretch p-1">
           <Textarea
-            autosize 
-            value={editText}
-            onChange={(e) => onSetEditText(e.target.value)}
-            placeholder="Edit your message..."
             className={cn(
-              "rounded-md border bg-background px-1 text-base ring-offset-background placeholder:text-muted-foreground",
+              "rounded-md border bg-background p-1 text-base ring-offset-background placeholder:text-muted-foreground",
               "border-input",
               "text-foreground",
               "hover:border-primary focus-visible:border-primary focus-visible:ring-0",
-              "min-h-[60px]"
-            )}
+              "min-h-[60px]",
+              "w-full",
+            )} 
             minRows={3}
+            placeholder="Edit your message..."
+            value={editText}
             autoFocus
+            autosize
+            onChange={e => onSetEditText(e.target.value)}
           />
           <div className="flex font-mono justify-end space-x-2">
             <Button
               size="sm"
+              title="Save changes"
               variant="outline"
               onClick={onSaveEdit}
-              title="Save changes"
             >
               <FiCheck className="h-4 w-4 mr-1" /> Save
             </Button>
             <Button
-              variant="outline"
               size="sm"
-              onClick={onCancelEdit}
               title="Discard changes"
+              variant="outline"
+              onClick={onCancelEdit}
             >
               <FiX className="h-4 w-4 mr-1" /> Exit
             </Button>
@@ -195,30 +350,36 @@ export const EditableMessage: FC<MessageProps> = ({
             <>
               {turn.role === 'assistant' && turn.webDisplayContent && (
                 <div className="message-prefix">
-                  <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={messageMarkdownComponents}>
+                  <Markdown components={createMessageMarkdownComponents(turn.retrieverResults)} remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
                     {`~From the Internet~\n${turn.webDisplayContent}\n\n---\n\n`}
                   </Markdown>
                 </div>
               )}
               {parts.map((part, partIndex) => {
                 const match = part.match(thinkRegex);
+
                 if (match && match[1]) {
                   return <ThinkingBlock key={`think_${partIndex}`} content={match[1]} />;
                 } else if (part.trim() !== '') {
                   return (
                     <div key={`content_${partIndex}`} className="message-content">
                     <Markdown
-                      remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
-                      components={messageMarkdownComponents}
+                      components={createMessageMarkdownComponents(turn.retrieverResults)}
+                      remarkPlugins={remarkPlugins}
+                      rehypePlugins={rehypePlugins}
                     >{part}</Markdown>
                     </div>
                   );
                 }
+
                 return null;
               })}
             </>
           )}
           {/* ToolCallBlock hidden from UI */}
+          {turn.role === 'assistant' && turn.retrieverResults && (
+            <SourcesDisplay retrieverResults={turn.retrieverResults} onLoadChat={onLoadChat} />
+          )}
         </div>
       )}
     </div>
@@ -228,30 +389,30 @@ export const EditableMessage: FC<MessageProps> = ({
 const COLLAPSIBLE_TOOLS: Record<string, string> = {
   fetcher: 'Fetched Content',
   web_search: 'Search Results',
-  smart_dispatcher: 'Smart Dispatcher',
-  planner: 'The Plan',
-  retriever: 'Retrieved Content',
-  wikipedia_search: 'Wikipedia Results',
+  browse_page: 'Browsed Page Content',
+
 };
 
 const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { config } = useConfig();
+  const { remarkPlugins, rehypePlugins } = getMarkdownPlugins(config);
 
   if (turn.name && turn.name in COLLAPSIBLE_TOOLS) {
     const toolName = COLLAPSIBLE_TOOLS[turn.name];
+
     return (
       <div className="my-2">
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full flex flex-col items-center">
+        <Collapsible className="w-full flex flex-col items-center" open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
             <Button
-              variant="outline"
-              size="sm"
               className={cn(
-                "mb-1",
                 "rounded-xl",
-                "border-foreground text-foreground hover:text-accent-foreground"
+                "border-[var(--text)]/20",
+                "bg-text-foreground hover:text-accent-foreground",
               )}
+              size="sm"
+              variant="outline"
             >
               {isOpen ? `Hide ${toolName}` : `Show ${toolName}`}
             </Button>
@@ -262,13 +423,14 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
                 "p-3 rounded-md border border-dashed",
                 "bg-muted",
                 "border-muted-foreground",
-                "text-muted-foreground"
+                "text-muted-foreground",
               )}
             >
               <div className="markdown-body">
                 <Markdown
-                  remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]}
-                  components={messageMarkdownComponents}
+                  components={createMessageMarkdownComponents()}
+                  remarkPlugins={remarkPlugins}
+                  rehypePlugins={rehypePlugins}
                 >
                   {turn.content || ''}
                 </Markdown>
@@ -283,7 +445,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
   // Fallback for other tools or if turn.name is undefined
   return (
     <div className="message-markdown markdown-body relative z-[1] text-foreground">
-      <Markdown remarkPlugins={[[remarkGfm, { singleTilde: false }], remarkSupersub]} components={messageMarkdownComponents}>
+      <Markdown components={createMessageMarkdownComponents()} remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
         {turn.content || ''}
       </Markdown>
     </div>
