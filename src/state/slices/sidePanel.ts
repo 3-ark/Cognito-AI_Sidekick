@@ -18,12 +18,12 @@ export const sidePanelDefaultState: SidePanelState = { isOpen: false };
 const slice = createSlice({
   name: 'sidePanel',
   initialState: sidePanelDefaultState,
-  reducers: { reset: () => sidePanelDefaultState }
+  reducers: { reset: () => sidePanelDefaultState },
 });
 
 const { actions, reducer } = slice;
 const aliases = {};
 
 export {
- actions, aliases,reducer 
+ actions, aliases,reducer, 
 };

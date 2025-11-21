@@ -1,186 +1,164 @@
-// Utilities for generating embeddings for text content.
 
-interface EmbeddingServiceConfig {
-  apiUrl: string;
-  model: string;
-  apiKey?: string; // Optional API key
-}
+import { getStoredAppSettings } from './storageUtil';
 
-// Internal configuration store
-let embeddingServiceConfig: EmbeddingServiceConfig = {
-  apiUrl: '', // Needs to be configured
-  model: '',   // Needs to be configured
-};
-
-let _embeddingServiceReadyResolve: () => void;
-export const embeddingServiceReadyPromise = new Promise<void>(resolve => {
-  _embeddingServiceReadyResolve = resolve;
-});
-
-// Function to check if the service is configured
-const isServiceConfigured = (): boolean => {
-  return !!embeddingServiceConfig.apiUrl && !!embeddingServiceConfig.model;
-};
-
-/**
- * Configures the embedding service details.
- * This should be called during application initialization.
- * For example, in src/background/index.ts
- */
-export const configureEmbeddingService = (
+// Generic function for OpenAI-compatible embedding APIs
+const getOpenAICompatibleEmbedding = async (
+  text: string,
   apiUrl: string,
+  apiKey: string,
   model: string,
-  apiKey?: string
-): void => {
-  embeddingServiceConfig.apiUrl = apiUrl;
-  embeddingServiceConfig.model = model;
-  embeddingServiceConfig.apiKey = apiKey;
-  console.log('Embedding service configured:', { apiUrl, model, apiKey: apiKey ? '******' : 'Not set' });
-
-  if (isServiceConfigured()) {
-    _embeddingServiceReadyResolve();
-  }
-};
-
-/**
- * Returns a promise that resolves when the embedding service is configured.
- */
-export const ensureEmbeddingServiceConfigured = (): Promise<void> => {
-  if (isServiceConfigured()) {
-    return Promise.resolve();
-  }
-  return embeddingServiceReadyPromise;
-};
-
-/**
- * Generates an embedding for a single piece of text.
- * @param text The text to embed.
- * @returns A promise that resolves to an array of numbers representing the embedding, or an empty array on error.
- */
-export const generateEmbedding = async (text: string): Promise<number[]> => {
-  if (!embeddingServiceConfig.apiUrl || !embeddingServiceConfig.model) {
-    console.error(
-      'Embedding service is not configured. Call configureEmbeddingService first.'
-    );
-    return [];
-  }
-  if (!text || text.trim() === '') {
-    console.warn('generateEmbedding called with empty text.');
-    return [];
-  }
+): Promise<number[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
 
   try {
-    // Assuming a common API structure. This may need adjustment based on the actual service.
-    // Example: OpenAI embeddings API, Cohere, or a custom service.
-    // Here, we'll use a generic structure: POST { "input": "...", "model": "..." }
-    // and expect { "embedding": [...] } or { "data": [{ "embedding": [...] }] }
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (embeddingServiceConfig.apiKey) {
-      headers['Authorization'] = `Bearer ${embeddingServiceConfig.apiKey}`;
-    }
-
-    const body = JSON.stringify({
-      input: text,
-      model: embeddingServiceConfig.model,
-    });
-
-    const response = await fetch(embeddingServiceConfig.apiUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: headers,
-      body: body,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        input: text,
+        model: model,
+      }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(
-        `Error generating embedding for text "${text.substring(0, 50)}...": ${response.status} ${response.statusText}`,
-        errorBody
-      );
-      return [];
+      const errorData = await response.json();
+      throw new Error(`Failed to get embedding: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
-
-    // Adapt based on actual API response structure
-    if (data.embedding) {
-      return data.embedding as number[];
-    } else if (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0].embedding) {
-      // Common structure for OpenAI API
-      return data.data[0].embedding as number[];
-    } else {
-      console.error(
-        `Unexpected response structure from embedding service for text "${text.substring(0,50)}..."`, data);
-      return [];
-    }
+    return data.data[0].embedding;
   } catch (error) {
-    console.error(`Network or other error generating embedding for text "${text.substring(0,50)}...":`, error);
-    return [];
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Embedding request timed out after 60 seconds');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
-/**
- * Generates embeddings for multiple texts, processing them in batches concurrently.
- * @param texts An array of strings to embed.
- * @param batchSize The number of texts to process in each concurrent batch. Defaults to 5.
- * @returns A promise that resolves to an array of embeddings (number[][]).
- *          Each inner array corresponds to the embedding of the text at the same index in the input.
- *          If an embedding for a specific text fails, its corresponding entry will be an empty array.
- */
-export const generateEmbeddings = async (
-  texts: string[],
-  batchSize = 5,
-  progressCallback?: (processed: number, total: number) => void,
-  processedChunks = 0,
-  totalChunksToProcess = 0
-): Promise<number[][]> => {
-  if (!embeddingServiceConfig.apiUrl || !embeddingServiceConfig.model) {
-    console.error(
-      'Embedding service is not configured. Call configureEmbeddingService first.'
-    );
-    return texts.map(() => []);
-  }
-
-  if (!texts || texts.length === 0) {
-    return [];
-  }
-
-  const allEmbeddings: (number[] | null)[] = new Array(texts.length).fill(null);
-  let processedCount = 0;
-  const totalCount = texts.length;
-
-  for (let i = 0; i < totalCount; i += batchSize) {
-    const batchTexts = texts.slice(i, i + batchSize);
-    const batchPromises = batchTexts.map((text, batchIndex) => {
-      return generateEmbedding(text)
-        .then(embedding => ({ embedding, originalIndex: i + batchIndex }))
-        .catch(error => {
-          console.error(`Error processing text at index ${i + batchIndex} in batch:`, error);
-          return { embedding: [], originalIndex: i + batchIndex };
-        });
-    });
+// Specific function for Gemini
+const getGeminiEmbedding = async (
+    text: string,
+    apiKey: string,
+    model: string,
+): Promise<number[]> => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/${model}:embedContent`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
 
     try {
-      const batchResults = await Promise.all(batchPromises);
-      for (const result of batchResults) {
-        allEmbeddings[result.originalIndex] = result.embedding;
-      }
-    } catch (batchError) {
-      console.error('Error processing a batch of embeddings:', batchError);
-      for (let j = 0; j < batchTexts.length; j++) {
-        if (allEmbeddings[i + j] === null) {
-          allEmbeddings[i + j] = [];
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify({
+                content: {
+                    parts: [{ text: text }],
+                },
+            }),
+            signal: controller.signal,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Failed to get Gemini embedding: ${errorData.error?.message || 'Unknown error'}`);
         }
-      }
+
+        const data = await response.json();
+        return data.embedding.values;
+    } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('Gemini embedding request timed out after 60 seconds');
+        }
+        throw error;
     } finally {
-      processedCount += batchTexts.length;
-      if (progressCallback) {
-        progressCallback(processedChunks + processedCount, totalChunksToProcess);
-      }
+        clearTimeout(timeoutId);
     }
+}
+
+export const getEmbedding = async (text: string): Promise<number[]> => {
+  const config = await getStoredAppSettings();
+
+  if (!config) {
+    throw new Error('Configuration not found.');
   }
 
-  return allEmbeddings.map(emb => emb === null ? [] : emb);
-};
+  const modelId = config.ragConfig?.model;
 
+  if (!modelId) {
+    throw new Error('No embedding model is configured in RAG settings.');
+  }
+
+  // Preferred method: Find the model in the config and use its host property.
+  const modelInfo = config.models?.find(m => m.id === modelId);
+
+  let hostId = modelInfo?.host;
+  let modelNameForApi = modelId;
+
+  // Fallback method: If model not found in config, parse the ID string.
+  if (!hostId) {
+    console.warn(`Model with ID '${modelId}' not found in config.models. Falling back to parsing ID.`);
+    const parts = modelId.split('/');
+
+    hostId = parts[0];
+    modelNameForApi = parts.slice(1).join('/');
+  }
+
+  switch (hostId) {
+    case 'ollama':
+
+    case 'lmStudio': {
+      const url = hostId === 'ollama' ? config.ollamaUrl : config.lmStudioUrl;
+
+      if (!url) {
+        throw new Error(`${hostId} URL is not configured.`);
+      }
+
+      return getOpenAICompatibleEmbedding(text, `${url}/v1/embeddings`, 'no-key', modelNameForApi);
+    }
+
+    case 'openai':
+      if (!config.openAiApiKey) throw new Error('OpenAI API key not found.');
+
+      return getOpenAICompatibleEmbedding(text, 'https://api.openai.com/v1/embeddings', config.openAiApiKey, modelNameForApi);
+
+    case 'groq':
+      if (!config.groqApiKey) throw new Error('Groq API key not found.');
+
+      return getOpenAICompatibleEmbedding(text, 'https://api.groq.com/openai/v1/embeddings', config.groqApiKey, modelNameForApi);
+
+    case 'openrouter':
+        if (!config.openRouterApiKey) throw new Error('OpenRouter API key not found.');
+
+        return getOpenAICompatibleEmbedding(text, 'https://openrouter.ai/api/v1/embeddings', config.openRouterApiKey, modelNameForApi);
+
+    case 'gemini':
+      if (!config.geminiApiKey) throw new Error('Gemini API key not found.');
+
+      // The model name for Gemini is passed differently, expecting the full ID.
+      return getGeminiEmbedding(text, config.geminiApiKey, modelId);
+
+    default: {
+      // Handle custom endpoints
+      const customEndpoint = config.customEndpoints?.find(e => e.id === hostId);
+
+      if (customEndpoint) {
+        if (!customEndpoint.connected) {
+          throw new Error(`Custom endpoint '${customEndpoint.name}' is not connected.`);
+        }
+
+        return getOpenAICompatibleEmbedding(text, `${customEndpoint.endpoint}/v1/embeddings`, customEndpoint.apiKey, modelNameForApi);
+      }
+
+      throw new Error(`Unsupported embedding provider or unknown custom endpoint ID: ${hostId}`);
+    }
+  }
+};

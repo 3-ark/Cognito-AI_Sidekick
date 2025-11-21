@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+
 import { useConfig } from '../ConfigContext';
 
 /**
@@ -17,6 +18,7 @@ export const useAddToNote = () => {
   const appendToNote = useCallback((textToAdd: string) => {
     if (!textToAdd || textToAdd.trim() === '') {
       toast.error("No text selected to add to note.");
+
       return;
     }
 

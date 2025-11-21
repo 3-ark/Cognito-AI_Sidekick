@@ -18,22 +18,25 @@
     "message": "ऑनलाइन"
   },
   "typing": {
-    "message": "लिख रहा है…"
+    "message": "लिख रहा है..."
   },
   "thinking": {
-    "message": "सोच रहा है…"
+    "message": "सोच रहा है..."
   },
   "searchingWeb": {
-    "message": "वेब खोज रहा है…"
+    "message": "वेब पर खोज रहा है..."
+  },
+  "setDisplayName": {
+    "message": "Set your display name in Profile"
   },
   "processingSERP": {
-    "message": "SERP संसाधित कर रहा है…"
+    "message": "SERP संसाधित कर रहा है..."
   },
   "readingPage": {
-    "message": "पेज पढ़ रहा है…"
+    "message": "पेज पढ़ रहा है..."
   },
   "analyzing": {
-    "message": "विश्लेषण कर रहा है…"
+    "message": "विश्लेषण कर रहा है..."
   },
   "resetChat": {
     "message": "चैट रीसेट करें"
@@ -51,7 +54,7 @@
     "message": "चैट निर्यात करें"
   },
   "deleteAllHistory": {
-    "message": "सभी इतिहास हटाएं"
+    "message": "सारा इतिहास हटाएं"
   },
   "noteOptions": {
     "message": "नोट विकल्प"
@@ -63,22 +66,22 @@
     "message": "नोट आयात करें"
   },
   "selectNotes": {
-    "message": "नोट चुनें"
+    "message": "नोट्स चुनें"
   },
   "quickGuide": {
     "message": "त्वरित गाइड"
   },
   "guideIntro": {
-    "message": "Cognito के साथ आरंभ करने के लिए एक त्वरित परिचय।"
+    "message": "कॉग्निटो के साथ आरंभ करने के लिए एक त्वरित परिचय।"
   },
   "guideStep1": {
-    "message": "1. सेटिंग्स में, अपनी एपीआई कुंजी या यूआरएल भरने के लिए 'एपीआई एक्सेस' पर जाएं।"
+    "message": "1. सेटिंग्स में, अपने एपीआई कुंजी या यूआरएल दर्ज करने के लिए 'एपीआई एक्सेस' पर जाएं।"
   },
   "guideStep2": {
-    "message": "2. सेटिंग्स से बाहर निकलें, फिर अपना मॉडल चुनने के लिए हेडर में मॉडल चयनकर्ता पर क्लिक करें। आप ऊपरी दाएं कोने में अपना उपयोगकर्ता नाम सेट कर सकते हैं।"
+    "message": "2. सेटिंग्स से बाहर निकलें, फिर अपना मॉडल चुनने के लिए हेडर में मॉडल चयनकर्ता पर क्लिक करें। आप अपना उपयोगकर्ता नाम ऊपरी दाएं कोने में सेट कर सकते हैं।"
   },
   "guideStep3": {
-    "message": "3. एआई मेमोरी और टूल उपयोग को टॉगल करने के लिए 'चैट कंट्रोल्स' (इनपुट बार में नोटबुक आइकन) का उपयोग करें।"
+    "message": "3. एआई मेमोरी और टूल उपयोग को टॉगल करने के लिए 'चैट कंट्रोल' (इनपुट बार में नोटबुक आइकन) का उपयोग करें।"
   },
   "guideStep4": {
     "message": "4. उपयोगकर्ता गाइड <1>यहां</1> देखें"
@@ -108,19 +111,19 @@
     "message": "सहेजें"
   },
   "profileUpdated": {
-    "message": "प्रोफ़ाइल अपडेट की गई!"
+    "message": "प्रोफ़ाइल अपडेट हो गई!"
   },
   "confirmDeletion": {
     "message": "हटाने की पुष्टि करें"
   },
   "confirmDeletionDesc": {
-    "message": "क्या आप वाकई सभी चैट इतिहास हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती है।"
+    "message": "क्या आप वाकई सभी चैट इतिहास हटाना चाहते हैं? यह कार्रवाई पूर्ववत नहीं की जा सकती।"
   },
   "deleteAll": {
     "message": "सभी हटाएं"
   },
   "searchPlaceholder": {
-    "message": "अपने नोट्स और चैट इतिहास खोजें..."
+    "message": "अपने नोट्स और चैट इतिहास से खोजें..."
   },
   "searching": {
     "message": "खोज रहा है..."
@@ -144,7 +147,7 @@
     "message": "इतिहास"
   },
   "notes": {
-    "message": "नोट्स"
+    "message": "टिप्पणियाँ"
   },
   "embeddings": {
     "message": "एम्बेडिंग"
@@ -159,7 +162,7 @@
     "message": "एम्बेडिंग का पुनर्निर्माण करें"
   },
   "lastRebuild": {
-    "message": "पिछला: {{date}}"
+    "message": "अंतिम: {{date}}"
   },
   "update": {
     "message": "अपडेट करें"
@@ -168,7 +171,7 @@
     "message": "एम्बेडिंग अपडेट करें"
   },
   "lastUpdate": {
-    "message": "पिछला: {{date}}"
+    "message": "अंतिम: {{date}}"
   },
   "currentModel": {
     "message": "वर्तमान मॉडल: {{modelName}}"
@@ -186,9 +189,141 @@
     "message": "सेटिंग्स बंद करें"
   },
   "extName": {
-    "message": "कॉग्निटो एआई साइडकिक"
+    "message": "कॉग्निटो एआई सहायक"
   },
   "extShortDesc": {
-    "message": "आपके ब्राउज़र के लिए एक गोपनीयता-केंद्रित, ऑफ़लाइन-प्रथम, एआई-संचालित साइडकिक।"
+    "message": "एक गोपनीयता-केंद्रित, ऑफ़लाइन-प्रथम एआई ब्राउज़र सहायक।"
+  },
+  "speech": {
+    "message": "Speech"
+  },
+  "addWebSearchResultsToLlmContext": {
+    "message": "Add Web Search Results to LLM Context"
+  },
+  "addCurrentWebPageToLlmContext": {
+    "message": "Add Current Web Page to LLM Context"
+  },
+  "tokensPerSecond": {
+    "message": "t/s"
+  },
+  "prompt": {
+    "message": "prompt"
+  },
+  "gen": {
+    "message": "gen"
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "deleteMessage": {
+    "message": "Delete message"
+  },
+  "continueFromHere": {
+    "message": "Continue from here"
+  },
+  "copyMessage": {
+    "message": "Copy message"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resumeSpeech": {
+    "message": "Resume speech"
+  },
+  "pauseSpeech": {
+    "message": "Pause speech"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopSpeech": {
+    "message": "Stop speech"
+  },
+  "speak": {
+    "message": "Speak"
+  },
+  "speakMessage": {
+    "message": "Speak message"
+  },
+  "reload": {
+    "message": "Reload"
+  },
+  "reloadLastPrompt": {
+    "message": "Reload last prompt"
+  },
+  "selectModel": {
+    "message": "Select model..."
+  },
+  "selectedModel": {
+    "message": "Selected model: {{modelName}}. Click to change."
+  },
+  "searchModels": {
+    "message": "Search models..."
+  },
+  "noModelsMatch": {
+    "message": "No models match your search."
+  },
+  "noModelsAvailable": {
+    "message": "No models available. Check configuration."
+  },
+  "ctx": {
+    "message": "ctx"
+  },
+  "provideGist": {
+    "message": "Provide the gist without missing important details."
+  },
+  "tldr": {
+    "message": "TLDR"
+  },
+  "quickSummary": {
+    "message": "Quick Summary"
+  },
+  "extractKeyFigures": {
+    "message": "Extract all key figures, names, locations, and dates mentioned on this page and list them."
+  },
+  "facts": {
+    "message": "Facts"
+  },
+  "numbersEventsNames": {
+    "message": "Numbers, events, names"
+  },
+  "findPositiveDevelopments": {
+    "message": "Find positive developments, achievements, or opportunities mentioned on this page."
+  },
+  "yay": {
+    "message": "Yay!"
+  },
+  "goodNews": {
+    "message": "Good news"
+  },
+  "findConcerningIssues": {
+    "message": "Find concerning issues, risks, or criticisms mentioned on this page."
+  },
+  "oops": {
+    "message": "Oops"
+  },
+  "badNews": {
+    "message": "Bad news"
+  },
+  "googleSearch": {
+    "message": "Google Search"
+  },
+  "duckduckgoSearch": {
+    "message": "DuckDuckGo Search"
+  },
+  "braveSearch": {
+    "message": "Brave Search"
+  },
+  "wikipediaSearch": {
+    "message": "Wikipedia Search"
+  },
+  "googleApiSearch": {
+    "message": "Google API Search"
+  },
+  "language": {
+    "message": "Language"
   }
 }

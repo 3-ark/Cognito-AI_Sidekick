@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaEye, FaEyeSlash, FaCheck } from 'react-icons/fa';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+ FaCheck,FaEye, FaEyeSlash, 
+} from 'react-icons/fa';
+
 import { useConfig } from './ConfigContext';
 import { OPENAI_URL } from './constants';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from "@/src/background/util";
 
 export const ConnectOpenAI = () => {
@@ -16,8 +20,10 @@ export const ConnectOpenAI = () => {
   const onConnect = () => {
     if (!apiKey) {
       toast.error("API key is required for OpenAI.");
+
       return;
     }
+
     setIsLoading(true);
     toast.dismiss();
     toast.loading('Connecting to OpenAI...');
@@ -27,11 +33,13 @@ export const ConnectOpenAI = () => {
         if (!res.ok) {
           return res.json().then(errData => {
             const errorMsg = errData?.error?.message || `Connection failed: ${res.status} ${res.statusText}`;
+
             throw new Error(errorMsg);
           }).catch(() => {
             throw new Error(`Connection failed: ${res.status} ${res.statusText}`);
           });
         }
+
         return res.json();
       })
       .then(data => {
@@ -48,9 +56,11 @@ export const ConnectOpenAI = () => {
             openAiError: undefined,
             models: [
               ...(config?.models || []),
-              { id: 'openai', host: 'openai', active: true }
+              {
+ id: 'openai', host: 'openai', active: true, 
+},
             ],
-            selectedModel: 'openai'
+            selectedModel: 'openai',
           });
         }
       })
@@ -71,23 +81,24 @@ export const ConnectOpenAI = () => {
     <div className="flex items-center space-x-3">
       <div className="relative flex-grow">
         <Input
-          id="openai-api-key"
           autoComplete="off"
+          className={cn(
+            { "pr-8": true }, "rounded-full"
+          )}
+          disabled={isLoading}
+          id="openai-api-key"
           placeholder="OPENAI_API_KEY"
           type={visibleApiKey ? 'text' : 'password'}
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
-          className={cn( 
-            {"pr-8": true}
-          )}
-          disabled={isLoading}
         />
         <Button
-            variant="ghost" size="sm" // size="sm" is already here
-            className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")} // buttonHeightClass removed
-            onClick={() => setVisibleApiKey(!visibleApiKey)}
             aria-label={visibleApiKey ? "Hide API key" : "Show API key"}
+className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")}
             disabled={isLoading}
+            size="sm"
+            variant="ghost"
+            onClick={() => setVisibleApiKey(!visibleApiKey)}
         >
             {visibleApiKey ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
         </Button>
@@ -95,22 +106,22 @@ export const ConnectOpenAI = () => {
 
       {!isConnected && (
         <Button
-          onClick={onConnect}
-          variant="connect"
-          size="sm"
           disabled={connectButtonDisabled}
+          size="sm"
+          variant="connect"
+          onClick={onConnect}
         >
           {isLoading ? "..." : "Save"}
         </Button>
       )}
       {isConnected && (
         <Button
-          variant="ghost"
-          size="sm"
           aria-label="Connected to OpenAI"
           className={cn("w-8 rounded-md text-[var(--success)]")}
-          onClick={onConnect}
           disabled={isLoading}
+          size="sm"
+          variant="ghost"
+          onClick={onConnect}
         >
           <FaCheck className="h-5 w-5" />
         </Button>

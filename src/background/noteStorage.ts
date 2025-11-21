@@ -1,260 +1,290 @@
-import localforage from 'localforage';
 import { strToU8, zipSync } from 'fflate';
-import { Note, NoteWithEmbedding } from '../types/noteTypes';
-import type { NoteChunk } from '../types/chunkTypes';
-import { removeNoteFromIndex, rebuildFullIndex } from './searchUtils';
-import { CHAT_STORAGE_PREFIX, deleteChatMessage, deleteAllChatMessages } from './chatHistoryStorage'; // Keep these if they are used from here
-import { chunkNoteContent } from './chunkingUtils';
-import { generateEmbeddings, ensureEmbeddingServiceConfigured } from './embeddingUtils';
-import storage from './storageUtil';
-import { Config } from '../types/config';
+import localforage from 'localforage';
 
-// --- CONSTANTS ---
+import { getChunkIndex, getChunksForParent, removeParentFromIndex, setChunksForParent } from './chunkIndex';
+import { NoteInputForChunking } from '../types/chunkTypes';
+import {
+ Note, NOTE_STORAGE_PREFIX, NoteWithEmbedding, 
+} from '../types/noteTypes';
+import { chunkNote } from './chunkingUtils';
+import { getEmbedding } from './embeddingUtils';
+import { getStoredAppSettings } from './storageUtil';
+import { aggressiveProcessText, cleanMarkdownForSemantics } from './textProcessing';
+
+const sanitizeTags = (tags: unknown): string[] => {
+  if (typeof tags === 'string') {
+    return tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  }
+  if (Array.isArray(tags)) {
+    return tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
+  }
+  return [];
+};
+
 export const EMBEDDING_NOTE_PREFIX = 'embedding_note_';
-export const EMBEDDING_NOTE_CHUNK_PREFIX = 'embedding_notechunk_';
-export const NOTE_CHUNK_TEXT_PREFIX = 'notechunktext_';
-export const NOTE_STORAGE_PREFIX = 'note_';
-// NEW: Constant for the parent-to-chunk index
-export const NOTE_CHUNK_INDEX_PREFIX = 'note-chunk-index:';
 
 export const generateNoteId = (): string => `${NOTE_STORAGE_PREFIX}${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 /**
  * Saves a new note or updates an existing one in localforage.
- * This function now also handles chunking and saving the parent-to-chunk index.
+ * Embedding is saved separately.
  */
-export const saveNoteInSystem = async (noteData: Partial<Omit<Note, 'id' | 'createdAt' | 'lastUpdatedAt'>> & { id?: string; content: string; embedding?: number[] }): Promise<Note> => {
+export const saveNoteInSystem = async (noteData: Partial<Note> & { content: string; embedding?: number[] }): Promise<Note> => {
   const now = Date.now();
   const noteId = noteData.id || generateNoteId();
   const existingNote = noteData.id ? await localforage.getItem<Note>(noteId) : null;
 
+  const cleanContent = cleanMarkdownForSemantics(noteData.content);
+  const bm25Content = aggressiveProcessText(cleanContent).join(' ');
+
+  const finalTitle = noteData.title || (existingNote?.title) || `Note - ${new Date(now).toLocaleDateString([], {
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  })}`;
+
+  const hasContentChanged = !existingNote ||
+    noteData.content !== existingNote.content ||
+    finalTitle !== existingNote.title ||
+    (noteData.description || '') !== (existingNote.description || '') ||
+    JSON.stringify((noteData.tags || []).sort()) !== JSON.stringify((existingNote?.tags || []).sort());
+
   const noteToSaveToStorage: Note = {
+    ...(existingNote || {}),
+    ...noteData,
     id: noteId,
-    title: noteData.title || `Note - ${new Date(now).toLocaleDateString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+    title: finalTitle,
     content: noteData.content,
     createdAt: existingNote?.createdAt || now,
-    lastUpdatedAt: now,
-    tags: noteData.tags,
-    url: noteData.url || '',
+    lastUpdatedAt: noteData.lastUpdatedAt || now,
+    contentLastUpdatedAt: hasContentChanged ? now : (existingNote.contentLastUpdatedAt || existingNote.lastUpdatedAt),
+    tags: noteData.tags || (existingNote?.tags) || [],
+    url: noteData.url || (existingNote?.url) || '',
+    pinned: noteData.pinned ?? (existingNote?.pinned) ?? false,
+    bm25Content: bm25Content,
   };
 
+  // Save the core Note object
   await localforage.setItem(noteId, noteToSaveToStorage);
 
+  // Separately, save the embedding if it exists in the input 'noteData'
   if (noteData.embedding && noteData.embedding.length > 0) {
     await localforage.setItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`, noteData.embedding);
   } else {
+    // If noteData.embedding is undefined, null, or an empty array,
+    // remove any existing embedding for this note to prevent orphans.
     await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
   }
 
-  try {
-    const configStr: string | null = await storage.getItem('config');
-    const config: Config | null = configStr ? JSON.parse(configStr) : null;
-    const embeddingMode = config?.rag?.embeddingMode ?? 'manual';
+  const appSettings = await getStoredAppSettings();
 
-    // MODIFIED: Destructure the new return object from chunkNoteContent
-    const { chunks: currentChunks, chunkIds } = chunkNoteContent({
-      id: noteToSaveToStorage.id,
-      content: noteToSaveToStorage.content,
+  if (appSettings?.ragConfig?.autoEmbedOnSave && hasContentChanged) {
+    // If the note is being updated, use the index to efficiently delete its old chunks.
+    if (existingNote) {
+      const oldChunkIds = await getChunksForParent(noteId);
+      for (const chunkId of oldChunkIds) {
+          await localforage.removeItem(chunkId);
+      }
+      // No need to remove parent from index, as it will be overwritten by setChunksForParent.
+      console.log(`Deleted ${oldChunkIds.length} old chunks for note ${noteId} using the index.`);
+    }
+
+    const noteInput: NoteInputForChunking = {
+      id: noteId,
+      content: noteData.content,
       title: noteToSaveToStorage.title,
       url: noteToSaveToStorage.url,
+      description: noteToSaveToStorage.description,
       tags: noteToSaveToStorage.tags,
-    });
+      lastUpdatedAt: noteToSaveToStorage.contentLastUpdatedAt,
+    };
+    const { chunks } = await chunkNote(noteInput, appSettings.ragConfig);
+    const chunkIds = chunks.map(chunk => chunk.id);
+    await setChunksForParent(noteId, chunkIds);
 
-    const currentChunkIdsSet = new Set(chunkIds);
-    const allStorageKeys = await localforage.keys();
-
-    const oldChunkTextKeys = allStorageKeys.filter(key => 
-      key.startsWith(NOTE_CHUNK_TEXT_PREFIX) && key.includes(noteToSaveToStorage.id)
-    );
-    const oldChunkEmbeddingKeys = allStorageKeys.filter(key =>
-      key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) && key.includes(noteToSaveToStorage.id)
-    );
-
-    for (const oldKey of oldChunkTextKeys) {
-      const chunkId = oldKey.substring(NOTE_CHUNK_TEXT_PREFIX.length);
-      if (!currentChunkIdsSet.has(chunkId)) {
-        await localforage.removeItem(oldKey);
-        await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunkId}`);
-      }
+    for (const chunk of chunks) {
+      chunk.embedding = await getEmbedding(chunk.content);
+      await localforage.setItem(chunk.id, chunk);
     }
-    for (const oldEmbeddingKey of oldChunkEmbeddingKeys) {
-        const chunkId = oldEmbeddingKey.substring(EMBEDDING_NOTE_CHUNK_PREFIX.length);
-        if (!currentChunkIdsSet.has(chunkId)) {
-            await localforage.removeItem(oldEmbeddingKey);
-        }
-    }
-
-    for (const chunk of currentChunks) {
-      await localforage.setItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunk.id}`, chunk.content);
-    }
-
-    // NEW: Save the parent-to-chunk index. This is the crucial part.
-    await localforage.setItem(`${NOTE_CHUNK_INDEX_PREFIX}${noteToSaveToStorage.id}`, chunkIds);
-
-    if (embeddingMode === 'automatic') {
-      if (currentChunks.length > 0) {
-        try {
-            await ensureEmbeddingServiceConfigured();
-            if (config?.rag?.embedding_model) {
-                const chunkContents = currentChunks.map(chunk => chunk.content);
-                const embeddings = await generateEmbeddings(chunkContents);
-                for (let i = 0; i < currentChunks.length; i++) {
-                    const chunk = currentChunks[i];
-                    const embedding = embeddings[i];
-                    if (embedding && embedding.length > 0) {
-                        await localforage.setItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`, embedding);
-                    } else {
-                        await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunk.id}`);
-                    }
-                }
-            }
-        } catch (configError) {
-            console.warn(`Embedding service not configured. Skipping automatic embedding for note ${noteToSaveToStorage.id}. Error: ${configError}`);
-        }
-      }
-    }
-    console.log(`Processed and saved ${currentChunks.length} chunk texts and index for note ${noteToSaveToStorage.id}.`);
-  } catch (error) {
-    console.error(`Error during chunking or conditional embedding generation for note ${noteToSaveToStorage.id}:`, error);
   }
 
-  return noteToSaveToStorage;
+  // After saving the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
+  // await indexSingleNote(noteToSaveToStorage);
+
+  return noteToSaveToStorage; // Return the core Note object
 };
 
 /**
  * Fetches all notes from localforage and their embeddings.
- * (This function is unchanged)
  */
 export const getAllNotesFromSystem = async (): Promise<NoteWithEmbedding[]> => {
   const keys = await localforage.keys();
   const noteKeys = keys.filter(key => key.startsWith(NOTE_STORAGE_PREFIX));
   const processedNotes: NoteWithEmbedding[] = [];
 
-  for (const key of noteKeys) {
-    const rawNoteData = await localforage.getItem<Note>(key);
-    if (rawNoteData && rawNoteData.id) { 
-      let tagsArray: string[] = [];
-      const tags: unknown = rawNoteData.tags;
+  for (const key of noteKeys.sort().reverse()) {
+    const rawNoteData = await localforage.getItem<Note>(key); // Expecting type Note
 
-      if (typeof tags === 'string') {
-        tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      } else if (Array.isArray(tags)) {
-        tagsArray = tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
-      }
+    if (rawNoteData && rawNoteData.id) {
+      const tagsArray = sanitizeTags(rawNoteData.tags);
       
       const baseNote: Note = {
         id: rawNoteData.id,
         title: rawNoteData.title,
+        description: rawNoteData.description,
         content: rawNoteData.content,
         createdAt: rawNoteData.createdAt,
         lastUpdatedAt: rawNoteData.lastUpdatedAt,
         tags: tagsArray,
         url: rawNoteData.url || '',
+        pinned: rawNoteData.pinned || false,
       };
 
       const embedding = await localforage.getItem<number[]>(`${EMBEDDING_NOTE_PREFIX}${baseNote.id}`);
+
       processedNotes.push({ ...baseNote, embedding: embedding || undefined });
     }
   }
-  return processedNotes.sort((a, b) => b.lastUpdatedAt - a.lastUpdatedAt);
+
+  return processedNotes.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return b.lastUpdatedAt - a.lastUpdatedAt;
+  });
 };
 
 /**
- * Deletes a note and its associated data (embedding, chunks, index) from localforage.
+ * Deletes a note and its embedding from localforage by its ID.
  */
 export const deleteNoteFromSystem = async (noteId: string): Promise<void> => {
-  const chunkIds = await localforage.getItem<string[]>(`${NOTE_CHUNK_INDEX_PREFIX}${noteId}`);
-
   await localforage.removeItem(noteId);
   await localforage.removeItem(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
-  await localforage.removeItem(`${NOTE_CHUNK_INDEX_PREFIX}${noteId}`);
 
-  await removeNoteFromIndex(noteId);
-
-  if (chunkIds?.length) {
-    for (const chunkId of chunkIds) {
-      await localforage.removeItem(`${NOTE_CHUNK_TEXT_PREFIX}${chunkId}`);
-      await localforage.removeItem(`${EMBEDDING_NOTE_CHUNK_PREFIX}${chunkId}`);
-    }
-  }
-  console.log(`Deleted note ${noteId} and all associated data.`);
-};
-
-/**
- * Deletes all notes and their associated data from localforage.
- */
-export const deleteAllNotesFromSystem = async (): Promise<void> => {
-  const keys = await localforage.keys();
-  const keysToDelete: string[] = [];
-
-  for (const key of keys) {
-    if (
-      key.startsWith(NOTE_STORAGE_PREFIX) ||
-      key.startsWith(EMBEDDING_NOTE_PREFIX) ||
-      key.startsWith(NOTE_CHUNK_TEXT_PREFIX) ||
-      key.startsWith(EMBEDDING_NOTE_CHUNK_PREFIX) ||
-      // NEW: Add the index prefix to the deletion list
-      key.startsWith(NOTE_CHUNK_INDEX_PREFIX)
-    ) {
-      keysToDelete.push(key);
-    }
-  }
-
-  for (const key of keysToDelete) {
+  // Also, delete all associated chunks using the new index.
+  const chunkIdsToDelete = await getChunksForParent(noteId);
+  for (const key of chunkIdsToDelete) {
     await localforage.removeItem(key);
   }
-  
-  console.log('All notes and associated data deleted.');
-  await rebuildFullIndex();
+  await removeParentFromIndex(noteId);
+
+  console.log('Note and its embedding deleted from system:', noteId);
+
+  // After deleting the note, update the search index - THIS IS NOW HANDLED BY THE CALLER (background/index.ts)
+  // await removeNoteFromIndex(noteId);
+};
+
+import { getSearchService } from './searchUtils';
+import { saveChunkIndex } from './chunkIndex';
+
+/**
+ * Deletes all notes and their embeddings from localforage efficiently.
+ */
+export const deleteAllNotesFromSystem = async (): Promise<void> => {
+  const searchService = await getSearchService();
+  const chunkIndex = await getChunkIndex();
+  const keys = await localforage.keys();
+
+  const noteKeys = keys.filter(key => key.startsWith(NOTE_STORAGE_PREFIX));
+  const noteEmbeddingKeys = keys.filter(key => key.startsWith(EMBEDDING_NOTE_PREFIX));
+
+  const noteChunkKeysToDelete = new Set<string>();
+
+  for (const noteId of noteKeys) {
+      const chunkIds = chunkIndex[noteId] || [];
+      for (const chunkId of chunkIds) {
+          noteChunkKeysToDelete.add(chunkId);
+      }
+      delete chunkIndex[noteId]; // Remove from chunk index
+  }
+
+  // Find any orphaned note chunks
+  keys.forEach(key => {
+      if (key.startsWith('notechunk_') || key.startsWith('jsonchunk_')) {
+          noteChunkKeysToDelete.add(key);
+      }
+  });
+
+  const allKeysToDelete = [
+      ...noteKeys,
+      ...noteEmbeddingKeys,
+      ...Array.from(noteChunkKeysToDelete)
+  ];
+
+  for (const key of noteKeys) {
+      await searchService.removeItemFromIndex(key);
+  }
+
+  await Promise.all(allKeysToDelete.map(key => localforage.removeItem(key)));
+
+  await saveChunkIndex(chunkIndex);
+
+  console.log('All notes and their associated data have been deleted efficiently.');
 };
 
 /**
  * Gets a single note by ID, including its embedding.
- * (This function is unchanged)
  */
 export const getNoteByIdFromSystem = async (noteId: string): Promise<NoteWithEmbedding | null> => {
-    const rawNote = await localforage.getItem<Note>(noteId); 
+    const rawNote = await localforage.getItem<Note>(noteId);
+ 
     if (!rawNote) {
       return null;
     }
 
-    let tagsArray: string[] = [];
-    const tags: unknown = rawNote.tags;
+    const tagsArray = sanitizeTags(rawNote.tags);
 
-    if (typeof tags === 'string') {
-      tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    } else if (Array.isArray(tags)) {
-      tagsArray = tags.map(tag => String(tag).trim()).filter(tag => tag.length > 0);
-    }
-
-    const note: Note = { ...rawNote, tags: tagsArray };
+    const note: Note = {
+      ...rawNote,
+      description: rawNote.description,
+      tags: tagsArray,
+    };
 
     const embedding = await localforage.getItem<number[]>(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+
     return { ...note, embedding: embedding || undefined }; 
 };
 
 /**
- * Deletes multiple notes and their embeddings from localforage by their IDs.
- * (This function is unchanged)
+ * Deletes multiple notes and their embeddings from localforage by their IDs efficiently.
  */
 export const deleteNotesFromSystem = async (noteIds: string[]): Promise<void> => {
   if (!noteIds || noteIds.length === 0) {
+    console.log('No note IDs provided for deletion.');
     return;
   }
+
+  const searchService = await getSearchService();
+  const chunkIndex = await getChunkIndex();
+  const keysToDelete = new Set<string>();
+
   for (const noteId of noteIds) {
-    await deleteNoteFromSystem(noteId);
+    keysToDelete.add(noteId);
+    keysToDelete.add(`${EMBEDDING_NOTE_PREFIX}${noteId}`);
+
+    const chunkIds = chunkIndex[noteId] || [];
+    for (const chunkId of chunkIds) {
+        keysToDelete.add(chunkId);
+    }
+    delete chunkIndex[noteId];
+
+    await searchService.removeItemFromIndex(noteId);
   }
-  console.log(`${noteIds.length} notes deleted from system.`);
+
+  await Promise.all(Array.from(keysToDelete).map(key => localforage.removeItem(key)));
+
+  await saveChunkIndex(chunkIndex);
+
+  console.log(`${noteIds.length} notes and their associated data deleted from system.`);
 };
 
 /**
  * Exports multiple notes to Obsidian MD format and triggers download for each.
- * (This function is unchanged)
  */
 export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ successCount: number, errorCount: number, isZip: boolean }> => {
-  // ... (This entire function's logic remains the same)
   if (!noteIds || noteIds.length === 0) {
-    return { successCount: 0, errorCount: 0, isZip: false };
+    console.log('No note IDs provided for export.');
+
+    return {
+ successCount: 0, errorCount: 0, isZip: false, 
+};
   }
 
   let successCount = 0;
@@ -264,18 +294,30 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
   for (const noteId of noteIds) {
     try {
       const note = await getNoteByIdFromSystem(noteId);
+
       if (!note) {
+        console.warn(`Note with ID ${noteId} not found for export.`);
         errorCount++;
         continue;
       }
 
       let mdContent = '---\n';
+
       mdContent += `title: "${note.title.replace(/"/g, '\\\\"')}"\n`;
-      if (note.url) mdContent += `source: "${note.url.replace(/"/g, '\\\\"')}"\n`;
+
+      if (note.description) {
+        mdContent += `description: "${note.description.replace(/"/g, '\\\\"')}"\n`;
+      }
+
+      if (note.url) {
+        mdContent += `source: "${note.url.replace(/"/g, '\\\\"')}"\n`;
+      }
+
       if (note.tags && note.tags.length > 0) {
         mdContent += 'tags:\n';
         note.tags.forEach(tag => {
           const trimmedTag = tag.trim();
+
           if (trimmedTag.includes(':') || trimmedTag.includes('"')) {
             mdContent += `  - "${trimmedTag.replace(/"/g, '\\\\"')}"\n`;
           } else {
@@ -283,6 +325,7 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
           }
         });
       }
+
       mdContent += '---\n\n';
       mdContent += note.content;
 
@@ -292,42 +335,74 @@ export const exportNotesToObsidianMD = async (noteIds: string[]): Promise<{ succ
       filesToZip[filename] = strToU8(mdContent);
       successCount++;
     } catch (error) {
+      console.error(`Failed to process note ${noteId} for zipping:`, error);
       errorCount++;
     }
   }
 
   if (successCount === 0) {
-    return { successCount: 0, errorCount, isZip: false };
+    console.log('No notes were successfully processed for export.');
+
+    return {
+ successCount: 0, errorCount, isZip: false, 
+};
   }
 
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const zipFilename = `Cognito-${timestamp}.zip`;
+    const zipFilename = `cognito-${timestamp}.zip`;
+
+    // Create the zip file content
     const zippedContent = zipSync(filesToZip);
-    const blob = new Blob([zippedContent], { type: 'application/zip' });
+
+    // Convert Uint8Array to Blob
+    const blob = new Blob([new Uint8Array(zippedContent)], { type: 'application/zip' });
+
+    // Convert Blob to Base64 data URL
     const reader = new FileReader();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      reader.onloadend = () => typeof reader.result === 'string' ? resolve(reader.result) : reject();
-      reader.onerror = reject;
+    const dataUrl = await new Promise<string>((resolveReader, rejectReader) => {
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolveReader(reader.result);
+        } else {
+          rejectReader(new Error('Failed to convert Blob to Base64 data URL.'));
+        }
+      };
+      reader.onerror = () => {
+        rejectReader(new Error('FileReader error while converting Blob to Base64.'));
+      };
       reader.readAsDataURL(blob);
     });
 
     await new Promise<void>((resolve, reject) => {
-      chrome.downloads.download({ url: dataUrl, filename: zipFilename, saveAs: false }, (id) => {
-        if (chrome.runtime.lastError || id === undefined) {
-          reject(chrome.runtime.lastError?.message || 'Download failed.');
+      chrome.downloads.download({
+        url: dataUrl,
+        filename: zipFilename,
+        saveAs: false,
+      }, downloadId => {
+        // No URL.revokeObjectURL needed for data URLs
+        if (chrome.runtime.lastError) {
+          console.error(`Error downloading zip file ${zipFilename}:`, chrome.runtime.lastError.message);
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (downloadId === undefined) {
+          console.error(`Download failed for zip file ${zipFilename}: downloadId is undefined.`);
+          reject(new Error('Download failed: downloadId is undefined.'));
         } else {
+          console.log(`Successfully initiated download for ${zipFilename}`);
           resolve();
         }
       });
     });
-    return { successCount, errorCount, isZip: true };
+
+    return {
+ successCount, errorCount, isZip: true, 
+};
   } catch (zipError) {
-    return { successCount: 0, errorCount: noteIds.length, isZip: false };
+    console.error('Failed to create or download zip file:', zipError);
+
+    // If zipping fails, we still have the individual error counts, but explicitly state zip failed.
+    return {
+ successCount: 0, errorCount: noteIds.length, isZip: false, 
+}; // Treat all as errors if zip fails
   }
 };
-
-// Note: The chat-related functions at the end of your original file are kept
-// for compatibility, though they might be better placed in chatHistoryStorage.ts.
-// These are unchanged.
-export { deleteChatMessage, deleteAllChatMessages };

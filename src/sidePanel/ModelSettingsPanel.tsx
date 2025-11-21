@@ -1,111 +1,107 @@
+import React from 'react';
+
+import AnimatedBackground from './AnimatedBackground';
 import { useConfig } from './ConfigContext';
-import {
-  AccordionItem,
-  AccordionContent,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { SettingTitle } from './SettingsTitle';
+
+// Button and FiChevronLeft are no longer needed here for an internal back button
 import { cn } from "@/src/background/util";
 
-type ModelParamKey = 'temperature' | 'maxTokens' | 'topP' | 'presencepenalty';
+type ModelParamKey = 'temperature' | 'maxTokens' | 'topP' | 'presencePenalty';
 
-export const ModelSettingsPanel = () => {
+// No onBack prop needed anymore
+// interface ModelSettingsPanelProps {
+//   onBack?: () => void; 
+// }
+
+// export const ModelSettingsPanel: React.FC<ModelSettingsPanelProps> = ({ onBack }) => {
+export const ModelSettingsPanel: React.FC = () => { // Simplified props
   const { config, updateConfig } = useConfig();
 
   const handleChange = (key: ModelParamKey) => (val: number | number[]) => {
     const valueToSet = Array.isArray(val) ? val[0] : val;
+
     updateConfig({ [key]: valueToSet });
   };
 
   const temperature = config.temperature ?? 0.7;
   const maxTokens = config.maxTokens ?? 32048;
   const topP = config.topP ?? 0.95;
-  const presence_penalty = config.presencepenalty ?? 0;
+  const presence_penalty = config.presencePenalty ?? 0;
+
+  const inputStyles = "bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus:border-[var(--active)] hide-number-spinners";
+  const labelStyles = "text-base font-medium text-[var(--text)] opacity-90";
 
   return (
-    <AccordionItem
-      value="model-params"
-      className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/20 rounded-xl shadow-md",
-        "transition-all duration-150 ease-in-out",
-        "hover:border-[var(--active)] hover:brightness-105"
-      )}
-    >
-      <AccordionTrigger
-        className={cn(
-          "flex items-center justify-between w-full px-3 py-2 hover:no-underline",
-          "text-[var(--text)] font-medium",
-          "hover:brightness-95",
-        )}
-      >
-        <SettingTitle icon="⚙️" text="Model Config" />
-      </AccordionTrigger>
-      <AccordionContent
-        className="px-3 pb-4 pt-2 text-[var(--text)]"
-      >
-        <div className="flex flex-col gap-6">
+
+    // The main div now provides padding and overflow handling for full-page display
+    // The sticky header with back button is removed from here.
+    <div className="relative z-[1] flex flex-col h-full flex-1 overflow-y-auto p-6 text-[var(--text)] no-scrollbar">
+      <AnimatedBackground />
+      <div className="flex flex-col gap-6"> {/* Removed extra text-[var(--text)] as it's on parent */}
           <div className="space-y-3">
-            <Label htmlFor="temperature" className="text-base font-medium text-foreground">
+            <Label className={labelStyles} htmlFor="temperature">
               Temperature ({temperature.toFixed(2)})
             </Label>
             <Slider
               id="temperature"
-              min={0} max={2} step={0.01}
+              max={2}
+min={0}
+step={0.01}
               value={[temperature]}
-              onValueChange={handleChange('temperature')}
-              variant="themed" 
+              variant="themed"
+              onValueChange={handleChange('temperature')} 
             />
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="maxTokens" className="text-base font-medium text-foreground">
+            <Label className={labelStyles} htmlFor="maxTokens">
               Max Tokens ({maxTokens})
             </Label>
             <Input
+              className={cn(inputStyles, "rounded-xl")}
               id="maxTokens"
+              max={1280000}
+              min={1}
               type="number"
               value={maxTokens}
-              min={1}
-              max={1280000}
-              onChange={(e) => handleChange('maxTokens')(parseInt(e.target.value, 10) || 0)}
-              className={cn(
-                "hide-number-spinners"
-              )}
+              onChange={e => handleChange('maxTokens')(parseInt(e.target.value, 10) || 0)} // Removed unused left side of comma operator
             />
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="topP" className="text-base font-medium text-foreground">
+            <Label className={labelStyles} htmlFor="topP">
               Top P ({topP.toFixed(2)})
             </Label>
             <Slider
               id="topP"
-              min={0} max={1} step={0.01}
+              max={1}
+min={0}
+step={0.01}
               value={[topP]}
-              onValueChange={handleChange('topP')}
               variant="themed"
+              onValueChange={handleChange('topP')}
             />
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="presencepenalty" className="text-base font-medium text-foreground">
+            <Label className={labelStyles} htmlFor="presencePenalty">
             Presence Penalty ({presence_penalty.toFixed(2)})
             </Label>
             <Slider
-              id="presencepenalty"
-              min={-2}
+              id="presencePenalty"
               max={2}
+              min={-2}
               step={0.01}
               value={[presence_penalty]}
-              onValueChange={handleChange('presencepenalty')}
               variant="themed"
+              onValueChange={handleChange('presencePenalty')}
             />
           </div>
         </div>
-      </AccordionContent>
-    </AccordionItem>
+      </div>
   );
 };

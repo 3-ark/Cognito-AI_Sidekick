@@ -5,6 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/src/background/util"
 
 const sliderVariants = cva(
+
   // Base styles
   "relative flex w-full touch-none select-none items-center data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
   {
@@ -32,14 +33,14 @@ const sliderVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 )
 
 export interface SliderProps
   extends React.ComponentProps<typeof SliderPrimitive.Root>,
     VariantProps<typeof sliderVariants> {}
 
-function Slider({
+const Slider = ({
   className,
   variant,
   defaultValue,
@@ -47,7 +48,7 @@ function Slider({
   min = 0,
   max = 100,
   ...props
-}: SliderProps) {
+}: SliderProps) => {
   const _values = React.useMemo(
     () =>
       Array.isArray(value)
@@ -55,41 +56,41 @@ function Slider({
         : Array.isArray(defaultValue)
           ? defaultValue
           : [min, max],
-    [value, defaultValue, min]
+    [value, defaultValue, min],
   );
 
   return (
     <SliderPrimitive.Root
+      className={cn(sliderVariants({ variant, className }))}
       data-slot="slider"
       defaultValue={defaultValue}
-      value={value}
-      min={min}
       max={max}
-      className={cn(sliderVariants({ variant, className }))}
+      min={min}
+      value={value}
       {...props}
     >
       <SliderPrimitive.Track
-        data-slot="slider-track"
         className={cn(
           "relative h-1.5 w-full grow overflow-hidden rounded-full",
-          "data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+          "data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5",
         )}
+        data-slot="slider-track"
       >
         <SliderPrimitive.Range
-          data-slot="slider-range"
           className={cn(
             "absolute h-full",
-            "data-[orientation=vertical]:w-full"
+            "data-[orientation=vertical]:w-full",
           )}
+          data-slot="slider-range"
         />
       </SliderPrimitive.Track>
       {(_values.length > 0 ? _values : [min]).map((_, index) => (
         <SliderPrimitive.Thumb
-          data-slot="slider-thumb"
           key={index}
           className={cn(
-            "block h-4 w-4 bg-white rounded-full border border-primary/50 shadow-sm transition-colors focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50"
+            "block h-4 w-4 bg-white rounded-full border border-primary/50 shadow-sm transition-colors focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-50",
           )}
+          data-slot="slider-thumb"
         />
       ))}
     </SliderPrimitive.Root>

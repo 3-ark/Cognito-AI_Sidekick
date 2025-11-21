@@ -26,6 +26,9 @@
   "searchingWeb": {
     "message": "Buscando en la web…"
   },
+  "setDisplayName": {
+    "message": "Set your display name in Profile"
+  },
   "processingSERP": {
     "message": "Procesando SERP…"
   },
@@ -186,9 +189,141 @@
     "message": "Cerrar configuración"
   },
   "extName": {
-    "message": "Cognito AI Sidekick"
+    "message": "Asistente de IA Cognito"
   },
   "extShortDesc": {
-    "message": "Un compañero de IA centrado en la privacidad, primero sin conexión, para su navegador."
+    "message": "Un asistente de navegador de IA centrado en la privacidad y que funciona sin conexión."
+  },
+  "speech": {
+    "message": "Speech"
+  },
+  "addWebSearchResultsToLlmContext": {
+    "message": "Add Web Search Results to LLM Context"
+  },
+  "addCurrentWebPageToLlmContext": {
+    "message": "Add Current Web Page to LLM Context"
+  },
+  "tokensPerSecond": {
+    "message": "t/s"
+  },
+  "prompt": {
+    "message": "prompt"
+  },
+  "gen": {
+    "message": "gen"
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "deleteMessage": {
+    "message": "Delete message"
+  },
+  "continueFromHere": {
+    "message": "Continue from here"
+  },
+  "copyMessage": {
+    "message": "Copy message"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resumeSpeech": {
+    "message": "Resume speech"
+  },
+  "pauseSpeech": {
+    "message": "Pause speech"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopSpeech": {
+    "message": "Stop speech"
+  },
+  "speak": {
+    "message": "Speak"
+  },
+  "speakMessage": {
+    "message": "Speak message"
+  },
+  "reload": {
+    "message": "Reload"
+  },
+  "reloadLastPrompt": {
+    "message": "Reload last prompt"
+  },
+  "selectModel": {
+    "message": "Select model..."
+  },
+  "selectedModel": {
+    "message": "Selected model: {{modelName}}. Click to change."
+  },
+  "searchModels": {
+    "message": "Search models..."
+  },
+  "noModelsMatch": {
+    "message": "No models match your search."
+  },
+  "noModelsAvailable": {
+    "message": "No models available. Check configuration."
+  },
+  "ctx": {
+    "message": "ctx"
+  },
+  "provideGist": {
+    "message": "Provide the gist without missing important details."
+  },
+  "tldr": {
+    "message": "TLDR"
+  },
+  "quickSummary": {
+    "message": "Quick Summary"
+  },
+  "extractKeyFigures": {
+    "message": "Extract all key figures, names, locations, and dates mentioned on this page and list them."
+  },
+  "facts": {
+    "message": "Facts"
+  },
+  "numbersEventsNames": {
+    "message": "Numbers, events, names"
+  },
+  "findPositiveDevelopments": {
+    "message": "Find positive developments, achievements, or opportunities mentioned on this page."
+  },
+  "yay": {
+    "message": "Yay!"
+  },
+  "goodNews": {
+    "message": "Good news"
+  },
+  "findConcerningIssues": {
+    "message": "Find concerning issues, risks, or criticisms mentioned on this page."
+  },
+  "oops": {
+    "message": "Oops"
+  },
+  "badNews": {
+    "message": "Bad news"
+  },
+  "googleSearch": {
+    "message": "Google Search"
+  },
+  "duckduckgoSearch": {
+    "message": "DuckDuckGo Search"
+  },
+  "braveSearch": {
+    "message": "Brave Search"
+  },
+  "wikipediaSearch": {
+    "message": "Wikipedia Search"
+  },
+  "googleApiSearch": {
+    "message": "Google API Search"
+  },
+  "language": {
+    "message": "Language"
   }
 }

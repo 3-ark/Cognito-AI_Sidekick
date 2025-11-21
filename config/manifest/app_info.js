@@ -5,5 +5,5 @@ const packageJson = require(packageJsonPath);
 module.exports = {
   name: packageJson.name,
   description: packageJson.description,
-  version: packageJson.version
+  version: packageJson.version,
 };

@@ -12,28 +12,31 @@
     "message": "채팅으로 돌아가기"
   },
   "hiSettings": {
-    "message": "안녕하세요 {{userName}}님, 설정하시겠어요?"
+    "message": "안녕하세요 {{userName}}, 설정?"
   },
   "online": {
     "message": "온라인"
   },
   "typing": {
-    "message": "입력 중…"
+    "message": "입력 중..."
   },
   "thinking": {
-    "message": "생각 중…"
+    "message": "생각 중..."
   },
   "searchingWeb": {
-    "message": "웹 검색 중…"
+    "message": "웹 검색 중..."
+  },
+  "setDisplayName": {
+    "message": "Set your display name in Profile"
   },
   "processingSERP": {
-    "message": "SERP 처리 중…"
+    "message": "SERP 처리 중..."
   },
   "readingPage": {
-    "message": "페이지 읽는 중…"
+    "message": "페이지 읽는 중..."
   },
   "analyzing": {
-    "message": "분석 중…"
+    "message": "분석 중..."
   },
   "resetChat": {
     "message": "채팅 재설정"
@@ -69,10 +72,10 @@
     "message": "빠른 안내"
   },
   "guideIntro": {
-    "message": "Cognito를 시작하는 데 도움이 되는 빠른 소개입니다."
+    "message": "Cognito를 시작하기 위한 빠른 소개입니다."
   },
   "guideStep1": {
-    "message": "1. '설정'에서 'API 액세스'로 이동하여 API 키 또는 URL을 입력합니다."
+    "message": "1. 설정에서 'API 액세스'로 이동하여 API 키 또는 URL을 입력합니다."
   },
   "guideStep2": {
     "message": "2. 설정을 종료한 다음 헤더의 모델 선택기를 클릭하여 모델을 선택합니다. 오른쪽 상단에서 사용자 이름을 설정할 수 있습니다."
@@ -87,13 +90,13 @@
     "message": "즐거운 시간 보내세요!"
   },
   "gotIt": {
-    "message": "알겠습니다, 설정으로 이동"
+    "message": "알겠습니다. 설정으로 이동합니다."
   },
   "editProfile": {
     "message": "프로필 편집"
   },
   "editProfileDesc": {
-    "message": "표시 이름과 프로필 정보를 설정합니다."
+    "message": "표시 이름 및 프로필 정보를 설정하십시오."
   },
   "username": {
     "message": "사용자 이름"
@@ -120,7 +123,7 @@
     "message": "모두 삭제"
   },
   "searchPlaceholder": {
-    "message": "노트 및 채팅 기록 검색..."
+    "message": "노트 및 채팅 기록에서 검색..."
   },
   "searching": {
     "message": "검색 중..."
@@ -141,10 +144,10 @@
     "message": "선택한 페르소나 삭제"
   },
   "history": {
-    "message": "기록"
+    "message": "역사"
   },
   "notes": {
-    "message": "노트"
+    "message": "메모"
   },
   "embeddings": {
     "message": "임베딩"
@@ -186,9 +189,141 @@
     "message": "설정 닫기"
   },
   "extName": {
-    "message": "Cognito AI 사이드킥"
+    "message": "Cognito AI 어시스턴트"
   },
   "extShortDesc": {
-    "message": "개인 정보 보호에 중점을 둔 오프라인 우선 AI 기반 브라우저 사이드킥입니다."
+    "message": "개인 정보 보호에 중점을 둔 오프라인 우선 AI 브라우저 어시스턴트입니다."
+  },
+  "speech": {
+    "message": "Speech"
+  },
+  "addWebSearchResultsToLlmContext": {
+    "message": "Add Web Search Results to LLM Context"
+  },
+  "addCurrentWebPageToLlmContext": {
+    "message": "Add Current Web Page to LLM Context"
+  },
+  "tokensPerSecond": {
+    "message": "t/s"
+  },
+  "prompt": {
+    "message": "prompt"
+  },
+  "gen": {
+    "message": "gen"
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "deleteMessage": {
+    "message": "Delete message"
+  },
+  "continueFromHere": {
+    "message": "Continue from here"
+  },
+  "copyMessage": {
+    "message": "Copy message"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resumeSpeech": {
+    "message": "Resume speech"
+  },
+  "pauseSpeech": {
+    "message": "Pause speech"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopSpeech": {
+    "message": "Stop speech"
+  },
+  "speak": {
+    "message": "Speak"
+  },
+  "speakMessage": {
+    "message": "Speak message"
+  },
+  "reload": {
+    "message": "Reload"
+  },
+  "reloadLastPrompt": {
+    "message": "Reload last prompt"
+  },
+  "selectModel": {
+    "message": "Select model..."
+  },
+  "selectedModel": {
+    "message": "Selected model: {{modelName}}. Click to change."
+  },
+  "searchModels": {
+    "message": "Search models..."
+  },
+  "noModelsMatch": {
+    "message": "No models match your search."
+  },
+  "noModelsAvailable": {
+    "message": "No models available. Check configuration."
+  },
+  "ctx": {
+    "message": "ctx"
+  },
+  "provideGist": {
+    "message": "Provide the gist without missing important details."
+  },
+  "tldr": {
+    "message": "TLDR"
+  },
+  "quickSummary": {
+    "message": "Quick Summary"
+  },
+  "extractKeyFigures": {
+    "message": "Extract all key figures, names, locations, and dates mentioned on this page and list them."
+  },
+  "facts": {
+    "message": "Facts"
+  },
+  "numbersEventsNames": {
+    "message": "Numbers, events, names"
+  },
+  "findPositiveDevelopments": {
+    "message": "Find positive developments, achievements, or opportunities mentioned on this page."
+  },
+  "yay": {
+    "message": "Yay!"
+  },
+  "goodNews": {
+    "message": "Good news"
+  },
+  "findConcerningIssues": {
+    "message": "Find concerning issues, risks, or criticisms mentioned on this page."
+  },
+  "oops": {
+    "message": "Oops"
+  },
+  "badNews": {
+    "message": "Bad news"
+  },
+  "googleSearch": {
+    "message": "Google Search"
+  },
+  "duckduckgoSearch": {
+    "message": "DuckDuckGo Search"
+  },
+  "braveSearch": {
+    "message": "Brave Search"
+  },
+  "wikipediaSearch": {
+    "message": "Wikipedia Search"
+  },
+  "googleApiSearch": {
+    "message": "Google API Search"
+  },
+  "language": {
+    "message": "Language"
   }
 }

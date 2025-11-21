@@ -1,6 +1,4 @@
 const manifestV3Object = require('./manifest/v3.js');
-const fs = require('fs');
-const path = require('path');
 
 module.exports = function(browser) {
   let manifest = JSON.parse(JSON.stringify(manifestV3Object));
@@ -8,6 +6,8 @@ module.exports = function(browser) {
   if (manifest.content_security_policy && typeof manifest.content_security_policy.extension_pages === 'string') {
     manifest.content_security_policy.extension_pages = manifest.content_security_policy.extension_pages.replace(/\s+/g, ' ');
   }
+
+  manifest.default_locale = 'en';
 
   return JSON.stringify(manifest, null, 2);
 };

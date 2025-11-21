@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaEye, FaEyeSlash, FaCheck } from 'react-icons/fa';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+ FaCheck,FaEye, FaEyeSlash, 
+} from 'react-icons/fa';
+
 import { useConfig } from './ConfigContext';
 import { OPENROUTER_URL } from './constants';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from "@/src/background/util";
 
 export const ConnectOpenRouter = () => {
@@ -16,8 +20,10 @@ export const ConnectOpenRouter = () => {
   const onConnect = () => {
     if (!apiKey) {
       toast.error("API key is required for OpenRouter.");
+
       return;
     }
+
     setIsLoading(true);
     toast.dismiss();
     toast.loading('Connecting to OpenRouter...');
@@ -27,11 +33,13 @@ export const ConnectOpenRouter = () => {
         if (!res.ok) {
           return res.json().then(errData => {
             const errorMsg = errData?.error?.message || `Connection failed: ${res.status} ${res.statusText}`;
+
             throw new Error(errorMsg);
           }).catch(() => {
             throw new Error(`Connection failed: ${res.status} ${res.statusText}`);
           });
         }
+
         return res.json();
       })
       .then(data => {
@@ -45,10 +53,10 @@ export const ConnectOpenRouter = () => {
                 id: `openrouter_${model.id}`,
                 name: model.name || model.id,
                 host: 'openrouter',
-                active: true
-              }))
+                active: true,
+              })),
             ),
-          selectedModel: `openrouter_${data.data[0].id}`
+          selectedModel: `openrouter_${data.data[0].id}`,
           });
           toast.dismiss();
           toast.success('Connected to OpenRouter');
@@ -79,23 +87,24 @@ export const ConnectOpenRouter = () => {
     <div className="flex items-center space-x-3">
       <div className="relative flex-grow">
         <Input
-          id="openrouter-api-key"
           autoComplete="off"
+          className={cn(
+            { "pr-8": true }, "rounded-full"
+          )}
+          disabled={isLoading}
+          id="openrouter-api-key"
           placeholder="OPENROUTER_API_KEY"
           type={visibleApiKey ? 'text' : 'password'}
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
-          className={cn(
-            {"pr-8": true}
-          )}
-          disabled={isLoading}
         />
         <Button
-            variant="ghost" size="sm"
-            className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")}
-            onClick={() => setVisibleApiKey(!visibleApiKey)}
             aria-label={visibleApiKey ? "Hide API key" : "Show API key"}
+className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")}
             disabled={isLoading}
+            size="sm"
+            variant="ghost"
+            onClick={() => setVisibleApiKey(!visibleApiKey)}
         >
             {visibleApiKey ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
         </Button>
@@ -103,20 +112,22 @@ export const ConnectOpenRouter = () => {
 
       {!isConnected && (
         <Button
-          onClick={onConnect}
-          variant="connect"
-          size="sm"
           disabled={connectButtonDisabled}
+          size="sm"
+          variant="connect"
+          onClick={onConnect}
         >
           {isLoading ? "..." : "Save"}
         </Button>
       )}
       {isConnected && (
         <Button
-          variant="ghost" size="sm" aria-label="Connected to OpenRouter"
-          className={cn("w-8 rounded-md text-[var(--success)]")}
+          aria-label="Connected to OpenRouter"
+className={cn("w-8 rounded-md text-[var(--success)]")}
+disabled={isLoading}
+          size="sm"
+          variant="ghost"
           onClick={onConnect}
-          disabled={isLoading}
         >
           <FaCheck className="h-5 w-5" />
         </Button>

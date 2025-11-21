@@ -1,159 +1,174 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { FiX, FiTrash2, FiShare, FiChevronLeft, FiUpload } from 'react-icons/fi';
-import { TbReload, TbJson } from "react-icons/tb";
-import { useConfig } from './ConfigContext';
-import { cn } from "@/src/background/util";
+import React, { useEffect,useRef,useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Button } from "@/components/ui/button";
+import { useTranslation } from 'react-i18next';
+import { BsFiletypeMd } from "react-icons/bs";
+import {
+ FiChevronLeft, FiSave,FiShare, FiTrash2, FiUpload, FiX, 
+} from 'react-icons/fi';
+import { GoPlus } from "react-icons/go";
+import {
+ IoCheckmarkCircleOutline,IoFingerPrint, IoImageOutline, IoPerson, IoTextOutline, 
+} from "react-icons/io5"; // Added IoCheckmarkCircleOutline
+import { LuEllipsis } from "react-icons/lu";
+import { TbJson,TbReload } from "react-icons/tb";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Download,Upload } from 'lucide-react';
+
+import ModelSelector from './components/ModelSelector'; // Import the new component
+import { exportData, importData } from "./utils/backupUtils";
+import { useConfig } from './ConfigContext';
+import { DEFAULT_PERSONA_IMAGES } from './constants';
 import { SettingsSheet } from './SettingsSheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+import {
+ Avatar, AvatarFallback, AvatarImage, 
+} from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+ Dialog, DialogContent, DialogDescription, DialogFooter,DialogHeader, DialogTitle, 
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import {
+ Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, 
+} from "@/components/ui/tooltip";
+import { cn } from "@/src/background/util";
+import {
+ChatMode, ChatStatus,type Config, 
+} from "@/src/types/config";
 
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { IoFingerPrint, IoPerson, IoImageOutline, IoTextOutline, IoCheckmarkCircleOutline } from "react-icons/io5"; // Added IoCheckmarkCircleOutline
-import { GoPlus } from "react-icons/go";
-import { LuEllipsis } from "react-icons/lu"; // Import LuEllipsis
-import { BsFiletypeMd } from "react-icons/bs";
+function getStatusText(mode: ChatMode, status: ChatStatus, t: (key: string) => string): string {
+  if (status === 'idle') return t('online');
 
-import {type Config, Model, ChatMode, ChatStatus } from "@/src/types/config";
-import { DEFAULT_PERSONA_IMAGES } from './constants';
-import { Changelog } from './components/Changelog/Changelog';
-import { ModelSelection } from './ModelSelection';
-import { useUpdateModels } from './hooks/useUpdateModels';
-import { VscRocket } from "react-icons/vsc";
-import { Textarea } from '@/components/ui/textarea';
-
-
-function getStatusText(t: (key: string) => string, mode: ChatMode, status: ChatStatus): string {
-  if (status === 'idle') return t('online.message');
   if (mode === 'chat') {
-    if (status === 'typing') return t('typing.message');
-    if (status === 'thinking') return t('thinking.message');
+    if (status === 'typing') return t('typing');
+
+    if (status === 'thinking') return t('thinking');
   }
+
   if (mode === 'web') {
-    if (status === 'searching') return t('searchingWeb.message');
-    if (status === 'thinking') return t('processingSERP.message');
+    if (status === 'searching') return t('searchingWeb');
+
+    if (status === 'thinking') return t('processingSERP');
   }
+
   if (mode === 'page') {
-    if (status === 'reading') return t('readingPage.message');
-    if (status === 'thinking') return t('analyzing.message');
+    if (status === 'reading') return t('readingPage');
+
+    if (status === 'thinking') return t('analyzing');
   }
-  if (status === 'done') return t('online.message');
-  return t('online.message');
+
+  if (status === 'done') return t('online');
+
+  return t('online');
 }
 
-// --- Word-by-word typewriter animation ---
-function TypewriterLinesWordByWord({ lines, delay = 120, className = "" }: { lines: React.ReactNode[], delay?: number, className?: string }) {
+import type { ReactNode } from 'react'; // Added for Typewriter
+
+// --- Word-by-word typewriter animation (copied from Settings.tsx) ---
+const TypewriterLinesWordByWord = ({
+ lines, delay = 120, className = "", 
+}: { lines: ReactNode[], delay?: number, className?: string }) => {
   const words = lines.flatMap((line, idx) =>
     typeof line === "string"
       ? line.split(" ").map((word, i, arr) => word + (i < arr.length - 1 ? " " : "")).concat(idx < lines.length - 1 ? ["\n"] : [])
-      : [line, idx < lines.length - 1 ? "\n" : ""]
+      : [line, idx < lines.length - 1 ? "\n" : ""],
   );
-  const [visibleCount, setVisibleCount] = useState(0);
+  const [visibleWords, setVisibleWords] = useState(0); // Renamed for clarity within this component
 
   useEffect(() => {
-    if (visibleCount < words.length) {
-      const timer = setTimeout(() => setVisibleCount(visibleCount + 1), delay);
+    if (visibleWords < words.length) {
+      const timer = setTimeout(() => setVisibleWords(visibleWords + 1), delay);
+
       return () => clearTimeout(timer);
     }
-  }, [visibleCount, words.length, delay]);
+  }, [visibleWords, words.length, delay]);
 
   return (
     <div
       className={className}
       style={{
         fontFamily: "'Space Mono', monospace",
-        whiteSpace: "pre-wrap"
+        whiteSpace: "pre-wrap",
       }}
     >
-      {words.slice(0, visibleCount).map((word, idx) =>
-        word === "\n" ? <br key={idx} /> : <span key={idx}>{word}</span>
+      {words.slice(0, visibleWords).map((word, idx) =>
+        word === "\n" ? <br key={idx} /> : <span key={idx}>{word}</span>,
       )}
-      {visibleCount < words.length && <span className="blinking-cursor">|</span>}
+      {visibleWords < words.length && <span className="blinking-cursor">|</span>}
     </div>
   );
 }
 
-import { Trans } from 'react-i18next';
-// --- Guide content with link ---
-const GuideLines = ({ t }: { t: (key: string, options?: any) => string }) => [
-  t('guideStep1.message'),
-  t('guideStep2.message'),
-  t('guideStep3.message'),
-  <Trans
-    i18nKey="guideStep4.message"
-    ts={t}
-    components={[
-      <a
-        href="https://github.com/3-ark/Cognito-AI_Sidekick/blob/main/docs/USER_GUIDE.md"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
-      />,
-    ]}
-  />,
+const updatedGuideLines = [
+  "1. Click on your avatar (top left) and then the 'API' button to add your API key or URLs.",
+  "2. Select your desired model directly from the header in the main chat interface.",
+  <>
+    3. Check the user guide{" "}
+    <a
+      className="underline text-blue-600 dark:text-blue-400 hover:text-blue-800"
+      href="https://github.com/3-ark/"
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      here
+    </a>
+  </>,
   "",
-  t('guideHaveFun.message'),
+  "Note: You can explore other settings later. Click the fingerprint to dismiss this guide. Enjoy!",
 ];
 
 interface WelcomeModalProps {
   isOpen: boolean;
-  onClose: () => void; // Changed to simple onClose
-  setSettingsMode: (mode: boolean) => void;
+
+  // onClose will be handled by the fingerprint click now, which calls a dismiss function
+  // setSettingsMode: (mode: boolean) => void; // No longer navigating to settings directly
+  onDismiss: () => void;
 }
 
-const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onClose, setSettingsMode }) => {
+const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onDismiss }) => {
   const { t } = useTranslation();
-  const guideLines = GuideLines({ t });
-  const handleGotIt = () => {
-    chrome.storage.local.set({ hasSeenWelcomeGuide: true });
-    onClose();
-    setSettingsMode(true); // Navigate to settings
-  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}> {/* Call onClose when dialog tries to close */}
+    <Dialog open={isOpen} onOpenChange={open => { if (!open) onDismiss(); }}> {/* Call onDismiss if dialog is closed by other means */}
       <DialogContent
-        variant="themedPanel"
         className={cn(
-          "[&>button]:hidden", // Hide default close button if any
-          "flex flex-col items-center justify-center" // Center content
+          "[&>button]:hidden", // Keep if relevant for close button styling
+          "w-[95%] max-w-sm", // Use a responsive width that doesn't touch edges and has a max width
         )}
-        style={{
-          width: '22rem', // Adjusted width for content
-          minHeight: '18rem', // Adjusted height for content
-          borderRadius: '1.875rem',
-          boxShadow: '0.9375rem 0.9375rem 1.875rem rgb(25, 25, 25), 0 0 1.875rem rgb(60, 60, 60)'
-        }}
-        onInteractOutside={(e) => e.preventDefault()} // Prevent closing on outside click
+        variant="themedPanel" // Keep existing variant if it works
+        onInteractOutside={e => e.preventDefault()} // Keep to prevent accidental close
       >
-        <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-2 header-title-glow mt-4">
-          <DialogTitle className="text-lg">{t('quickGuide.message')}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {t('guideIntro.message')}
-          </DialogDescription>
+        <DialogHeader className="text-center font-['Bruno_Ace_SC'] p-3 pt-4 header-title-glow">
+          <DialogTitle className="text-xl">{t('quickGuide')}</DialogTitle>
         </DialogHeader>
-        <div className="p-4 text-left w-full max-w-md">
-          <TypewriterLinesWordByWord
-            lines={guideLines}
-            delay={50} // Faster typing
-            className="text-sm text-[var(--text)] mt-2"
-          />
-        </div>
-        <DialogFooter className="mt-auto p-4">
-          <Button
-            variant="ghost"
-            className="fingerprint-pulse-btn"
-            onClick={handleGotIt}
-            aria-label={t('gotIt.message')}
-          >
-            <IoFingerPrint size="3rem" color="var(--active)" />
-          </Button>
-        </DialogFooter>
+        <DialogDescription asChild>
+          <div className="p-4 text-left text-sm"> {/* Changed text-center to text-left */}
+            <TypewriterLinesWordByWord
+              className="text-[var(--text)] mt-1 mb-3"
+              delay={50}
+              lines={updatedGuideLines}
+            />
+            <div className="flex justify-center mt-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    aria-label={t('gotIt')}
+                    className="fingerprint-pulse-btn" // Keep existing class if it provides good styling
+                    variant="ghost"
+                    onClick={onDismiss} // Call onDismiss when fingerprint is clicked
+                  >
+                    <IoFingerPrint color="var(--active)" size="3rem" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                  {t('gotItDismiss')}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </DialogDescription>
       </DialogContent>
     </Dialog>
   );
@@ -172,7 +187,6 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
   config,
   updateConfig,
 }) => {
-  const { t } = useTranslation();
   const [currentUserName, setCurrentUserName] = useState(config?.userName || '');
   const [currentUserProfile, setCurrentUserProfile] = useState(config?.userProfile || '');
 
@@ -183,86 +197,151 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
     }
   }, [isOpen, config?.userName, config?.userProfile]);
 
+  const { t } = useTranslation();
   const handleSave = () => {
     updateConfig({ userName: currentUserName, userProfile: currentUserProfile });
     onOpenChange(false);
-    toast.success(t('profileUpdated.message'));
+    toast.success(t("profileUpdated"));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
+        className='w-[95%] max-w-sm'
         variant="themedPanel"
-        className="max-w-xs"
       >
-        <DialogHeader className="px-6 py-2">
-          <DialogTitle className="text-lg font-semibold text-[var(--text)]">{t('editProfile.message')}</DialogTitle>
+        <DialogHeader className="p-4">
+          <DialogTitle className="text-lg font-semibold text-[var(--text)]">{t('editProfile')}</DialogTitle>
           <DialogDescription className="text-sm text-[var(--text)] opacity-80">
-            {t('editProfileDesc.message')}
+            {t('setDisplayName')}
           </DialogDescription>
         </DialogHeader>
-        <div className="px-6 space-y-4">
+        <div className="px-4 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="username" className="text-sm font-medium text-[var(--text)] opacity-90">
-              {t('username.message')}
+            <Label className="text-sm font-medium text-[var(--text)] opacity-90" htmlFor="username">
+              {t('username')}
             </Label>
             <Input
+              className={cn(
+                "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
+                "hover:border-[var(--active)] hover:brightness-98",
+              )}
               id="username"
               value={currentUserName}
-              onChange={(e) => setCurrentUserName(e.target.value)}
-              className={cn(
-                "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-                "hover:border-[var(--active)] hover:brightness-98",
-                "break-words whitespace-pre-wrap",
-                "rounded-md border border-[var(--text)]/20 bg-[var(--input-background)]",
-              )}
+              onChange={e => setCurrentUserName(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="userprofile" className="text-sm font-medium text-[var(--text)] opacity-90">
-              {t('userProfile.message')}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-[var(--text)] opacity-90" htmlFor="userprofile">
+              {t('userProfile')}
             </Label>
             <Textarea
-              id="userprofile"
-              value={currentUserProfile}
-              minRows={5}
-              maxRows={8}
-              autosize
-              onChange={(e) => setCurrentUserProfile(e.target.value)}              
               className={cn(
                 "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
                 "hover:border-[var(--active)] hover:brightness-98",
-                "border-[var(--text)]/20",
-                "bg-[var(--input-background)]",
+                "overflow-y-auto",
                 "rounded-md",
+                "border border-[var(--text)]/20 dark:border-0",
+                "whitespace-pre-wrap",
+                "px-3 py-2",
+                "break-words",
+                "bg-[var(--input-background)] placeholder:text-muted-foreground",
               )}
+              id="userprofile"
+              maxRows={8}
+              minRows={5}
+              value={currentUserProfile}
+              autosize
+              onChange={e => setCurrentUserProfile(e.target.value)}
             />
           </div>
         </div>
-        <DialogFooter className="flex flex-row justify-end space-x-2 px-6 mb-2 py-2">
-          <Button
-            variant="outline-subtle"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-          >
-            {t('cancel.message')}
-          </Button>
-          <Button
-            variant="outline-subtle"
-            className="bg-[var(--active)] text-[var(--text)]"
-            size="sm"
-            onClick={handleSave}
-          >
-            {t('save.message')}
-          </Button>
+        <DialogFooter>
+          <div className="flex justify-end p-4 space-x-2">
+            <Button size="persona" type="button" variant="outline-subtle" onClick={() => onOpenChange(false)}>
+              <FiX />
+              {t('cancel')}
+            </Button>
+            <Button
+              size="persona"
+              type="button"
+              variant="save"
+              onClick={handleSave}
+            >
+              <FiSave />
+              {t('save')}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
+const EditableTitle = ({ title, onTitleChange }: { title: string, onTitleChange: (newTitle: string) => void }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentTitle, setCurrentTitle] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCurrentTitle(title);
+  }, [title]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (currentTitle.trim() === '') {
+        setCurrentTitle(title); // revert if empty
+    } else if (currentTitle !== title) {
+        onTitleChange(currentTitle);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inputRef.current?.blur();
+    }
+    if (e.key === 'Escape') {
+        setCurrentTitle(title);
+        setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <Input
+        ref={inputRef}
+        type="text"
+        value={currentTitle}
+        onChange={(e) => setCurrentTitle(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="text-xs text-center bg-transparent border-0 focus:ring-0 h-auto p-0 m-0 w-full"
+        style={{ boxShadow: 'none' }}
+      />
+    );
+  }
+
+  return (
+    <p
+      className="text-xs text-[var(--muted-foreground)] whitespace-nowrap overflow-hidden text-ellipsis text-center w-full cursor-pointer"
+      onClick={() => setIsEditing(true)}
+    >
+      {title}
+    </p>
+  );
+};
+
 interface HeaderProps {
   chatTitle?: string | null;
+  onTitleChange: (newTitle: string) => void;
   settingsMode: boolean;
   setSettingsMode: (mode: boolean) => void;
   historyMode: boolean;
@@ -279,17 +358,46 @@ interface HeaderProps {
   chatStatus: ChatStatus;
   onAddNewNoteRequest?: () => void;
   onImportNoteRequest?: () => void;
-  onSelectNotesRequest?: () => void; // New prop for selecting notes
+  onSelectNotesRequest?: () => void; 
+
+  // New page mode states and setters
+  modelSettingsPageMode?: boolean; // Optional as Header doesn't directly use it but passes it
+  setModelSettingsPageMode: (mode: boolean) => void;
+  apiSettingsPageMode?: boolean;
+  setApiSettingsPageMode: (mode: boolean) => void;
+  ragSettingsPageMode?: boolean;
+  setRagSettingsPageMode: (mode: boolean) => void;
+  customizePageMode?: boolean;
+  setCustomizePageMode: (mode: boolean) => void;
+  webSearchPageMode?: boolean;
+  setWebSearchPageMode: (mode: boolean) => void;
+  pageSettingsPageMode?: boolean;
+  setPageSettingsPageMode: (mode: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   chatTitle,
+  onTitleChange,
   settingsMode,
   setSettingsMode,
   historyMode,
   setHistoryMode,
   noteSystemMode,
   setNoteSystemMode,
+
+  // Destructure new props
+  modelSettingsPageMode, 
+  setModelSettingsPageMode,
+  apiSettingsPageMode,
+  setApiSettingsPageMode,
+  ragSettingsPageMode,
+  setRagSettingsPageMode,
+  customizePageMode,
+  setCustomizePageMode,
+  webSearchPageMode,
+  setWebSearchPageMode,
+  pageSettingsPageMode,
+  setPageSettingsPageMode,
   deleteAll,
   reset,
   downloadImage,
@@ -304,101 +412,104 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   const { config, updateConfig } = useConfig();
-  const { fetchAllModels } = useUpdateModels();
   const [isEditProfileDialogOpen, setIsEditProfileDialogOpen] = useState(false);
-  const [isChangelogOpen, setChangelogOpen] = useState(false);
-  const [showWelcomeModalState, setShowWelcomeModalState] = useState(false); // Renamed to avoid conflict
-
-useEffect(() => {
-  // Check for welcome guide
-  chrome.storage.local.get('hasSeenWelcomeGuide', (result) => {
-    if (!result.hasSeenWelcomeGuide) {
-      setShowWelcomeModalState(true);
-    }
-  });
-}, []);
-
-const handleWelcomeModalClose = () => {
-  setShowWelcomeModalState(false);
-  // The flag `hasSeenWelcomeGuide` is set inside the WelcomeModal's handleGotIt by clicking the fingerprint button
-};
-
-useEffect(() => {
-  // Check for changelog
-  const lastVersionStored = localStorage.getItem('lastVersion');
-  const currentVersion = APP_VERSION as string;
-
-  if (lastVersionStored !== currentVersion) {
-    // New version detected or first time running with this version tracking
-    localStorage.removeItem('changelogDismissed'); // Ensure changelog shows if version changed or if this flag was somehow set
-    setChangelogOpen(true);
-    localStorage.setItem('lastVersion', currentVersion);
-  }
-  // Note: The 'changelogDismissed' flag is typically handled by the Changelog component itself if it offers a "don't show again for this version" feature.
-  // Here, we ensure it's shown if the version is new.
-}, []);
-
-const handleChangelogClose = () => {
-  setChangelogOpen(false);
-};
-
   const currentPersona = config?.persona || 'default';
   const currentPersonaAvatar = config?.personaAvatars?.[currentPersona] || DEFAULT_PERSONA_IMAGES[currentPersona] || DEFAULT_PERSONA_IMAGES.default;
 
-  const visibleTitle = chatTitle && !settingsMode && !historyMode && !noteSystemMode;
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const handleSheetOpenChange = (open: boolean) => {setIsSheetOpen(open);}
+  const handleSheetOpenChange = (open: boolean) => { setIsSheetOpen(open); };
 
-  const showBackButton = settingsMode || historyMode || noteSystemMode;
+  // State for the welcome guide modal
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
+
+  const handleDismissWelcomeGuide = () => {
+    setShowWelcomeGuide(false);
+    chrome.storage.local.set({ hasSeenWelcomeGuide: true }, () => {
+      console.log('[Cognito] Welcome guide dismissed and flag set.');
+    });
+  };
+
+  // Determine if any full-page mode is active (including new ones)
+  // This needs to be defined *before* the useEffect that uses it.
+  const isAnyPageModeActive = settingsMode || historyMode || noteSystemMode || modelSettingsPageMode || apiSettingsPageMode || ragSettingsPageMode || customizePageMode || webSearchPageMode || pageSettingsPageMode;
+
+  // Revised useEffect for showing the guide
+  useEffect(() => {
+    chrome.storage.local.get(['hasSeenWelcomeGuide'], result => {
+      if (!result.hasSeenWelcomeGuide) {
+        // If not seen, always show it, regardless of API keys or page modes for the *very first* view.
+        // The dismissal is permanent.
+        setShowWelcomeGuide(true);
+      }
+    });
+  }, []); // Empty dependency array: check only once on component mount.
 
   const handleLeftButtonClick = () => {
-    if (showBackButton) {
+    if (isAnyPageModeActive) {
       setSettingsMode(false);
       setHistoryMode(false);
-      setNoteSystemMode(false); // Ensure note system mode is also reset
+      setNoteSystemMode(false);
+      setModelSettingsPageMode(false);
+      setApiSettingsPageMode(false);
+      setRagSettingsPageMode(false);
+      setCustomizePageMode(false);
+      setWebSearchPageMode(false);
+      setPageSettingsPageMode(false);
     } else {
       setIsSheetOpen(true);
     }
   };
+  
+  let pageTitle = '';
 
-  const leftButtonLabel = showBackButton
-    ? t('backToChat.message')
+  if (settingsMode) pageTitle = t('speech');
+  else if (historyMode) pageTitle = t('chatHistory');
+  else if (noteSystemMode) pageTitle = t('noteSystem');
+  else if (modelSettingsPageMode) pageTitle = t('modelSettings');
+  else if (apiSettingsPageMode) pageTitle = t('apiSettings');
+  else if (ragSettingsPageMode) pageTitle = t('ragSettings');
+  else if (customizePageMode) pageTitle = t('customize');
+  else if (webSearchPageMode) pageTitle = t('searchingWeb');
+  else if (pageSettingsPageMode) pageTitle = t('page');
+
+  const leftButtonLabel = isAnyPageModeActive
+    ? t('backToChat')
     : config?.userName
-      ? t('hiSettings.message', { userName: config.userName })
-      : t('settings.message');
+      ? t('hiSettings', { userName: config.userName })
+      : t('settings');
 
   const handleDeleteAllWithConfirmation = () => {
     toast.custom(
-      (ts) => (
+      ts => (
         <div
           className={cn(
-            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
-            "p-4 rounded-lg shadow-xl max-w-sm w-full",
-            "flex flex-col space-y-3"
+            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]/20",
+            "p-4 rounded-xl shadow-xl max-w-sm w-full",
+            "flex flex-col space-y-3",
           )}
         >
-          <h4 className="text-lg font-semibold text-[var(--text)]">{t('confirmDeletion.message')}</h4>
+          <h4 className="text-lg font-semibold text-[var(--text)]">{t('confirmDeletion')}</h4>
           <p className="text-sm text-[var(--text)] opacity-90">
-            {t('confirmDeletionDesc.message')}
+            {t('confirmDeletionDesc')}
           </p>
           <div className="flex justify-end space-x-3 pt-2">
             <Button
-              variant="outline"
-              size="sm"
               className={cn(
                 "bg-transparent text-[var(--text)] border-[var(--text)]",
-                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]"
-              )}
+                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]",
+                )}
+              size="sm"
+              variant="outline"
               onClick={() => toast.dismiss(ts.id)}
             >
-              {t('cancel.message')}
+              {t('cancel')}
             </Button>
             <Button
-              variant="destructive"
-              size="sm"
               className={cn(
-                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]"
-              )}
+                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]",
+                )}
+              size="sm"
+              variant="destructive"
               onClick={async () => {
                 try {
                   if (typeof deleteAll === 'function') {
@@ -415,15 +526,15 @@ const handleChangelogClose = () => {
                 }
               }}
             >
-              {t('deleteAll.message')}
+              {t('deleteAll')}
             </Button>
           </div>
         </div>
-      ),
+        ),
       {
         duration: Infinity,
         position: 'top-center',
-      }
+      },
     );
   };
 
@@ -438,38 +549,40 @@ const handleChangelogClose = () => {
     <TooltipProvider delayDuration={500}>
       <div 
         className={cn(
-          "sticky top-0 z-10 px-2",
+          "sticky top-0 z-10 p-0",
         )}
       >
-        <div className="flex items-center h-auto">
+        <div className="flex items-center h-auto px-2">
           {/* Left Button Area */}
           <div className={cn("flex justify-start items-center min-h-10", sideContainerWidthClass)}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   aria-label={leftButtonLabel}
-                  variant="ghost"
-                  size={showBackButton ? "sm" : undefined}
                   className={cn(
-                    "text-[var(--text)] rounded-md p-0 h-8 w-8 flex items-center justify-center"
+                    "text-[var(--text)] rounded-md p-0 h-8 w-8 flex items-center justify-center",
                   )}
+                  size={isAnyPageModeActive ? "sm" : undefined} // Use isAnyPageModeActive
+                  variant="ghost"
                   onClick={handleLeftButtonClick}
                 >
-                  {showBackButton ? (
-                    <FiX size="22px" />
+                  {isAnyPageModeActive ? ( // Use isAnyPageModeActive
+                    <FiX size="22px" /> // This is the "Back to Chat" button
                   ) : (
+
+                    // This is the button to open SettingsSheet
                     <Avatar className="h-8 w-8 border border-[var(--active)]">
-                      <AvatarImage src={currentPersonaAvatar} alt={currentPersona} />
+                      <AvatarImage alt={currentPersona} src={currentPersonaAvatar} />
                       <AvatarFallback>{currentPersona.substring(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
+              <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
                 {leftButtonLabel}
               </TooltipContent>
             </Tooltip>
-            {!showBackButton && (
+            {!isAnyPageModeActive && ( // Show Persona name and status only if not in a page mode
               <div className="flex flex-col justify-center ml-1">
                 <span className="text-[0.8125rem] font-medium text-[var(--text)] leading-tight">
                   {currentPersona === 'default' ? 'Jet' : currentPersona}
@@ -478,72 +591,53 @@ const handleChangelogClose = () => {
                   {chatStatus === 'idle' && (
                     <span className="h-1.5 w-1.5 bg-green-600 rounded-full mr-1"></span>
                   )}
-                  {getStatusText(t, chatMode, chatStatus)}
+                  {getStatusText(chatMode, chatStatus, t)}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Middle Content Area */}
-          <div className="flex-grow flex flex-col justify-center items-center overflow-hidden"> {/* Removed py-1 */}
-            {!historyMode && !settingsMode && !noteSystemMode && (
-              <div className="w-full max-w-xs"> {/* Removed px-1 */}
-                <ModelSelection
-                  config={config}
-                  updateConfig={updateConfig}
-                  fetchAllModels={fetchAllModels}
-                />
-              </div>
-            )}
-            {visibleTitle && (
-              <p className="text-xs text-[var(--text)] opacity-70 whitespace-nowrap overflow-hidden text-ellipsis text-center mt-0.5"> {/* Small, muted, margin-top */}
-                {chatTitle}
-              </p>
-            )}
-            {settingsMode && (
-              <div className="flex items-center justify-center">
+          {/* Middle Content Area - Title Display Logic */}
+          <div className="flex-grow flex flex-col justify-center items-center overflow-hidden px-1 py-1">
+            {!isAnyPageModeActive ? (
+              <>
+                <div className="w-full max-w-xs">
+                  <ModelSelector config={config} updateConfig={updateConfig} />
+                </div>
+                {chatTitle && (
+                  <EditableTitle onTitleChange={onTitleChange} title={chatTitle} />
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
                 <p className="relative top-0 text-lg font-['Bruno_Ace_SC'] header-title-glow">
-                  {t('settings.message')}
-                </p>
-              </div>
-            )}
-            {historyMode && (
-              <div className="flex items-center justify-center">
-                <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
-                  {t('chatHistory.message')}
-                </p>
-              </div>
-            )}
-            {noteSystemMode && (
-              <div className="flex items-center justify-center">
-                <p className="font-['Bruno_Ace_SC'] text-lg header-title-glow">
-                  {t('noteSystem.message')}
+                  {pageTitle} {/* Display dynamic page title */}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Right Button Area */}
+          {/* Right Button Area - Conditional rendering based on page mode */}
           <div className={cn("flex justify-end items-center min-h-10", rightSideContainerWidthClass)}>
-            {!settingsMode && !historyMode && !noteSystemMode && (
+            {!isAnyPageModeActive && ( // Show these only if not in a page mode
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       aria-label="Reset Chat"
-                      variant="ghost"
-                      size="sm"
                       className="text-[var(--text)] hover:bg-black/10 dark:hover:bg-white/10 rounded-md group"
+                      size="sm"
+                      variant="ghost"
                       onClick={reset}
                     >
                       <TbReload 
-                        size="18px" 
                         className="transition-transform duration-300 rotate-0 group-hover:rotate-180 text-[var(--text)]" 
+                        size="18px" 
                       />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    {t('resetChat.message')}
+                  <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                    {t('resetChat')}
                   </TooltipContent>
                 </Tooltip>
 
@@ -553,60 +647,43 @@ const handleChangelogClose = () => {
                     <TooltipTrigger asChild>
                       <DropdownMenuPrimitive.Trigger asChild>
                         <Button
-                          aria-label={t('shareOptions.message')}
-                          variant="ghost"
-                          size="sm"
+                          aria-label={t('shareOptions')}
                           className="text-[var(--text)] rounded-md"
+                          size="sm"
+                          variant="ghost"
                         >
                           <FiShare size="18px" />
                         </Button>
                       </DropdownMenuPrimitive.Trigger>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                      {t('shareOptions.message')}
+                    <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                      {t('shareOptions')}
                     </TooltipContent>
                   </Tooltip>
                   <DropdownMenuPrimitive.Portal>
                     <DropdownMenuPrimitive.Content
+                      align="start"
                       className={cn(
                         dropdownContentClasses,
-                        "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl"
+                        "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl",
                       )}
                       sideOffset={5}
-                      align="end"
                     >
                       <DropdownMenuPrimitive.Item
                         className={cn(
                           dropdownItemClasses,
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
                         )}
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
-                        <IoPerson className="h-4 w-4" />
-                        <span>{t('yourProfile.message')}</span>
+                        <IoPerson  className="mr-2 h-4 w-4" />
+                        {t('yourProfile')}
                       </DropdownMenuPrimitive.Item>
                       <DropdownMenuPrimitive.Separator
                         className={cn(
                           dropdownSeparatorClasses,
-                          "bg-[var(--text)]/10"
-                        )}
-                      />
-                      <DropdownMenuPrimitive.Item
-                        className={cn(
-                          dropdownItemClasses,
-                          "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
-                        )}
-                        onSelect={() => setChangelogOpen(true)}
-                      >
-                        <VscRocket className="h-4 w-4" />
-                        <span>{t('whatsNew.message')}</span>
-                      </DropdownMenuPrimitive.Item>
-                      <DropdownMenuPrimitive.Separator
-                        className={cn(
-                          dropdownSeparatorClasses,
-                          "bg-[var(--text)]/10"
+                          "bg-[var(--text)]/10",
                         )}
                       />
                       <DropdownMenuPrimitive.Sub>
@@ -614,48 +691,91 @@ const handleChangelogClose = () => {
                           className={cn(
                             dropdownSubTriggerClasses,
                             "gap-2",
-                            "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                            "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
                           )}
                         >
-                          <FiChevronLeft className="h-4 w-4" />
-                          <span>{t('exportChat.message')}</span>
+                        <FiChevronLeft className="mr-2 h-4 w-4" />
+                          {t('exportChat')}
                         </DropdownMenuPrimitive.SubTrigger>
                         <DropdownMenuPrimitive.Portal>
                           <DropdownMenuPrimitive.SubContent
+                            alignOffset={-5}
                             className={cn(
                               dropdownContentClasses,
-                              "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-lg"
+                              "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-lg",
                             )}
                             sideOffset={2}
-                            alignOffset={-5}
                           >
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadMarkdown}
                             >
-                              <BsFiletypeMd className="h-4 w-4" />
-                              <span>.md</span>
+                             <BsFiletypeMd className="mr-2 h-4 w-4" />
+                              .md
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadText}
                             >
-                              <IoTextOutline className="h-4 w-4" />
-                              <span>.txt</span>
+                             <IoTextOutline className="mr-2 h-4 w-4" />
+                              .txt
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadJson}
                             >
-                              <TbJson className="h-4 w-4" />
-                              <span>.json</span>
+                             <TbJson className="mr-2 h-4 w-4" />
+                              .json
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "gap-2", "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
                               onSelect={downloadImage}
                             >
-                              <IoImageOutline className="h-4 w-4" />
-                              <span>.png</span>
+                             <IoImageOutline className="mr-2 h-4 w-4" />
+                              .png
+                            </DropdownMenuPrimitive.Item>
+                          </DropdownMenuPrimitive.SubContent>
+                        </DropdownMenuPrimitive.Portal>
+                      </DropdownMenuPrimitive.Sub>
+                      <DropdownMenuPrimitive.Separator
+                        className={cn(
+                          dropdownSeparatorClasses,
+                          "bg-[var(--text)]/10",
+                        )}
+                      />
+                      <DropdownMenuPrimitive.Sub>
+                        <DropdownMenuPrimitive.SubTrigger
+                          className={cn(
+                            dropdownSubTriggerClasses,
+                            "gap-2",
+                            "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                          )}
+                        >
+                        <FiChevronLeft className="mr-2 h-4 w-4" />
+                          Backup
+                        </DropdownMenuPrimitive.SubTrigger>
+                        <DropdownMenuPrimitive.Portal>
+                          <DropdownMenuPrimitive.SubContent
+                            alignOffset={-5}
+                            className={cn(
+                              dropdownContentClasses,
+                              "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-lg",
+                            )}
+                            sideOffset={2}
+                          >
+                            <DropdownMenuPrimitive.Item
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              onSelect={exportData}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Export Data
+                            </DropdownMenuPrimitive.Item>
+                            <DropdownMenuPrimitive.Item
+                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              onSelect={importData}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              Import Data
                             </DropdownMenuPrimitive.Item>
                           </DropdownMenuPrimitive.SubContent>
                         </DropdownMenuPrimitive.Portal>
@@ -669,17 +789,17 @@ const handleChangelogClose = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    aria-label={t('deleteAllHistory.message')}
-                    variant="ghost"
-                    size="sm"
+                    aria-label={t("deleteAllHistory")}
                     className="text-[var(--text)] rounded-md"
+                    size="sm"
+                    variant="ghost"
                     onClick={handleDeleteAllWithConfirmation}
                   >
                     <FiTrash2 size="18px" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                  {t('deleteAll.message')}
+                <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                  {t('deleteAll')}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -689,39 +809,39 @@ const handleChangelogClose = () => {
                   <TooltipTrigger asChild>
                     <DropdownMenuPrimitive.Trigger asChild>
                       <Button
-                        aria-label={t('noteOptions.message')}
-                        variant="ghost"
-                        size="sm"
+                        aria-label="Note Options"
                         className="text-[var(--text)] rounded-md"
+                        size="sm"
+                        variant="ghost"
                       >
-                        <LuEllipsis size="18px" />
+                        <LuEllipsis size="18px" /> 
                       </Button>
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]">
-                    {t('noteOptions.message')}
+                  <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                    {t('noteOptions')}
                   </TooltipContent>
                 </Tooltip>
                 <DropdownMenuPrimitive.Portal>
                   <DropdownMenuPrimitive.Content
+                    align="start"
                     className={cn(
                       dropdownContentClasses,
-                      "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl"
+                      "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl",
                     )}
                     sideOffset={5}
-                    align="end"
                   >
                     {onAddNewNoteRequest && (
                       <DropdownMenuPrimitive.Item
                         className={cn(
-                          dropdownItemClasses,
+                          dropdownItemClasses, 
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
                         )}
                         onSelect={onAddNewNoteRequest}
                       >
-                        <GoPlus className="h-4 w-4" />
-                        <span>{t('createNote.message')}</span>
+                        <GoPlus className="mr-2 h-4 w-4" />
+                        {t('createNote')}
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onImportNoteRequest && (
@@ -729,12 +849,12 @@ const handleChangelogClose = () => {
                         className={cn(
                           dropdownItemClasses,
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
                         )}
                         onSelect={onImportNoteRequest}
                       >
-                        <FiUpload className="h-4 w-4" />
-                        <span>{t('importNote.message')}</span>
+                        <FiUpload className="mr-2 h-4 w-4" />
+                        {t('importNote')}
                       </DropdownMenuPrimitive.Item>
                     )}
                     {onSelectNotesRequest && (
@@ -742,12 +862,12 @@ const handleChangelogClose = () => {
                         className={cn(
                           dropdownItemClasses,
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer"
+                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
                         )}
                         onSelect={onSelectNotesRequest}
                       >
-                        <IoCheckmarkCircleOutline className="h-4 w-4" />
-                        <span>{t('selectNotes.message')}</span>
+                        <IoCheckmarkCircleOutline className="mr-2 h-4 w-4" /> 
+                        {t('selectNotes')}
                       </DropdownMenuPrimitive.Item>
                     )}
                   </DropdownMenuPrimitive.Content>
@@ -757,34 +877,33 @@ const handleChangelogClose = () => {
           </div>
         </div>
 
-        {showWelcomeModalState && !settingsMode && !historyMode && !noteSystemMode && (
-           <WelcomeModal 
-             isOpen={showWelcomeModalState} 
-             setSettingsMode={setSettingsMode} 
-             onClose={handleWelcomeModalClose} 
-           />
+        {/* WelcomeModal is now controlled by showWelcomeGuide state and uses onDismiss */}
+        {showWelcomeGuide && !isAnyPageModeActive && (
+          <WelcomeModal isOpen={showWelcomeGuide} onDismiss={handleDismissWelcomeGuide} />
         )}
 
         <SettingsSheet
-          isOpen={isSheetOpen}
-          onOpenChange={handleSheetOpenChange}
           config={config}
-          updateConfig={updateConfig}
-          setSettingsMode={setSettingsMode}
+          isOpen={isSheetOpen}
+          setApiSettingsPageMode={setApiSettingsPageMode}
+          setCustomizePageMode={setCustomizePageMode}
           setHistoryMode={setHistoryMode}
+          setRagSettingsPageMode={setRagSettingsPageMode}
+          setSettingsMode={setSettingsMode}
+          setWebSearchPageMode={setWebSearchPageMode}
+          setPageSettingsPageMode={setPageSettingsPageMode}
+          updateConfig={updateConfig}
+          onOpenChange={handleSheetOpenChange}
           setNoteSystemMode={setNoteSystemMode}
+          // Pass new page mode setters to SettingsSheet
+          setModelSettingsPageMode={setModelSettingsPageMode}
         />
 
         <EditProfileDialog
-          isOpen={isEditProfileDialogOpen}
-          onOpenChange={setIsEditProfileDialogOpen}
           config={config}
+          isOpen={isEditProfileDialogOpen}
           updateConfig={updateConfig}
-        />
-
-        <Changelog
-          isOpen={isChangelogOpen}
-          onClose={handleChangelogClose}
+          onOpenChange={setIsEditProfileDialogOpen}
         />
       </div>
     </TooltipProvider>

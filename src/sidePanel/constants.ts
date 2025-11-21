@@ -12,5 +12,5 @@ export const DEFAULT_PERSONA_IMAGES: Record<string, string> = {
   Sherlock: 'assets/images/sherlock.png',
   Ein: 'assets/images/ein.png',
   Faye: 'assets/images/faye.png',
-  default: 'assets/images/custom.png'
+  default: 'assets/images/custom.png',
 };

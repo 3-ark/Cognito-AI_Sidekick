@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+
 import { ThunkType } from 'src/state/State';
 
 export interface ContentState {
@@ -17,7 +18,7 @@ const slice = createSlice({
     contentLoaded: state => {
       state.isLoaded = true;
     },
-  }
+  },
 });
 
 /**
@@ -36,5 +37,5 @@ const { actions, reducer } = slice;
 const aliases = {};
 
 export {
- actions, aliases, reducer 
+ actions, aliases, reducer, 
 };

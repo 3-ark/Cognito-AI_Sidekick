@@ -1,36 +1,116 @@
-interface ToolParameterProperty {
-  type: string;
-  description: string;
-  enum?: string[];
-  items?: { 
-    type: string;
-    properties?: { [key: string]: ToolParameterProperty };
-    required?: string[];
-  };
-}
-
-export interface ToolDefinition {
-  type: 'function';
-  function: {
-    name: string;
-    description: string;
-    parameters: {
-      type: 'object';
-      properties: {
-        [key: string]: ToolParameterProperty;
-      };
-      required?: string[];
-    };
-  };
-}
+import type { ToolDefinition } from '../../types/toolTypes';
 
 export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'prompt_optimizer',
+      name: 'note.save', // Renamed from saveNote
+      description: 'Saves a new note to the user\'s persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.',
+      parameters: {
+        type: 'object',
+        properties: {
+          content: {
+            type: 'string',
+            description: 'The main content of the note. This is mandatory.',
+          },
+          title: {
+            type: 'string',
+            description: 'An optional title for the note. If not provided, a default title will be generated.',
+          },
+          tags: {
+            type: 'array',
+            description: 'An optional list of tags (strings) to categorize the note.',
+            items: {
+              type: 'string',
+              description: 'A single tag for the note.',
+            },
+          },
+        },
+        required: ['content'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'fetcher',
+      description: 'Fetches the main textual content of a given URL. Use this to get the content of a webpage.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: {
+            type: 'string',
+            description: 'The URL of the webpage to fetch and extract content from.',
+          },
+        },
+        required: ['url'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'browse_page',
+      description: 'Opens a URL in a new, temporary tab, extracts the full text content using the same method as "page mode", and returns the text. This is useful for accessing content on pages that block standard fetching tools, or for reading pages exactly as the user sees them.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: {
+            type: 'string',
+            description: 'The URL of the webpage to browse.',
+          },
+        },
+        required: ['url'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'memory.update', // Renamed from updateMemory
+      description: 'Appends a short summary or key piece of information to a special "memory" note in the popover. Use this to remember user preferences, facts about the user, or important context from the conversation for future reference within the current session or for the user to see in their popover note.',
+      parameters: {
+        type: 'object',
+        properties: {
+          summary: {
+            type: 'string',
+            description: 'The concise summary or piece of information to add to the memory. For example, "User is 30yo, he is building an extension".',
+          },
+        },
+        required: ['summary'],
+      },
+    },
+  },
+    {
+    type: 'function',
+    function: {
+      name: 'web_search',
       description:
-        'Optimizes a user-provided prompt to be clearer, more concise, and more effective for the LLM. Use this when a prompt is ambiguous, overly complex, or could be improved for better results. This should be used (when you do need it) in the first step in the smart_dispatcher or planner tool.',
+        'Performs a web search using a specified search engine to find up-to-date information, news, or specific documents on the web.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description:
+              'The search query to be executed. This should be a concise and targeted string similar to what a user would type into a search engine.',
+          },
+          engine: {
+            type: 'string',
+            description:
+              'The search engine to use. Defaults to Google if not specified. Wikipedia is ideal for factual lookups, while other engines are good for general searches.',
+            enum: ['Google', 'DuckDuckGo', 'Brave', 'Wikipedia', 'GoogleCustomSearch'],
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'prompt_optimizer',
+      description: 'Optimizes a user\'s prompt to be clearer and more effective for the LLM. Use this when a prompt is ambiguous or could be improved for better results.',
       parameters: {
         type: 'object',
         properties: {
@@ -46,76 +126,14 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'summarizer',
-      description:
-        'Summarizes given text content. Use this to condense long search results or retrieved content to extract the key information relevant to your task in the planner only. **Note:** This tool is not meant to be used outside of tasks in tool <planner>.',
-      parameters: {
-        type: 'object',
-        properties: {
-          text: { 
-            type: 'string',
-            description:
-              'The text content to be summarized. This should be a substantial piece of text to get a meaningful summary.',
-          },
-          task_context: {
-            type: 'string',
-            description:
-              "The original user task or question. This provides crucial context to guide the summary towards the most relevant information. For example: 'What are the side effects of X?'",
-          },
-        },
-        required: ['text', 'task_context'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'wikipedia_search',
-      description:
-        'Performs a semantic search over Wikipedia to find relevant articles and information. Use this for fact-checking, definitions, and general knowledge questions.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'The query to search for on Wikipedia.',
-          },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'retriever',
-      description:
-        'Performs a semantic search over the user’s notes and chat history to find relevant context. Use this to answer questions, recall information, or provide context for other tasks.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description:
-              'The query to search for in the user’s notes and chat history.',
-          },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
       name: 'planner',
-      description:
-        'Analyzes a user’s task and the available tools to create a step-by-step plan of tool calls to achieve the mission. Use this for complex tasks that require multiple steps or tools.',
+      description: 'Analyzes the user\'s task and available tools to create a step-by-step plan of tool calls to achieve the mission.',
       parameters: {
         type: 'object',
         properties: {
           task: {
             type: 'string',
-            description: 'The user’s task to be planned.',
+            description: 'The user\'s task to be planned.',
           },
         },
         required: ['task'],
@@ -126,14 +144,28 @@ export const toolDefinitions: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'executor',
-      description:
-        'Executes the **JSON plan generated** by the planner after user confirmation. The executor follows the plan strictly and executes the tool calls in the specified order.',
+      description: 'Executes a plan from the planner after user confirmation. The executor follows the plan strictly.',
       parameters: {
         type: 'object',
         properties: {
           plan: {
-            type: 'string',
-            description: 'The plan to be executed.',
+            type: 'array',
+            description: 'The plan of tool calls to be executed.',
+            items: {
+              type: 'object',
+              description: 'A single step in the plan, representing a tool call.',
+              properties: {
+                tool_name: {
+                  type: 'string',
+                  description: 'The name of the tool to be called.',
+                },
+                arguments: {
+                  type: 'object',
+                  description: 'The arguments for the tool call.',
+                },
+              },
+              required: ['tool_name', 'arguments'],
+            },
           },
         },
         required: ['plan'],
@@ -143,121 +175,17 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     type: 'function',
     function: {
-      name: 'save_note',
-      description:
-        "Saves a new note to the user's persistent note system. Use this when the user wants to record information, decisions, or create a new structured note.",
-      parameters: {
-        type: 'object',
-        properties: {
-          content: {
-            type: 'string',
-            description: 'The main content of the note. This is mandatory.',
-          },
-          title: {
-            type: 'string',
-            description:
-              'An optional title for the note. If not provided, a default title will be generated.',
-          },
-          tags: {
-            type: 'array',
-            description:
-              'An optional list of tags (strings) to categorize the note.',
-            items: {
-              type: 'string',
-            },
-          },
-        },
-        required: ['content'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'fetcher',
-      description:
-        'Fetches the main textual content of a given URL. Use this when the user provides a link and asks you to summarize it, answer questions about it, or extract specific information from it.',
+      name: 'open_tab',
+      description: 'Opens a new browser tab with the specified URL.',
       parameters: {
         type: 'object',
         properties: {
           url: {
             type: 'string',
-            description:
-              'The URL of the webpage to fetch and extract content from.',
+            description: 'The URL to open in the new tab.',
           },
         },
         required: ['url'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'update_memory',
-      description:
-        'Appends a short summary or key piece of information to a special "memory" note in the popover. Use this to remember user preferences, facts about the user, or important context from the conversation for future reference within the current session or for the user to see in their popover note.',
-      parameters: {
-        type: 'object',
-        properties: {
-          summary: {
-            type: 'string',
-            description:
-              'The concise summary or piece of information to add to the memory. For example, "User is 30yo, he is building an extension".',
-          },
-        },
-        required: ['summary'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'web_search',
-      description:
-        'Performs a web search using a specified search engine to find up-to-date information, news, or specific documents on the web. Can accept multiple queries to run concurrently, each with a different search engine.',
-      parameters: {
-        type: 'object',
-        properties: {
-          queries: {
-            type: 'array',
-            description: 'A list of search query objects to be executed concurrently.',
-            items: {
-              type: 'object',
-              properties: {
-                query: {
-                  type: 'string',
-                  description: 'The search query to be executed.',
-                },
-                engine: {
-                  type: 'string',
-                  description: 'The search engine to use for this specific query. Defaults to Google.',
-                  enum: ['Google', 'DuckDuckGo', 'Brave', 'GoogleCustomSearch'],
-                },
-              },
-              required: ['query'],
-            },
-          },
-        },
-        required: ['queries'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'smart_dispatcher',
-      description:
-        'Handles complex, multi-step user requests that require a sequence of actions or multiple tool calls. Use this for tasks like researching several topics and then summarizing, or finding information and then saving it. For simple, single-action requests (e.g., a single web search), call the specific tool directly.',
-      parameters: {
-        type: 'object',
-        properties: {
-          task: {
-            type: 'string',
-            description:
-              "The user's complete, original, natural language request that describes the entire multi-step task. For example: 'search for the pros and cons of GraphQL and REST, and then create a note summarizing the findings'.",
-          },
-        },
-        required: ['task'],
       },
     },
   },

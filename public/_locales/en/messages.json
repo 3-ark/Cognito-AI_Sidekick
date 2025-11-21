@@ -26,6 +26,9 @@
   "searchingWeb": {
     "message": "Searching web…"
   },
+  "setDisplayName": {
+    "message": "Set your display name in Profile"
+  },
   "processingSERP": {
     "message": "Processing SERP…"
   },
@@ -72,16 +75,16 @@
     "message": "A quick introduction to get you started with Cognito."
   },
   "guideStep1": {
-    "message": "1. In Settings, go to 'API Access' to fill in your API keys or URLs."
+    "message": "1. In Settings, go to 'API Access' to enter your API keys or URLs."
   },
   "guideStep2": {
-    "message": "2. Exit settings, then click the model selector in the header to choose your model. You can set your username in the top right corner."
+    "message": "2. Exit settings, then click the model selector in the header to choose your model. You can set your username in the top right."
   },
   "guideStep3": {
-    "message": "3. Use the 'Chat Controls' (notebook icon in input bar) to toggle AI memory and tool usage."
+    "message": "3. Use the 'Chat Controls' (notebook icon in the input bar) to toggle AI memory and tool usage."
   },
   "guideStep4": {
-    "message": "4. Check the user guide <1>here</1>"
+    "message": "4. Check out the user guide <1>here</1>"
   },
   "guideHaveFun": {
     "message": "Have fun!"
@@ -120,7 +123,7 @@
     "message": "Delete All"
   },
   "searchPlaceholder": {
-    "message": "Search your notes and chat history..."
+    "message": "Search from your notes & chat history..."
   },
   "searching": {
     "message": "Searching..."
@@ -129,7 +132,7 @@
     "message": "Settings"
   },
   "selectPersona": {
-    "message": "Select Persona..."
+    "message": "Select persona..."
   },
   "editPersona": {
     "message": "Edit selected persona"
@@ -156,7 +159,7 @@
     "message": "Rebuild"
   },
   "rebuildEmbeddings": {
-    "message": "Rebuild Embeddings"
+    "message": "Rebuild embeddings"
   },
   "lastRebuild": {
     "message": "Last: {{date}}"
@@ -165,13 +168,13 @@
     "message": "Update"
   },
   "updateEmbeddings": {
-    "message": "Update Embeddings"
+    "message": "Update embeddings"
   },
   "lastUpdate": {
     "message": "Last: {{date}}"
   },
   "currentModel": {
-    "message": "Current Model: {{modelName}}"
+    "message": "Current model: {{modelName}}"
   },
   "rebuilding": {
     "message": "Rebuilding..."
@@ -186,9 +189,153 @@
     "message": "Close Settings"
   },
   "extName": {
-    "message": "Cognito AI Sidekick"
+    "message": "Cognito AI Assistant"
   },
   "extShortDesc": {
-    "message": "A privacy-focused, offline-first, AI-powered sidekick for your browser."
+    "message": "A privacy-focused, offline-first AI browser assistant."
+  },
+  "speech": {
+    "message": "Speech"
+  },
+  "addWebSearchResultsToLlmContext": {
+    "message": "Add Web Search Results to LLM Context"
+  },
+  "addCurrentWebPageToLlmContext": {
+    "message": "Add Current Web Page to LLM Context"
+  },
+  "tokensPerSecond": {
+    "message": "t/s"
+  },
+  "prompt": {
+    "message": "prompt"
+  },
+  "gen": {
+    "message": "gen"
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "deleteMessage": {
+    "message": "Delete message"
+  },
+  "continueFromHere": {
+    "message": "Continue from here"
+  },
+  "copyMessage": {
+    "message": "Copy message"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resumeSpeech": {
+    "message": "Resume speech"
+  },
+  "pauseSpeech": {
+    "message": "Pause speech"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopSpeech": {
+    "message": "Stop speech"
+  },
+  "speak": {
+    "message": "Speak"
+  },
+  "speakMessage": {
+    "message": "Speak message"
+  },
+  "reload": {
+    "message": "Reload"
+  },
+  "reloadLastPrompt": {
+    "message": "Reload last prompt"
+  },
+  "selectModel": {
+    "message": "Select model..."
+  },
+  "selectedModel": {
+    "message": "Selected model: {{modelName}}. Click to change."
+  },
+  "searchModels": {
+    "message": "Search models..."
+  },
+  "noModelsMatch": {
+    "message": "No models match your search."
+  },
+  "noModelsAvailable": {
+    "message": "No models available. Check configuration."
+  },
+  "ctx": {
+    "message": "ctx"
+  },
+  "provideGist": {
+    "message": "Provide the gist without missing important details."
+  },
+  "tldr": {
+    "message": "TLDR"
+  },
+  "quickSummary": {
+    "message": "Quick Summary"
+  },
+  "extractKeyFigures": {
+    "message": "Extract all key figures, names, locations, and dates mentioned on this page and list them."
+  },
+  "facts": {
+    "message": "Facts"
+  },
+  "numbersEventsNames": {
+    "message": "Numbers, events, names"
+  },
+  "findPositiveDevelopments": {
+    "message": "Find positive developments, achievements, or opportunities mentioned on this page."
+  },
+  "yay": {
+    "message": "Yay!"
+  },
+  "goodNews": {
+    "message": "Good news"
+  },
+  "findConcerningIssues": {
+    "message": "Find concerning issues, risks, or criticisms mentioned on this page."
+  },
+  "oops": {
+    "message": "Oops"
+  },
+  "badNews": {
+    "message": "Bad news"
+  },
+  "googleSearch": {
+    "message": "Google Search"
+  },
+  "duckduckgoSearch": {
+    "message": "DuckDuckGo Search"
+  },
+  "braveSearch": {
+    "message": "Brave Search"
+  },
+  "wikipediaSearch": {
+    "message": "Wikipedia Search"
+  },
+  "googleApiSearch": {
+    "message": "Google API Search"
+  },
+  "language": {
+    "message": "Language"
+  },
+  "page": {
+    "message": "Page"
+  },
+  "floatingButtonShortcutHint": {
+    "message": "You can also use the shortcut Ctrl+Shift+F to toggle the floating button."
+  },
+  "openFloatingButtonShortcut": {
+    "message": "Open floating button"
+  },
+  "customizeShortcutsHint": {
+    "message": "You can customize this shortcut by visiting chrome://extensions/shortcuts"
   }
 }

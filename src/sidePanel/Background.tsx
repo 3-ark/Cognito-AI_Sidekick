@@ -1,6 +1,7 @@
-import { cn } from "@/src/background/util";
 import { useConfig } from './ConfigContext';
 import { DEFAULT_PERSONA_IMAGES } from "./constants";
+
+import { cn } from "@/src/background/util";
 
 export const Background = () => {
   const { config } = useConfig();
@@ -15,21 +16,21 @@ export const Background = () => {
     "fixed",
     "w-full",
     "top-[10%]",
-    "pointer-events-none"
+    "pointer-events-none",
   );
 
   const imageClasses = cn(
     "fixed",
     "opacity-[0.03]",
-    "z-[1]"
+    "z-[1]",
   );
 
   return (
     <div className={containerClasses}>
       <img
-        src={src}
         alt=""
         className={imageClasses}
+        src={src}
         style={{
           zoom: '1.2',
         }}

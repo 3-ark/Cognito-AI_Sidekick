@@ -1,642 +1,660 @@
 import localforage from 'localforage';
-import winkBM25Factory from 'wink-bm25-text-search';
-import TinySegmenter from 'tiny-segmenter';
-import winkNLP from 'wink-nlp';
-import model from 'wink-eng-lite-web-model';
-import { getAllNotesFromSystem, getNoteByIdFromSystem } from './noteStorage';
+import MiniSearch, { Options as BaseMiniSearchOptions } from 'minisearch'; // Renamed to BaseMiniSearchOptions
+
+import { getChunksForParent } from './chunkIndex';
+import { MessageTurn } from '../types/chatTypes';
+import {
+    GenericChunk,
+    NoteChunk,
+} from '../types/chunkTypes';
 import { Note } from '../types/noteTypes';
-import { ChatMessage, getAllChatMessages, getChatMessageById } from './chatHistoryStorage'; // Import chat types and functions
-import storage from './storageUtil';
 
-// Custom error for data integrity issues
-class IndexIntegrityError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'IndexIntegrityError';
-  }
-}
+import { isChunkIndexBuilt, rebuildChunkIndex } from './chunkIndex';
+import { getConversation, MESSAGE_STORAGE_PREFIX } from './chatHistoryStorage';
+import { getEmbedding } from './embeddingUtils';
+import { getAllNotesFromSystem } from './noteStorage';
 
-const CURRENT_INDEX_VERSION = '1.1';
+// Updated import to use getStoredAppSettings and AppSettings (which is Config)
+// and getEffectiveBm25Params for clarity in sourcing BM25 values.
+import {
+ AppSettings,getStoredAppSettings, 
+} from './storageUtil';
+import { aggressiveProcessText } from './textProcessing';
 
-// Wrapper for the index to include metadata for integrity checks
-interface IndexMetadata {
-  version: string;
-  docCount: number;
-}
+const MINISEARCH_INDEX_KEY = 'minisearch_chunk_index_v1';
+const CHUNK_CACHE_STORE_KEY = 'minisearch_chunk_cache_v1'; // Used for the inMemoryItemsStore
 
-interface WrappedIndex {
-  metadata: IndexMetadata;
-  index: string; // The raw JSON string from the engine
-}
-
-
-type BM25Engine = ReturnType<typeof winkBM25Factory>;
-const nlp = winkNLP(model);
-const its = nlp.its;
-
-const BM25_UNCONSOLIDATED_INDEX_KEY = 'bm25_index_unconsolidated';
-const BM25_CONSOLIDATED_INDEX_KEY = 'bm25_index_consolidated';
-const CONSOLIDATION_DEBOUNCE_TIME_MS = 60000; // 60 seconds
-
-// Types for documents stored in BM25
-export interface BM25TextDoc { // What the engine's addDoc expects
-  title: string;
+export interface HydratedChunkSearchResultItem {
+  id: string; // chunk id or message id
+  parentId: string; // note id or conversation id
   content: string;
-}
-
-// Type for items in our in-memory store, used for rebuilding the index
-export interface InMemorySearchableItem {
-  id: string; // note_id or chat_id
-  type: 'note' | 'chat';
-  title: string;
-  content: string; // For notes, it's note.content. For chats, it's concatenated turns.
-}
-
-// Type for raw search results from BM25 engine.search()
-export type RawBM25SearchResult = [id: string, score: number];
-
-
-// This existing interface is for hydrated search results, good for UI.
-export interface HydratedSearchResultItem {
-  id: string;
-  type: 'note' | 'chat'; // Added type
-  title: string;
+  parentTitle?: string;
+  originalType: 'note' | 'json' | 'text' | 'chat';
   score: number;
-  content?: string; // Full content after hydration
-  // Potentially add other specific fields like `createdAt`, `turns` for chats, etc.
-  note?: Note;
-  chat?: ChatMessage;
+
+  // Note specific
+  headingPath?: string[];
+  metadata?: NoteChunk['metadata'];
+  originalDescription?: string; // For notes, this is the description field
+  originalUrl?: string;
+  originalTags?: string[];
+
+  // Message specific
+  role?: 'user' | 'assistant' | 'tool';
+  timestamp?: number;
 }
 
+interface HydratedChunkSearchResultItemWithEmbedding extends HydratedChunkSearchResultItem {
+  embedding: number[];
+}
+
+// Default BM25 settings from MiniSearch documentation
+const DEFAULT_BM25_K = 1.2; // Term frequency saturation point
+const DEFAULT_BM25_B = 0.75; // Length normalization impact
+const DEFAULT_BM25_D = 0.5;  // BM25+ frequency normalization lower bound
+
+// Extend MiniSearchOptions to include BM25 parameters for stricter typing if needed
+interface MiniSearchOptionsWithBM25<T = GenericChunk> extends BaseMiniSearchOptions<T> {
+  k?: number;
+  b?: number;
+  d?: number;
+}
+
+type IndexableItem = (Note | (MessageTurn & { title?: string })) & { bm25Content?: string };
 
 class SearchService {
-  private engine: BM25Engine;
-  private tinySegmenter: TinySegmenter;
-  private _engineConfiguredAndLoaded: boolean = false;
-  // Unified in-memory store for both notes and chats
-  private inMemoryItemsStore: Map<string, InMemorySearchableItem> = new Map();
-  private unconsolidatedChangeCount: number = 0;
-  private rebuildDebounceTimer: NodeJS.Timeout | null = null;
-  private readonly DEBOUNCE_DELAY_MS = 1500; // 1.5 seconds
-  private lastUnconsolidatedChangeTime: number | null = null;
-  private consolidationDebounceTimer: NodeJS.Timeout | null = null;
+  private engine!: MiniSearch<IndexableItem>;
+  private inMemoryItemsStore: Map<string, IndexableItem> = new Map();
+
+  private saveIndexDebounceTimer: NodeJS.Timeout | null = null;
+  private readonly SAVE_INDEX_DEBOUNCE_MS = 2500;
+  private readonly CACHE_SAVE_DEBOUNCE_MS = 3000;
 
   public readonly initializationPromise: Promise<void>;
+  private _debouncedSaveInMemoryStoreCache: () => void;
+  private currentMiniSearchOptions!: MiniSearchOptionsWithBM25<IndexableItem>; // Use the extended type
 
   constructor() {
-    this.engine = winkBM25Factory();
-    this.tinySegmenter = new TinySegmenter();
-    this.initializationPromise = this._initialize();
+    this._debouncedSaveInMemoryStoreCache = this._debounce(this._saveInMemoryStoreCache.bind(this), this.CACHE_SAVE_DEBOUNCE_MS);
+    this.initializationPromise = this._initializeAndCreateEngine();
+
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'APP_SETTINGS_UPDATED') {
+        console.log('[SearchService] Received app settings update. Re-initializing engine.');
+        this.reInitializeEngine().then(() => {
+            console.log('[SearchService] Engine re-initialized with new settings.');
+        }).catch(error => {
+            console.error('[SearchService] Error re-initializing engine after settings update:', error);
+        });
+
+        // No need to return true if we're not calling sendResponse
+      }
+    });
   }
 
-  private _configureEngine(): void {
-    const prepTask = (text: string): string[] => {
-      if (!text || text.trim().length === 0) return [];
-      let nlpUtils: any;
-      let processedText = text;
-      nlpUtils = require('wink-nlp-utils');
+  private async _createEngine(passedSettings?: AppSettings | null): Promise<void> {
+    // Fetch settings if not passed, or use what's passed.
+    // getStoredAppSettings can return null, so handle that.
+    const appSettings = passedSettings === undefined ? await getStoredAppSettings() : passedSettings;
 
-      // Apply pre-cleaning steps for all languages before language-specific tokenization
-      processedText = nlpUtils.string.removeHTMLTags(processedText);
-      processedText = nlpUtils.string.removeExtraSpaces(processedText);
+    // Use getEffectiveBm25Params to get k, b, d with defaults.
+    // This requires appSettings to be passed to it, or it will fetch them again.
+    // To avoid double fetching if appSettings is already available, we can modify getEffectiveBm25Params
+    // or just use the values from appSettings here directly with local defaults.
+    // For now, let's rely on the structure of AppSettings (Config) and apply defaults here.
+    
+    const bm25UserK = appSettings?.ragConfig?.k; // Changed from k1 to k
+    const bm25UserB = appSettings?.ragConfig?.b;
+    const bm25UserD = appSettings?.ragConfig?.d;
 
-      if (processedText.trim().length === 0) return [];
+    this.currentMiniSearchOptions = {
+      idField: 'id',
 
-      const tokens: string[] = [];
-      const firstChar = processedText.trim().charAt(0);
-      const code = firstChar.charCodeAt(0);
+      // Fields to search: the aggressively processed `bm25Content` and the original `title`.
+      fields: ['bm25Content', 'title'],
+      storeFields: [
+        'id', 'title', 'content', 'description', 'createdAt', 'lastUpdatedAt', 'tags', 'url', // Note fields
+        'conversationId', 'parentMessageId', 'role', 'status', 'timestamp', // MessageTurn fields
+      ],
 
-      // Handle CJK languages
-      if ((code >= 0x3040 && code <= 0x30FF) || (code >= 0x31F0 && code <= 0x31FF)) { // Japanese
-        return this.tinySegmenter.segment(processedText);
-      } else if (code >= 0xAC00 && code <= 0xD7A3) { // Korean
-        return processedText.split('').filter(char => char.charCodeAt(0) >= 0xAC00 && char.charCodeAt(0) <= 0xD7A3);
-      }
-      // For other languages (e.g., English) use wink-nlp
-      else {
-        processedText = nlpUtils.string.removePunctuations(processedText);
-        // Apply lowercasing for non-CJK text
-        if (nlpUtils && nlpUtils.string && typeof nlpUtils.string.lowerCase === 'function') {
-          try {
-            processedText = nlpUtils.string.lowerCase(processedText) || '';
-          } catch (e) {
-            console.error('[SearchService prepTask] Error during nlpUtils.string.lowerCase:', e, 'Text was:', processedText);
-            // processedText remains as is or defaults to empty if it became non-string
-            if (typeof processedText !== 'string') processedText = '';
-          }
-        } else {
-          console.warn('[SearchService prepTask] nlpUtils.string.lowerCase not available. Skipping lowercasing.');
-        }
-        
-        // Safeguard before trim if lowerCase failed or wasn't available
-        if (typeof processedText !== 'string') {
-          processedText = ''; 
-        }
-        if (processedText.trim().length === 0) return []; // Re-check after potential lowercasing
+      // Since `bm25Content` is pre-processed and space-delimited, the tokenizer can be simple.
+      tokenize: (text, fieldName) => text.split('/\s+/'),
 
-
-        nlp.readDoc(processedText)
-          .tokens()
-          // Filter out stop words
-          .filter((t) => (t.out(its.type) === 'word' && !t.out(its.stopWordFlag)))
-          .each((t) => tokens.push((t.out(its.negationFlag)) ? '!' + t.out(its.lemma) : t.out(its.lemma)));
-        return tokens;
-      }
-    };
-    // Field weights can be adjusted if title relevance differs between notes and chats
-    this.engine.defineConfig({ fldWeights: { title: 1, content: 2 } });
-    this.engine.definePrepTasks([prepTask]);
-  }
-
-  private async _saveIndex(consolidated: boolean): Promise<void> {
-    console.log(`[SearchService._saveIndex] Attempting to save index. Consolidated: ${consolidated}`);
-    try {
-      const rawJson = this.engine.exportJSON();
-      const docCount = this.engine.getTotalDocs();
+      // Term processing is also simplified as it's done during chunk creation.
+      // We still lowercase search queries.
+      processTerm: (term, fieldName) => term.toLowerCase(),
       
-      const wrappedIndex: WrappedIndex = {
-        metadata: {
-          version: CURRENT_INDEX_VERSION,
-          docCount: docCount,
-        },
-        index: rawJson,
+      // Apply BM25 parameters from settings or use defaults
+      k: bm25UserK ?? DEFAULT_BM25_K,
+      b: bm25UserB ?? DEFAULT_BM25_B,
+      d: bm25UserD ?? DEFAULT_BM25_D,
+
+      searchOptions: {
+        // Boost title, and now search over bm25Content instead of content.
+        boost: { title: 2, bm25Content: 1 },
+        prefix: true,
+        fuzzy: 0.2,
+      },
+    };
+    this.engine = new MiniSearch<IndexableItem>(this.currentMiniSearchOptions);
+    console.log(`[SearchService] MiniSearch engine created with BM25 params: k=${this.currentMiniSearchOptions.k}, b=${this.currentMiniSearchOptions.b}, d=${this.currentMiniSearchOptions.d}`);
+  }
+
+  public async reInitializeEngine(): Promise<void> {
+    const appSettings = await getStoredAppSettings();
+    console.log(`[SearchService] reInitializeEngine called. RAG config: ${JSON.stringify(appSettings?.ragConfig)}`);
+
+    await this._createEngine(appSettings);
+    
+    if (this.inMemoryItemsStore.size > 0) {
+        console.log('[SearchService] Re-populating new engine from inMemoryItemsStore...');
+        this.engine.removeAll();
+        this.engine.addAll(Array.from(this.inMemoryItemsStore.values()));
+    }
+
+    await this._saveIndex(); 
+    console.log('[SearchService] Engine re-initialized and data repopulated.');
+  }
+
+  private _debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+    let timeout: NodeJS.Timeout | null = null;
+
+    return ((...args: any[]) => {
+      const later = () => {
+        timeout = null;
+        func(...args);
       };
 
-      const key = consolidated ? BM25_CONSOLIDATED_INDEX_KEY : BM25_UNCONSOLIDATED_INDEX_KEY;
-      const dataToStore = JSON.stringify(wrappedIndex);
+      if (timeout) clearTimeout(timeout);
 
-      if (consolidated) {
-        await localforage.setItem(key, dataToStore);
-        console.log(`[SearchService._saveIndex] Consolidated index saved to localforage with key: ${key}. Doc count: ${docCount}`);
-      } else {
-        await storage.setItem(key, dataToStore); // Unconsolidated remains in chrome.storage.local
-        console.log(`[SearchService._saveIndex] Unconsolidated index saved to chrome.storage.local with key: ${key}. Doc count: ${docCount}`);
-      }
-    } catch (error) {
-      console.error(`[SearchService._saveIndex] Error saving index (consolidated: ${consolidated}):`, error);
-      throw error;
-    }
+      timeout = setTimeout(later, wait);
+    }) as T;
   }
 
-  private async _performConsolidation(): Promise<void> {
-    // Clear any pending time-based consolidation timer, as we are consolidating now.
-    if (this.consolidationDebounceTimer) {
-      clearTimeout(this.consolidationDebounceTimer);
-      this.consolidationDebounceTimer = null;
-      console.log('[SearchService._performConsolidation] Cleared pending consolidationDebounceTimer.');
+  private async _saveIndex(): Promise<void> {
+    if (this.saveIndexDebounceTimer) {
+      clearTimeout(this.saveIndexDebounceTimer);
     }
 
-    console.log('[SearchService._performConsolidation] Starting consolidation process using in-memory store.');
-    // Do NOT load from unconsolidated index file. Instead, rebuild engine from in-memory store.
-    // This ensures we are consolidating the absolute latest state.
-    this.engine.reset();
-    this._configureEngine(); // Reapply config after reset
-    console.log(`[SearchService._performConsolidation] Rebuilding engine from ${this.inMemoryItemsStore.size} in-memory items before consolidation.`);
-    for (const [docId, item] of this.inMemoryItemsStore) {
-      this.engine.addDoc({ title: item.title, content: item.content }, docId);
-    }
-
-    try {
-      if (this.inMemoryItemsStore.size === 0) {
-        console.log('[SearchService._performConsolidation] In-memory store is empty. Clearing consolidated index.');
-        // If there are no items, consolidation means an empty index.
-        // We still save this empty state to localforage and remove the unconsolidated index.
-      }
-      this.engine.consolidate(); // Consolidate the freshly rebuilt engine state
-      console.log('[SearchService._performConsolidation] Engine consolidated from in-memory items.');
-      await this._saveIndex(true); // Save the consolidated state to localforage
-      console.log('[SearchService._performConsolidation] Consolidated index saved to localforage.');
-
-      // Now, remove the unconsolidated index from chrome.storage.local
-      await storage.deleteItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-      console.log('[SearchService._performConsolidation] Unconsolidated index removed from chrome.storage.local.');
-
-      this.unconsolidatedChangeCount = 0;
-      console.log('[SearchService._performConsolidation] Change counter reset.');
-    } catch (error) {
-      console.error('[SearchService._performConsolidation] Error during consolidation:', error);
-      // Consider if we need to avoid deleting the unconsolidated index if saving consolidated one fails.
-      // Current logic: if _saveIndex(true) fails, it will throw and skip deletion, which is good.
-    }
-  }
-
-  private async _loadUnconsolidatedIndexIntoEngine(): Promise<void> {
-    const rawStoredValue = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-    this.engine.reset(); // Reset before loading to ensure clean state
-    this._configureEngine(); // Reapply config after reset
-
-    if (rawStoredValue) {
-      console.log('[SearchService._loadUnconsolidatedIndexIntoEngine] Loading unconsolidated index from storage.');
+    this.saveIndexDebounceTimer = setTimeout(async () => {
       try {
-        const wrappedIndex: WrappedIndex = JSON.parse(rawStoredValue);
+        if (!this.engine) {
+            console.warn('[SearchService._saveIndex] Engine not initialized. Skipping save.');
 
-        if (!wrappedIndex.metadata || !wrappedIndex.metadata.version || typeof wrappedIndex.index !== 'string') {
-          throw new IndexIntegrityError('Unconsolidated index is malformed or missing metadata.');
-        }
-        
-        if (wrappedIndex.metadata.version !== CURRENT_INDEX_VERSION) {
-            console.warn(`[SearchService._loadUnconsolidatedIndexIntoEngine] Index version mismatch. Found: ${wrappedIndex.metadata.version}, Expected: ${CURRENT_INDEX_VERSION}. Proceeding with load.`);
+            return;
         }
 
-        this.engine.importJSON(wrappedIndex.index);
-        const loadedDocCount = this.engine.getTotalDocs();
+        const json = JSON.stringify(this.engine);
 
-        // The crucial integrity check
-        if (loadedDocCount !== wrappedIndex.metadata.docCount) {
-          throw new IndexIntegrityError(`Unconsolidated index corrupted. Expected ${wrappedIndex.metadata.docCount} docs, but loaded ${loadedDocCount}.`);
-        }
-        console.log(`[SearchService._loadUnconsolidatedIndexIntoEngine] Successfully loaded and verified unconsolidated index with ${loadedDocCount} documents.`);
-      } catch (e) {
-        if (e instanceof IndexIntegrityError) {
-          throw e; // Re-throw our specific error to be caught by the caller
-        }
-        // This catches JSON parsing errors or other unexpected issues
-        throw new IndexIntegrityError(`Failed to parse or validate unconsolidated index. Error: ${(e as Error).message}`);
+        await localforage.setItem(MINISEARCH_INDEX_KEY, json);
+        console.log('[SearchService._saveIndex] MiniSearch index saved to localforage.');
+      } catch (error) {
+        console.error('[SearchService._saveIndex] Error saving MiniSearch index:', error);
       }
-    } else {
-      console.warn('[SearchService._loadUnconsolidatedIndexIntoEngine] No unconsolidated index found in storage. Engine is fresh.');
-    }
-  }
-  
-  private async _rebuildEngineFromMemoryStoreAndSaveUnconsolidated(): Promise<void> {
-    // Clear any existing timer, as we're about to schedule a new rebuild.
-    if (this.rebuildDebounceTimer) {
-      clearTimeout(this.rebuildDebounceTimer);
-      this.rebuildDebounceTimer = null;
-    }
 
-    console.log(`[SearchService] Scheduling debounced rebuild. Current store size: ${this.inMemoryItemsStore.size}`);
+      this.saveIndexDebounceTimer = null;
+    }, this.SAVE_INDEX_DEBOUNCE_MS);
+   }
 
-    this.rebuildDebounceTimer = setTimeout(async () => {
-      this.engine.reset();
-      this._configureEngine();
-      console.log(`[SearchService._rebuildEngineFromMemoryStore] DEBOUNCED: Rebuilding engine from ${this.inMemoryItemsStore.size} in-memory items.`);
-      for (const [docId, item] of this.inMemoryItemsStore) {
-        this.engine.addDoc({ title: item.title, content: item.content }, docId);
-      }
-      await this._saveIndex(false); // Save as unconsolidated
-      this.unconsolidatedChangeCount++;
-      this.lastUnconsolidatedChangeTime = Date.now();
-      console.log(`[SearchService._rebuildEngineFromMemoryStore] DEBOUNCED: Unconsolidated index saved. Change count: ${this.unconsolidatedChangeCount}. Last change time: ${this.lastUnconsolidatedChangeTime}`);
-      await this._scheduleOrPerformConsolidation(); // New method to handle consolidation logic
-      this.rebuildDebounceTimer = null; 
-    }, this.DEBOUNCE_DELAY_MS);
-  }
+  private async _saveInMemoryStoreCache(): Promise<void> {
+    try {
+      const storableStore = Array.from(this.inMemoryItemsStore.entries());
 
-  private async _scheduleOrPerformConsolidation(): Promise<void> {
-    // Clear any existing consolidation timer, as we might consolidate now or reschedule.
-    if (this.consolidationDebounceTimer) {
-      clearTimeout(this.consolidationDebounceTimer);
-      this.consolidationDebounceTimer = null;
+      await localforage.setItem(CHUNK_CACHE_STORE_KEY, storableStore);
+      console.log(`[SearchService._saveInMemoryStoreCache] Chunk cache saved. Size: ${storableStore.length}`);
+    } catch (error) {
+      console.error('[SearchService._saveInMemoryStoreCache] Error saving chunk cache:', error);
     }
+   }
 
-    // If there are pending changes, schedule time-based consolidation.
-    // The count-based threshold has been removed in favor of purely time-based + search-triggered consolidation.
-    if (this.unconsolidatedChangeCount > 0) {
-      console.log(`[SearchService._scheduleOrPerformConsolidation] Scheduling time-based consolidation for ${this.unconsolidatedChangeCount} pending changes.`);
-      this.consolidationDebounceTimer = setTimeout(async () => {
-        // Check if there are still changes. It's possible they were consolidated by a search operation
-        // or a full rebuild that occurred after this timer was set but before it fired.
-        if (this.unconsolidatedChangeCount > 0) {
-          console.log(`[SearchService._scheduleOrPerformConsolidation] Time-based consolidation timer fired. Performing consolidation for ${this.unconsolidatedChangeCount} changes.`);
-          await this._performConsolidation();
-        } else {
-          console.log('[SearchService._scheduleOrPerformConsolidation] Time-based consolidation timer fired, but no pending changes found (likely consolidated by search/rebuild). Skipping.');
-        }
-        this.consolidationDebounceTimer = null;
-      }, CONSOLIDATION_DEBOUNCE_TIME_MS);
-    } else {
-      console.log('[SearchService._scheduleOrPerformConsolidation] No pending unconsolidated changes. No consolidation scheduled.');
-    }
-  }
-
-  // New method to fully rebuild both notes and chats into the inMemoryItemsStore
-  private async _populateInMemoryStoreFromStorage(): Promise<void> {
-    // Before populating, ensure any pending debounced rebuild is cancelled if we're doing a full refresh.
-    if (this.rebuildDebounceTimer) {
-      clearTimeout(this.rebuildDebounceTimer);
-      this.rebuildDebounceTimer = null;
-      console.log('[SearchService._populateInMemoryStoreFromStorage] Cancelled pending debounced rebuild due to full store population.');
-    }
+  private async _populateInMemoryStoreFromStorage(): Promise<boolean> {
+    console.log('[SearchService._populateInMemoryStoreFromStorage] Populating in-memory document store from all sources...');
     this.inMemoryItemsStore.clear();
-    const notes = await getAllNotesFromSystem();
-    notes.forEach(note => {
-      this.inMemoryItemsStore.set(String(note.id), {
-        id: String(note.id),
-        type: 'note',
-        title: note.title || '',
-        content: note.content || ''
-      });
-    });
-    console.log(`[SearchService._populateInMemoryStore] Populated with ${notes.length} notes.`);
+    let changed = false;
 
-    const chats = await getAllChatMessages();
-    chats.forEach(chat => {
-      const chatContent = chat.turns.map(turn => turn.content).join('\n');
-      this.inMemoryItemsStore.set(String(chat.id), {
-        id: String(chat.id),
-        type: 'chat',
-        title: chat.title || `Chat from ${new Date(chat.last_updated).toLocaleDateString()}`,
-        content: chatContent
-      });
-    });
-    console.log(`[SearchService._populateInMemoryStore] Populated with ${chats.length} chats. Total items: ${this.inMemoryItemsStore.size}`);
+    const notes = await getAllNotesFromSystem();
+
+    for (const note of notes) {
+        const textToProcess = [note.title, note.content, note.description, note.tags?.join(' ')].filter(Boolean).join(' ');
+        const processedTokens = aggressiveProcessText(textToProcess);
+        const indexableNote: IndexableItem = { ...note, bm25Content: processedTokens.join(' ') };
+
+        this.inMemoryItemsStore.set(note.id, indexableNote);
+        changed = true;
+    }
+
+    const keys = await localforage.keys();
+    const messageKeys = keys.filter(key => key.startsWith(MESSAGE_STORAGE_PREFIX));
+
+    for (const key of messageKeys) {
+        const message = await localforage.getItem<MessageTurn>(key);
+
+        if(message){
+            const conversation = await getConversation(message.conversationId);
+            const textToProcess = [conversation?.title, message.content].filter(Boolean).join(' ');
+            const processedTokens = aggressiveProcessText(textToProcess);
+            const indexableMessage: IndexableItem = {
+                ...message,
+                title: conversation?.title,
+                bm25Content: processedTokens.join(' ')
+            };
+
+            this.inMemoryItemsStore.set(message.id, indexableMessage);
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        console.log(`[SearchService._populateInMemoryStoreFromStorage] In-memory store populated. Total documents: ${this.inMemoryItemsStore.size}`);
+        await this._saveInMemoryStoreCache();
+    } else {
+        console.log('[SearchService._populateInMemoryStoreFromStorage] In-memory store was already up-to-date or empty.');
+    }
+
+    return changed;
+  }
+
+  private async _initializeAndCreateEngine(): Promise<void> {
+    try {
+      console.log('[SearchService._initializeAndCreateEngine] Initializing SearchService...');
+      const appSettings = await getStoredAppSettings();
+
+      await this._createEngine(appSettings);
+
+      const cachedStoreArray = await localforage.getItem<Array<[string, IndexableItem]>>(CHUNK_CACHE_STORE_KEY);
+
+      if (cachedStoreArray && Array.isArray(cachedStoreArray)) {
+          this.inMemoryItemsStore = new Map(cachedStoreArray);
+          console.log(`[SearchService._initializeAndCreateEngine] Loaded document cache. Size: ${this.inMemoryItemsStore.size}`);
+      }
+      
+      if (this.inMemoryItemsStore.size === 0) {
+          console.log('[SearchService._initializeAndCreateEngine] Document cache empty or not found. Populating from source.');
+          await this._populateInMemoryStoreFromStorage();
+      }
+
+      const persistedIndexJson = await localforage.getItem<string>(MINISEARCH_INDEX_KEY);
+
+      if (persistedIndexJson) {
+        console.log('[SearchService._initializeAndCreateEngine] Found persisted MiniSearch index. Loading...');
+        this.engine = MiniSearch.loadJSON<IndexableItem>(persistedIndexJson, this.currentMiniSearchOptions);
+        console.log(`[SearchService._initializeAndCreateEngine] MiniSearch index loaded with ${this.engine.documentCount} documents.`);
+
+        if (this.engine.documentCount !== this.inMemoryItemsStore.size) {
+            console.warn(`[SearchService._initializeAndCreateEngine] Mismatch count. Index: ${this.engine.documentCount}, Store: ${this.inMemoryItemsStore.size}. Rebuilding index from store.`);
+            this.engine.removeAll();
+
+            if (this.inMemoryItemsStore.size > 0) {
+                 this.engine.addAll(Array.from(this.inMemoryItemsStore.values()));
+            }
+
+            await this._saveIndex();
+        }
+
+      } else if (this.inMemoryItemsStore.size > 0) {
+        console.log('[SearchService._initializeAndCreateEngine] No persisted index, indexing from memory store...');
+        this.engine.addAll(Array.from(this.inMemoryItemsStore.values()));
+        await this._saveIndex();
+      } else {
+        console.log('[SearchService._initializeAndCreateEngine] No persisted index and no items in memory. Engine empty.');
+      }
+
+      console.log('[SearchService._initializeAndCreateEngine] Initialization complete.');
+
+      // One-time migration for users without the chunk index.
+      if (!(await isChunkIndexBuilt())) {
+        console.log('[SearchService] Parent-to-chunk index not found. Triggering background rebuild.');
+        rebuildChunkIndex(); // Rebuilds in the background, no need to await.
+      }
+    } catch (error) {
+      console.error('[SearchService._initializeAndCreateEngine] Critical error:', error);
+
+      try {
+        await this.indexAllFullRebuild(true); 
+      } catch (fallbackError) {
+        console.error('[SearchService._initializeAndCreateEngine] Critical error during fallback re-index:', fallbackError);
+      }
+    }
   }
   
-  // New method for a full re-index of everything from source of truth (storage)
-  public async indexAllFullRebuild(): Promise<void> {
-    console.log('[SearchService.indexAllFullRebuild] Starting to index all items (notes and chats).');
-    await this._populateInMemoryStoreFromStorage(); // Populate in-memory store first
-    // Now rebuild the engine from this fresh in-memory store
-    this.engine.reset();
-    this._configureEngine();
-    for (const [docId, item] of this.inMemoryItemsStore) {
-      this.engine.addDoc({ title: item.title, content: item.content }, docId);
+  public async indexAllFullRebuild(forceEngineRecreation = false): Promise<void> { 
+    console.log('[SearchService.indexAllFullRebuild] Starting full rebuild.');
+
+    if (forceEngineRecreation || !this.engine || !this.currentMiniSearchOptions) { 
+        const appSettings = await getStoredAppSettings();
+
+        await this._createEngine(appSettings); 
     }
-    console.log(`[SearchService.indexAllFullRebuild] Added ${this.inMemoryItemsStore.size} documents to engine.`);
-    try {
-      await this._saveIndex(false); // Save new index as unconsolidated first
-      console.log('[SearchService.indexAllFullRebuild] Unconsolidated index saved.');
-      await this._performConsolidation(); // Consolidate it immediately
-    } catch (e: any) {
-      console.error(`[SearchService.indexAllFullRebuild] Error during indexing/consolidation: ${e.message}`, e);
-      throw e;
+
+    await this._populateInMemoryStoreFromStorage();
+    
+    this.engine.removeAll();
+
+    if (this.inMemoryItemsStore.size > 0) {
+      this.engine.addAll(Array.from(this.inMemoryItemsStore.values()));
     }
-  }
 
-
-  private async _initialize(): Promise<void> {
-    if (this._engineConfiguredAndLoaded) return;
-    this._configureEngine();
-    try {
-      console.log('[SearchService._initialize] Attempting to load index from storage...');
-      let loadedIndex = false;
-      let consolidateAfterLoad = false;
-
-      // Try loading consolidated index from localforage first
-      const rawConsolidatedIndex = await localforage.getItem<string>(BM25_CONSOLIDATED_INDEX_KEY);
-      if (rawConsolidatedIndex) {
-        console.log('[SearchService._initialize] Found consolidated index in localforage.');
-        try {
-          const wrappedIndex: WrappedIndex = JSON.parse(rawConsolidatedIndex);
-
-          if (!wrappedIndex.metadata || !wrappedIndex.metadata.version || typeof wrappedIndex.index !== 'string') {
-            throw new IndexIntegrityError('Consolidated index is malformed or missing metadata.');
-          }
-          if (wrappedIndex.metadata.version !== CURRENT_INDEX_VERSION) {
-            console.warn(`[SearchService._initialize] Consolidated index version mismatch. Found: ${wrappedIndex.metadata.version}, Expected: ${CURRENT_INDEX_VERSION}. Proceeding with load.`);
-          }
-
-          this.engine.importJSON(wrappedIndex.index);
-          const loadedDocCount = this.engine.getTotalDocs();
-
-          if (loadedDocCount !== wrappedIndex.metadata.docCount) {
-            throw new IndexIntegrityError(`Consolidated index corrupted. Expected ${wrappedIndex.metadata.docCount} docs, but loaded ${loadedDocCount}.`);
-          }
-
-          loadedIndex = true;
-          this.unconsolidatedChangeCount = 0; // Reset as we loaded a good consolidated state
-          console.log(`[SearchService._initialize] Consolidated index loaded and verified successfully from localforage with ${loadedDocCount} documents.`);
-
-          // Optional: Check for and remove any orphaned unconsolidated index from chrome.storage.local
-          const orphanedUnconsolidatedJson = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-          if (orphanedUnconsolidatedJson) {
-            console.log('[SearchService._initialize] Found orphaned unconsolidated index in chrome.storage.local while a consolidated one exists. Removing it.');
-            await storage.deleteItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-          }
-        } catch (e) {
-          if (e instanceof IndexIntegrityError) {
-            throw e; // Re-throw our specific error to be caught by the outer try/catch
-          }
-          // This catches JSON parsing errors or other unexpected issues
-        throw new IndexIntegrityError(`Failed to parse or validate consolidated index. Error: ${(e as Error).message}`);
-        }
-      } else {
-        // Check for existence only. The loading and validation is now handled by _loadUnconsolidatedIndexIntoEngine
-        const unconsolidatedIndexExists = await storage.getItem(BM25_UNCONSOLIDATED_INDEX_KEY);
-        if (unconsolidatedIndexExists) {
-          console.log('[SearchService._initialize] Found unconsolidated index key in chrome.storage.local. Attempting to load and validate.');
-          await this._loadUnconsolidatedIndexIntoEngine(); // This will throw on failure
-          
-          loadedIndex = true;
-          consolidateAfterLoad = true; // Mark for consolidation after loading in-memory store
-          this.unconsolidatedChangeCount = 1;
-          console.log('[SearchService._initialize] Unconsolidated index loaded successfully and is pending consolidation.');
-        }
-      }
-
-      if (loadedIndex) {
-        console.log('[SearchService._initialize] Index loaded. Populating in-memory store from all sources.');
-        await this._populateInMemoryStoreFromStorage(); // Populates inMemoryItemsStore with notes & chats
-
-        if (consolidateAfterLoad) {
-          console.log('[SearchService._initialize] Consolidating loaded unconsolidated index...');
-          // Need to ensure the engine reflects the inMemoryItemsStore before consolidating
-          // The current _performConsolidation loads from unconsolidatedJson, which might be stale
-          // if inMemoryItemsStore has changed.
-          // A safer approach here might be to rebuild from inMemoryItemsStore then consolidate.
-          await this._rebuildEngineFromMemoryStoreAndSaveUnconsolidated(); // This saves unconsolidated, then triggers consolidation if needed.
-        }
-      } else {
-        console.log('[SearchService._initialize] No index found in storage. Building new index for all items...');
-        await this.indexAllFullRebuild(); // This method now handles both notes and chats
-      }
-
-      this._engineConfiguredAndLoaded = true;
-      console.log('[SearchService._initialize] Engine initialization complete.');
-    } catch (error) {
-      console.error('[SearchService._initialize] Critical error during engine initialization:', error);
-
-      // Check if the error is due to a corrupted index
-      if (error instanceof IndexIntegrityError) {
-        // Data Preservation Mode:
-        // Log a severe warning to the user/dev console.
-        // DO NOT proceed with a fallback re-index, as this would wipe the (potentially recoverable) data.
-        // The search service will remain in a non-initialized state.
-        console.error(
-          '****************************************************************\n' +
-          '[SearchService._initialize] FATAL: Index is corrupted. Halting search initialization to prevent data loss.\n' +
-          'The user should be notified and given options to either restore from backup or re-index from scratch.\n' +
-          `Reason: ${error.message}\n` +
-          '****************************************************************'
-        );
-        throw error;
-      }
-
-      // For other types of errors (e.g., storage API failures), attempt the fallback.
-      try {
-        console.warn('[SearchService._initialize] Attempting fallback: full re-index of all items due to non-integrity error.');
-        this._configureEngine(); // Ensure engine is configured before fallback
-        await this.indexAllFullRebuild();
-        this._engineConfiguredAndLoaded = true;
-        console.log('[SearchService._initialize] Fallback engine initialization complete.');
-      } catch (fallbackError) {
-        console.error('[SearchService._initialize] Critical error during fallback engine initialization:', fallbackError);
-        throw fallbackError; // Or handle more gracefully, e.g., disable search
-      }
-    }
+    await this._saveIndex();
+    console.log('[SearchService.indexAllFullRebuild] Full rebuild complete.');
   }
 
   public async indexSingleNote(note: Note): Promise<void> {
     await this.initializationPromise;
-    if (!note || !note.id) {
-      console.error('[SearchService.indexSingleNote] Cannot index note without ID:', note);
-      return;
+    console.log(`[SearchService.indexSingleNote] Indexing note ${note.id}`);
+
+    const textToProcess = [note.title, note.content, note.description, note.tags?.join(' ')].filter(Boolean).join(' ');
+    const processedTokens = aggressiveProcessText(textToProcess);
+    const indexableNote: IndexableItem = { ...note, bm25Content: processedTokens.join(' ') };
+
+    try {
+      this.engine.discard(note.id);
+    } catch (e) {
+      // Ignore if the document was not in the index
     }
-    const noteIdStr = String(note.id);
-    console.log(`[SearchService.indexSingleNote] Indexing single note: ${noteIdStr}`);
-    
-    this.inMemoryItemsStore.set(noteIdStr, {
-      id: noteIdStr,
-      type: 'note',
-      title: note.title || '',
-      content: note.content || ''
-    });
-    console.log(`[SearchService.indexSingleNote] Note ${noteIdStr} added/updated in in-memory store. Store size: ${this.inMemoryItemsStore.size}`);
-    
-    // Load current unconsolidated index, add this doc, then save unconsolidated.
-    // The _rebuildEngineFromMemoryStoreAndSaveUnconsolidated handles this now.
-    await this._rebuildEngineFromMemoryStoreAndSaveUnconsolidated();
+
+    this.engine.add(indexableNote);
+
+    this.inMemoryItemsStore.set(note.id, indexableNote);
+
+    this._debouncedSaveInMemoryStoreCache();
+    await this._saveIndex();
+    console.log(`[SearchService.indexSingleNote] Note ${note.id} processed. Engine docs: ${this.engine.documentCount}, Store size: ${this.inMemoryItemsStore.size}`);
+  }
+
+  public async indexSingleMessage(message: MessageTurn): Promise<void> {
+    await this.initializationPromise;
+    console.log(`[SearchService.indexSingleMessage] Indexing message ${message.id}`);
+
+    const conversation = await getConversation(message.conversationId);
+    const textToProcess = [conversation?.title, message.content].filter(Boolean).join(' ');
+    const processedTokens = aggressiveProcessText(textToProcess);
+    const indexableMessage: IndexableItem = {
+        ...message,
+        title: conversation?.title,
+        bm25Content: processedTokens.join(' ')
+    };
+
+    try {
+      this.engine.discard(message.id);
+    } catch (e) {
+      // Ignore if the document was not in the index
+    }
+
+    this.engine.add(indexableMessage);
+
+    this.inMemoryItemsStore.set(message.id, indexableMessage);
+
+    this._debouncedSaveInMemoryStoreCache();
+    await this._saveIndex();
+    console.log(`[SearchService.indexSingleMessage] Message ${message.id} processed. Engine docs: ${this.engine.documentCount}, Store size: ${this.inMemoryItemsStore.size}`);
   }
   
-  public async indexSingleChatMessage(chatMessage: ChatMessage): Promise<void> {
+  public async removeItemFromIndex(originalDocId: string): Promise<void> {
     await this.initializationPromise;
-    if (!chatMessage || !chatMessage.id) {
-      console.error('[SearchService.indexSingleChatMessage] Cannot index chat without ID:', chatMessage);
-      return;
-    }
-    const chatIdStr = String(chatMessage.id);
-    console.log(`[SearchService.indexSingleChatMessage] Indexing single chat: ${chatIdStr}`);
-    
-    const content = chatMessage.turns.map(turn => turn.content).join('\n');
-    this.inMemoryItemsStore.set(chatIdStr, {
-      id: chatIdStr,
-      type: 'chat',
-      title: chatMessage.title || `Chat from ${new Date(chatMessage.last_updated).toLocaleDateString()}`,
-      content: content
-    });
-    console.log(`[SearchService.indexSingleChatMessage] Chat ${chatIdStr} added/updated in in-memory store. Store size: ${this.inMemoryItemsStore.size}`);
-    
-    await this._rebuildEngineFromMemoryStoreAndSaveUnconsolidated();
-  }
+    console.log(`[SearchService.removeItemFromIndex] Removing document ${originalDocId}.`);
 
-  public async removeItemFromIndex(itemId: string): Promise<void> { // Renamed for generic use
-    await this.initializationPromise;
-    if (!itemId) {
-      console.error('[SearchService.removeItemFromIndex] Cannot remove item without ID.');
-      return;
-    }
-    console.log(`[SearchService.removeItemFromIndex] Removing item from index: ${itemId}`);
-    
-    if (this.inMemoryItemsStore.has(itemId)) {
-      this.inMemoryItemsStore.delete(itemId);
-      console.log(`[SearchService.removeItemFromIndex] Item ${itemId} removed from in-memory store. Store size: ${this.inMemoryItemsStore.size}`);
-      await this._rebuildEngineFromMemoryStoreAndSaveUnconsolidated();
-    } else {
-      console.warn(`[SearchService.removeItemFromIndex] Item ${itemId} not found in in-memory store. No changes made to index.`);
-    }
-  }
-
-  // Generic search method returning raw results (IDs and scores)
-  public async searchItems(query: string, topK = 20): Promise<RawBM25SearchResult[]> {
-    await this.initializationPromise;
-
-    if (this.unconsolidatedChangeCount > 0) {
-      console.log('[SearchService.searchItems] Consolidated index is stale. Performing consolidation before search.');
-      await this._performConsolidation();
-    }
-
-    if (typeof query !== 'string' || query.trim() === '') {
-      return [];
-    }
     try {
-      const rawResults = this.engine.search(query).map(
-        ([id, score]): RawBM25SearchResult => [String(id), score]
-      );
-      return rawResults.slice(0, topK);
+      this.engine.discard(originalDocId);
+    } catch (e) {
+      // Ignore if the document was not in the index
+    }
+
+    this.inMemoryItemsStore.delete(originalDocId);
+
+    this._debouncedSaveInMemoryStoreCache();
+    await this._saveIndex();
+    console.log(`[SearchService.removeItemFromIndex] Removed document ${originalDocId}. Engine docs: ${this.engine.documentCount}, Store size: ${this.inMemoryItemsStore.size}`);
+  }
+
+  public async searchItems(query: string, topK = 20): Promise<HydratedChunkSearchResultItem[]> {
+    console.time('searchItems');
+    await this.initializationPromise;
+
+    if (typeof query !== 'string' || query.trim() === '') return [];
+
+    try {
+        const appSettings = await getStoredAppSettings();
+        const ragConfig = appSettings?.ragConfig;
+        const bm25Weight = ragConfig?.bm25_weight ?? 0.5;
+        const semanticTopK = ragConfig?.semantic_top_k ?? 20;
+        const bm25TopK = ragConfig?.BM25_top_k ?? 10;
+        const lambda = ragConfig?.lambda ?? 0.5;
+
+        // --- Step 1: Perform parallel searches and get query embedding ---
+        console.time('bm25Search');
+        const processedQuery = aggressiveProcessText(query).join(' ');
+        const queryEmbeddingPromise = getEmbedding(query.toLowerCase());
+        
+        // BM25 search for parent documents
+        const bm25ParentResults = this.engine.search(processedQuery, {}).slice(0, bm25TopK);
+        const parentBm25Scores = new Map(bm25ParentResults.map(r => [r.id, r.score]));
+        console.timeEnd('bm25Search');
+
+        // Semantic search for chunks (while BM25 is running)
+        console.time('semanticSearch');
+        const queryEmbedding = await queryEmbeddingPromise;
+        if (!queryEmbedding) {
+            console.warn('[SearchService.searchItems] Could not generate query embedding. Proceeding with BM25 only.');
+        }
+
+        let semanticChunkResults: { chunkId: string, parentId: string, score: number }[] = [];
+        if (queryEmbedding) {
+            const allChunkKeys = await localforage.keys().then(keys => keys.filter(key => key.startsWith('notechunk_') || key.startsWith('msgchunk_')));
+            const promises = allChunkKeys.map(async (key) => {
+                const chunk = await localforage.getItem<NoteChunk>(key);
+                if (chunk) {
+                    const chunkEmbedding = chunk.embedding || await getEmbedding(chunk.content);
+                    const cosineSimilarity = this.calculateCosineSimilarity(queryEmbedding, chunkEmbedding);
+                    return { chunkId: chunk.id, parentId: chunk.parentId, score: cosineSimilarity };
+                }
+                return null;
+            });
+            const results = await Promise.all(promises);
+            semanticChunkResults = (results.filter(r => r !== null) as { chunkId: string, parentId: string, score: number }[])
+                .sort((a, b) => b.score - a.score)
+                .slice(0, semanticTopK);
+        }
+        console.timeEnd('semanticSearch');
+
+        // --- Step 2: Combine candidate pools ---
+        const candidateChunkIds = new Set<string>(semanticChunkResults.map(r => r.chunkId));
+        const bm25ParentIds = new Set(bm25ParentResults.map(r => r.id));
+
+        if (bm25ParentIds.size > 0) {
+            for (const parentId of bm25ParentIds) {
+                const chunkIds = await getChunksForParent(parentId);
+                for (const chunkId of chunkIds) {
+                    candidateChunkIds.add(chunkId);
+                }
+            }
+        }
+
+        // --- Step 3: Score and Rerank ---
+        console.time('rerank');
+        const bm25Scores = bm25ParentResults.map(r => r.score);
+        const minBm25Score = bm25Scores.length > 0 ? Math.min(...bm25Scores) : 0;
+        const maxBm25Score = bm25Scores.length > 0 ? Math.max(...bm25Scores) : 0;
+
+        const scoringPromises = Array.from(candidateChunkIds).map(async (chunkId) => {
+            const chunkData = await localforage.getItem<NoteChunk>(chunkId);
+            if (chunkData) {
+                const chunkEmbedding = chunkData.embedding || await getEmbedding(chunkData.content);
+                if (!chunkEmbedding || !queryEmbedding) return null;
+
+                // **THE FIX**: Calculate semantic score for every candidate, don't rely on a pre-filtered list.
+                const semanticScore = this.calculateCosineSimilarity(queryEmbedding, chunkEmbedding);
+
+                const parentBm25Score = parentBm25Scores.get(chunkData.parentId) ?? 0;
+
+                const normalizedParentBm25Score = (maxBm25Score > minBm25Score)
+                    ? (parentBm25Score - minBm25Score) / (maxBm25Score - minBm25Score)
+                    : 0;
+
+                const finalScore = (normalizedParentBm25Score * bm25Weight) + (semanticScore * (1 - bm25Weight));
+
+                if (finalScore > 0) {
+                    return {
+                        id: chunkData.id,
+                        parentId: chunkData.parentId,
+                        content: chunkData.content,
+                        parentTitle: chunkData.parentTitle,
+                        originalType: chunkData.originalType,
+                        score: finalScore,
+                        originalDescription: chunkData.parentDescription,
+                        headingPath: chunkData.headingPath,
+                        metadata: chunkData.metadata,
+                        originalUrl: chunkData.originalUrl,
+                        originalTags: chunkData.originalTags,
+                        embedding: chunkEmbedding,
+                    };
+                }
+            }
+            return null;
+        });
+
+        const combinedResults = (await Promise.all(scoringPromises))
+            .filter(r => r !== null) as HydratedChunkSearchResultItemWithEmbedding[];
+
+        if (lambda === 1) {
+          combinedResults.sort((a, b) => b.score - a.score);
+          console.timeEnd('rerank');
+          console.timeEnd('searchItems');
+          return combinedResults.slice(0, topK);
+        }
+
+        const rerankedResults = await this.rerankWithMMR(combinedResults, lambda, topK);
+        console.timeEnd('rerank');
+        console.timeEnd('searchItems');
+        return rerankedResults;
+
     } catch (e: any) {
-      console.error(`[SearchService.searchItems] Error during engine.search("${query}"): ${e.message}`, e);
-      return [];
+        console.error(`[SearchService.searchItems] Error during search: ${e.message}`, e);
+        return [];
     }
   }
 
-  // Example of how a caller might hydrate results (this logic would typically be in the background message handler)
-  // This is more of a conceptual guide than a function to be directly used by external modules as is.
-  public async hydrateSearchResults(rawResults: RawBM25SearchResult[]): Promise<HydratedSearchResultItem[]> {
-    const detailedResults: HydratedSearchResultItem[] = [];
-    for (const [docId, score] of rawResults) {
-      const itemInMemory = this.inMemoryItemsStore.get(docId); // Check in-memory store for type
-      if (itemInMemory) {
-        if (itemInMemory.type === 'note') {
-          const note = await getNoteByIdFromSystem(docId);
-          if (note) {
-            detailedResults.push({
-              id: note.id,
-              type: 'note',
-              title: note.title || 'Untitled Note',
-              score,
-              content: note.content || '',
-              note: note
-            });
-          }
-        } else if (itemInMemory.type === 'chat') {
-          const chat = await getChatMessageById(docId);
-          if (chat) {
-            detailedResults.push({
-              id: chat.id,
-              type: 'chat',
-              title: chat.title || `Chat from ${new Date(chat.last_updated).toLocaleDateString()}`,
-              score,
-              content: chat.turns.map(t => t.content).join('\n'),
-              chat: chat
-            });
-          }
-        }
-      } else {
-         // Fallback if not in memory store (should ideally not happen if store is synced)
-        console.warn(`[SearchService.hydrateSearchResults] Item ${docId} not found in inMemoryItemsStore for type determination.`);
-         // Attempt to guess or fetch both, or handle error
-      }
+  private calculateCosineSimilarity(vecA: number[], vecB: number[]): number {
+    if (!vecA || !vecB || vecA.length !== vecB.length) {
+      return 0;
     }
-    return detailedResults;
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < vecA.length; i++) {
+      dotProduct += vecA[i] * vecB[i];
+      normA += vecA[i] * vecA[i];
+      normB += vecB[i] * vecB[i];
+    }
+
+    if (normA === 0 || normB === 0) {
+      return 0;
+    }
+
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  private async rerankWithMMR(
+    candidates: HydratedChunkSearchResultItemWithEmbedding[],
+    lambda: number,
+    topK: number
+  ): Promise<HydratedChunkSearchResultItem[]> {
+      if (candidates.length === 0) return [];
+
+      const selected: HydratedChunkSearchResultItemWithEmbedding[] = [];
+      let remaining = [...candidates];
+
+      // Normalize relevance scores (0 to 1) for stable MMR calculation
+      const scores = remaining.map(c => c.score);
+      const minScore = Math.min(...scores);
+      const maxScore = Math.max(...scores);
+
+      if (maxScore > minScore) {
+        remaining.forEach(c => {
+          c.score = (c.score - minScore) / (maxScore - minScore);
+        });
+      } else {
+        remaining.forEach(c => { c.score = 0; });
+      }
+
+      // First, select the most relevant item
+      remaining.sort((a, b) => b.score - a.score);
+      const best = remaining.shift();
+      if (best) {
+          selected.push(best);
+      }
+
+      // Iteratively select the rest based on MMR
+      while (selected.length < topK && remaining.length > 0) {
+          let bestCandidate: HydratedChunkSearchResultItemWithEmbedding | null = null;
+          let bestMmrScore = -Infinity;
+
+          for (const candidate of remaining) {
+              const relevance = candidate.score; // Already normalized
+              let redundancy = 0;
+              if (selected.length > 0) {
+                  const similarities = selected.map(s => this.calculateCosineSimilarity(candidate.embedding, s.embedding));
+                  redundancy = Math.max(...similarities);
+              }
+
+              const mmrScore = lambda * relevance - (1 - lambda) * redundancy;
+
+              if (mmrScore > bestMmrScore) {
+                  bestMmrScore = mmrScore;
+                  bestCandidate = candidate;
+              }
+          }
+
+          if (bestCandidate) {
+              selected.push(bestCandidate);
+              remaining = remaining.filter(r => r.id !== bestCandidate!.id);
+          } else {
+              break; // No more candidates to select
+          }
+      }
+
+      // Return the selected items, removing the temporary embedding property
+      return selected.map(({ embedding, ...rest }) => rest);
+  }
+
+  public formatResultsForLLM(results: HydratedChunkSearchResultItem[]): string {
+    if (!results || results.length === 0) {
+      return "No relevant text segments found to provide context.";
+    }
+
+    let promptOutput = "Use the following text segments from documents to answer. Cite by [Document Title - Segment X] or (id: parent_id chunk_id) where appropriate:\n\n";
+
+    results.forEach((result, index) => {
+      const title = result.parentTitle || 'Untitled Document';
+
+      promptOutput += `### [${title} - Segment ${index + 1}] (id: ${result.parentId} ${result.id}, score: ${result.score.toFixed(2)})\n`;
+      promptOutput += `Content:\n${result.content}\n\n`;
+    });
+
+    return promptOutput.trim();
   }
 }
 
-const searchServiceInstance = new SearchService();
+let searchServiceInstance: SearchService | null = null;
+let searchServicePromise: Promise<SearchService> | null = null;
 
-export const engineInitializationPromise = searchServiceInstance.initializationPromise;
+export const getSearchService = (): Promise<SearchService> => {
+  if (searchServiceInstance) {
+    return Promise.resolve(searchServiceInstance);
+  }
 
-// Keep existing note-specific exports for now if they are directly used by noteStorage.
-// Consider deprecating them in favor of generic methods if applicable.
-export const rebuildFullIndex = searchServiceInstance.indexAllFullRebuild.bind(searchServiceInstance); // Renamed from indexNotes
-export const indexSingleNote = searchServiceInstance.indexSingleNote.bind(searchServiceInstance);
-export const removeNoteFromIndex = (noteId: string) => searchServiceInstance.removeItemFromIndex(noteId); // Wrapper
-
-// New/updated exports for chats and generic search
-export const indexSingleChatMessage = searchServiceInstance.indexSingleChatMessage.bind(searchServiceInstance);
-export const removeChatMessageFromIndex = (chatId: string) => searchServiceInstance.removeItemFromIndex(chatId); // Wrapper
-export const indexChatMessages = async () => { // Specific re-indexer for chats, though rebuildFullIndex is preferred for full sync
-  console.log('[SearchService.indexChatMessages] Starting to index all chat messages from system.');
-  await searchServiceInstance.initializationPromise;
-  const chats = await getAllChatMessages();
-  chats.forEach(chat => {
-     const content = chat.turns.map(turn => turn.content).join('\n');
-     searchServiceInstance['inMemoryItemsStore'].set(String(chat.id), { // Accessing private member for this helper
-        id: String(chat.id),
-        type: 'chat',
-        title: chat.title || `Chat from ${new Date(chat.last_updated).toLocaleDateString()}`,
-        content: content
+  if (!searchServicePromise) {
+    searchServicePromise = new Promise((resolve) => {
+      const instance = new SearchService();
+      instance.initializationPromise.then(() => {
+        searchServiceInstance = instance;
+        resolve(searchServiceInstance);
       });
-  });
-   // This helper would typically be followed by a call to _rebuildEngineFromMemoryStoreAndSaveUnconsolidated
-   // For simplicity, direct users to indexAllFullRebuild or rely on individual indexing.
-   // This export might be removed if indexAllFullRebuild and single indexing are sufficient.
-  await searchServiceInstance['_rebuildEngineFromMemoryStoreAndSaveUnconsolidated']();
-  console.log(`[SearchService.indexChatMessages] Chat indexing helper finished.`);
+    });
+  }
+
+  return searchServicePromise;
 };
 
-
-// Export the generic search function that returns raw BM25 results
-export const search = searchServiceInstance.searchItems.bind(searchServiceInstance);
-// The hydrateSearchResults is more of an internal concept or for the background script to use.
-export const hydrateSearchResults = searchServiceInstance.hydrateSearchResults.bind(searchServiceInstance);
+export { SearchService };

@@ -3,7 +3,7 @@
     "message": "Einstellungen"
   },
   "chatHistory": {
-    "message": "Chat-Verlauf"
+    "message": "Chatverlauf"
   },
   "noteSystem": {
     "message": "Notizsystem"
@@ -18,22 +18,25 @@
     "message": "Online"
   },
   "typing": {
-    "message": "Schreibt…"
+    "message": "Schreibt..."
   },
   "thinking": {
-    "message": "Denkt nach…"
+    "message": "Denkt nach..."
   },
   "searchingWeb": {
-    "message": "Sucht im Web…"
+    "message": "Sucht im Web..."
+  },
+  "setDisplayName": {
+    "message": "Set your display name in Profile"
   },
   "processingSERP": {
-    "message": "Verarbeitet SERP…"
+    "message": "Verarbeitet SERP..."
   },
   "readingPage": {
-    "message": "Liest Seite…"
+    "message": "Liest Seite..."
   },
   "analyzing": {
-    "message": "Analysiert…"
+    "message": "Analysiert..."
   },
   "resetChat": {
     "message": "Chat zurücksetzen"
@@ -42,10 +45,10 @@
     "message": "Freigabeoptionen"
   },
   "yourProfile": {
-    "message": "Dein Profil"
+    "message": "Ihr Profil"
   },
   "whatsNew": {
-    "message": "Was ist neu"
+    "message": "Was gibt's Neues"
   },
   "exportChat": {
     "message": "Chat exportieren"
@@ -72,13 +75,13 @@
     "message": "Eine kurze Einführung, um Ihnen den Einstieg in Cognito zu erleichtern."
   },
   "guideStep1": {
-    "message": "1. Gehen Sie in den Einstellungen zu 'API-Zugriff', um Ihre API-Schlüssel oder URLs einzugeben."
+    "message": "1. Gehen Sie in den Einstellungen zu 'API-Zugang', um Ihre API-Schlüssel oder URLs einzugeben."
   },
   "guideStep2": {
-    "message": "2. Verlassen Sie die Einstellungen und klicken Sie dann auf den Modellauswähler in der Kopfzeile, um Ihr Modell auszuwählen. Sie können Ihren Benutzernamen in der oberen rechten Ecke festlegen."
+    "message": "2. Verlassen Sie die Einstellungen und klicken Sie dann auf die Modellauswahl in der Kopfzeile, um Ihr Modell auszuwählen. Sie können Ihren Benutzernamen oben rechts festlegen."
   },
   "guideStep3": {
-    "message": "3. Verwenden Sie die 'Chat-Steuerung' (Notizbuchsymbol in der Eingabeleiste), um den KI-Speicher und die Werkzeugnutzung umzuschalten."
+    "message": "3. Verwenden Sie die 'Chat-Steuerung' (Notizbuch-Symbol in der Eingabeleiste), um den KI-Speicher und die Werkzeugnutzung umzuschalten."
   },
   "guideStep4": {
     "message": "4. Sehen Sie sich die Bedienungsanleitung <1>hier</1> an"
@@ -87,7 +90,7 @@
     "message": "Viel Spaß!"
   },
   "gotIt": {
-    "message": "Verstanden, zu den Einstellungen"
+    "message": "Verstanden, zu den Einstellungen gehen"
   },
   "editProfile": {
     "message": "Profil bearbeiten"
@@ -114,16 +117,16 @@
     "message": "Löschung bestätigen"
   },
   "confirmDeletionDesc": {
-    "message": "Sind Sie sicher, dass Sie den gesamten Chat-Verlauf löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+    "message": "Möchten Sie wirklich den gesamten Chatverlauf löschen? Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "deleteAll": {
     "message": "Alles löschen"
   },
   "searchPlaceholder": {
-    "message": "Durchsuchen Sie Ihre Notizen und Ihren Chat-Verlauf..."
+    "message": "Suchen Sie in Ihren Notizen und Ihrem Chatverlauf..."
   },
   "searching": {
-    "message": "Sucht..."
+    "message": "Suchen..."
   },
   "settingsTitle": {
     "message": "Einstellungen"
@@ -180,15 +183,147 @@
     "message": "Wird aktualisiert..."
   },
   "userGuide": {
-    "message": "Bedienungsanleitung"
+    "message": "Benutzerhandbuch"
   },
   "closeSettings": {
     "message": "Einstellungen schließen"
   },
   "extName": {
-    "message": "Cognito AI Sidekick"
+    "message": "Cognito KI-Assistent"
   },
   "extShortDesc": {
-    "message": "Ein datenschutzorientierter, offline-fähiger, KI-gestützter Sidekick für Ihren Browser."
+    "message": "Ein datenschutzorientierter, offline-first KI-Browser-Assistent."
+  },
+  "speech": {
+    "message": "Speech"
+  },
+  "addWebSearchResultsToLlmContext": {
+    "message": "Add Web Search Results to LLM Context"
+  },
+  "addCurrentWebPageToLlmContext": {
+    "message": "Add Current Web Page to LLM Context"
+  },
+  "tokensPerSecond": {
+    "message": "t/s"
+  },
+  "prompt": {
+    "message": "prompt"
+  },
+  "gen": {
+    "message": "gen"
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "deleteMessage": {
+    "message": "Delete message"
+  },
+  "continueFromHere": {
+    "message": "Continue from here"
+  },
+  "copyMessage": {
+    "message": "Copy message"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resumeSpeech": {
+    "message": "Resume speech"
+  },
+  "pauseSpeech": {
+    "message": "Pause speech"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopSpeech": {
+    "message": "Stop speech"
+  },
+  "speak": {
+    "message": "Speak"
+  },
+  "speakMessage": {
+    "message": "Speak message"
+  },
+  "reload": {
+    "message": "Reload"
+  },
+  "reloadLastPrompt": {
+    "message": "Reload last prompt"
+  },
+  "selectModel": {
+    "message": "Select model..."
+  },
+  "selectedModel": {
+    "message": "Selected model: {{modelName}}. Click to change."
+  },
+  "searchModels": {
+    "message": "Search models..."
+  },
+  "noModelsMatch": {
+    "message": "No models match your search."
+  },
+  "noModelsAvailable": {
+    "message": "No models available. Check configuration."
+  },
+  "ctx": {
+    "message": "ctx"
+  },
+  "provideGist": {
+    "message": "Provide the gist without missing important details."
+  },
+  "tldr": {
+    "message": "TLDR"
+  },
+  "quickSummary": {
+    "message": "Quick Summary"
+  },
+  "extractKeyFigures": {
+    "message": "Extract all key figures, names, locations, and dates mentioned on this page and list them."
+  },
+  "facts": {
+    "message": "Facts"
+  },
+  "numbersEventsNames": {
+    "message": "Numbers, events, names"
+  },
+  "findPositiveDevelopments": {
+    "message": "Find positive developments, achievements, or opportunities mentioned on this page."
+  },
+  "yay": {
+    "message": "Yay!"
+  },
+  "goodNews": {
+    "message": "Good news"
+  },
+  "findConcerningIssues": {
+    "message": "Find concerning issues, risks, or criticisms mentioned on this page."
+  },
+  "oops": {
+    "message": "Oops"
+  },
+  "badNews": {
+    "message": "Bad news"
+  },
+  "googleSearch": {
+    "message": "Google Search"
+  },
+  "duckduckgoSearch": {
+    "message": "DuckDuckGo Search"
+  },
+  "braveSearch": {
+    "message": "Brave Search"
+  },
+  "wikipediaSearch": {
+    "message": "Wikipedia Search"
+  },
+  "googleApiSearch": {
+    "message": "Google API Search"
+  },
+  "language": {
+    "message": "Language"
   }
 }

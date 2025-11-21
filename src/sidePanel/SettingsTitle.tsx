@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react';
+
 import { cn } from "@/src/background/util";
 
 interface SettingTitleProps {
   text?: string;
   widget?: ReactNode;
-  icon?: string;
+  icon?: ReactNode;
 }
 
 export const SettingTitle = ({
- text = '', widget = <></>, icon = ''
+ text = '', widget = <></>, icon = '',
 }: SettingTitleProps) => (
   (<div className="flex items-center justify-between w-full">
     <div className="flex items-center">
@@ -18,7 +19,7 @@ export const SettingTitle = ({
             "text-foreground", 
             "text-xl",
             "leading-none",   
-            "mr-3"            
+            "mr-3",            
           )}
         >
           {icon}
