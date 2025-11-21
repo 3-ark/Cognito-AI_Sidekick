@@ -179,6 +179,9 @@
 --markdown-h1: var(--foreground);
 --markdown-h2: var(--foreground);
 --markdown-h3: var(--foreground);
+--markdown-h4: var(--foreground);
+--markdown-h5: var(--foreground);
+--markdown-h6: var(--foreground);
 --markdown-table-border: var(--border);
 }
 
@@ -212,6 +215,33 @@ font-weight: 600;
 margin: 0.75rem 0 0.5rem;
 border-bottom: 1px dashed var(--markdown-h3);
 padding-bottom: 0.3rem;
+}
+
+.markdown-body h4 {
+color: var(--markdown-h4);
+font-size: 1rem;
+font-weight: 600;
+margin: 0.5rem 0 0.4rem;
+border-bottom: 1px dashed var(--markdown-h4);
+padding-bottom: 0.3rem;
+}
+
+.markdown-body h5 {
+color: var(--markdown-h5);
+font-size: 0.9rem;
+font-weight: 600;
+margin: 0.4rem 0 0.3rem;
+border-bottom: 1px dashed var(--markdown-h5);
+padding-bottom: 0.2rem;
+}
+
+.markdown-body h6 {
+color: var(--markdown-h6);
+font-size: 0.8rem;
+font-weight: 600;
+margin: 0.3rem 0 0.2rem;
+border-bottom: 1px dashed var(--markdown-h6);
+padding-bottom: 0.2rem;
 }
 
 .markdown-body strong {

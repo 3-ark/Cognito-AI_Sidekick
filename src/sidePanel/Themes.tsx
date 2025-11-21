@@ -235,7 +235,10 @@ export const setTheme = (c: Theme, paperTextureEnabled: boolean = true) => {
 
   root.style.setProperty('--markdown-h1', bold);
   root.style.setProperty('--markdown-h2', italic);
-  root.style.setProperty('--markdown-h3', text);
+  root.style.setProperty('--markdown-h3', link);
+  root.style.setProperty('--markdown-h4', text);
+  root.style.setProperty('--markdown-h5', text);
+  root.style.setProperty('--markdown-h6', text);
   root.style.setProperty('--markdown-strong', bold);
   root.style.setProperty('--markdown-em', italic);
   root.style.setProperty('--markdown-link', link);

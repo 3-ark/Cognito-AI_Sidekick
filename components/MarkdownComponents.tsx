@@ -155,6 +155,18 @@ export const H3 = ({ children, className, ...rest }: HeadingProps) => (
   <h3 className={cn("text-lg font-semibold mt-2 mb-1 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h3>
 );
 
+export const H4 = ({ children, className, ...rest }: HeadingProps) => (
+  <h4 className={cn("text-base font-semibold mt-1 mb-1 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h4>
+);
+
+export const H5 = ({ children, className, ...rest }: HeadingProps) => (
+  <h5 className={cn("text-sm font-semibold mt-1 mb-1 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h5>
+);
+
+export const H6 = ({ children, className, ...rest }: HeadingProps) => (
+  <h6 className={cn("text-xs font-semibold mt-1 mb-1 border-b pb-1 border-[var(--border)]", className)} {...rest}>{children}</h6>
+);  
+
 export const Strong = ({ children, className, ...rest }: StrongProps) => (
   <strong className={cn("font-bold", className)} {...rest}>{children}</strong>
 );
@@ -207,6 +219,9 @@ export const markdownComponents = {
   h1: H1,
   h2: H2,
   h3: H3,
+  h4: H4,
+  h5: H5,
+  h6: H6,
   table: Table,
   thead: THead,
   tbody: TBody,

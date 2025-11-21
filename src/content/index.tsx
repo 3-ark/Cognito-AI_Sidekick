@@ -74,7 +74,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const markdownContent = turndownService.turndown(defuddleResult.content || '');
       console.log('[Cognito Content Script] Turndown conversion complete. Markdown length:', markdownContent?.length);
 
-      const firstHeading = document.querySelector('h1, h2, h3')?.textContent?.trim();
+      const firstHeading = document.querySelector('h1, h2, h3, h4, h5, h6')?.textContent?.trim();
       const fallbackTitle = document.title || 'Untitled Note';
 
       sendResponse({
