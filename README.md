@@ -176,24 +176,6 @@ This setup allows Cognito to understand the context of your browsing and provide
 *   **Connect to Local LLM:** If you have Ollama running with a model like Llama3, go to Cognito's settings, select Ollama, enter your model details (e.g., `http://localhost:11434` and model name `llama3`), and start chatting with your local AI.
 *   **Save Notes:** During a chat, if the AI provides a useful snippet or you want to remember a key piece of information, click the "Add to Note" button (or a similar function) to save it for later reference within Cognito's notes feature.
 
-## 🗺️ Roadmap
-
-*   Ongoing bug fixes and performance improvements.
-*   Evaluation and integration of community pull requests.
-*   **Enhanced Agent Capabilities:**
-    *   ~"Memory" for chat history with RAG (Retrieval Augmented Generation) and semantic search.~
-    *   ~Autonomously invoke internal tools (like ~“save note”~, “search note”, “summarize page”) without switching modes. Here’s how to pull it off: Adding a small tool-invoking agent layer; Capturing tool-friendly intent (few-shot or system prompt); Internally calling functions when confidence is high.~
-    *   ~Better websearch with [Deepsearch](https://github.com/google-gemini/gemini-fullstack-langgraph-quickstart)~
-    *   ~"Short-term Memory" (state management) for multi-step tasks within the same context (e.g., web search followed by page parsing and comparison). Note would be used for this.~
-    *   Direct text editing/interaction on web pages via the side panel – extending Cognito towards an "AI agent" experience.
-*   Improved local TTS/STT integration (e.g., exploring options like [KokoroJS](https://github.com/hexgrad/kokoro/tree/main/kokoro.js) and even 0 shot voice generation chatterbox, try it on [huggingface](https://huggingface.co/spaces/ResembleAI/Chatterbox).)
-*   Potential support for image and voice API interactions for multimodal capabilities.
-*   ~Task planning (`plan`, `remindMe`)~
-*   ~Local-first note editor~
-
-
-*(This section will be regularly updated based on project progress)*
-
 ## 🤝 Contributing
 
 Contributions are welcome! If you'd like to help improve Cognito, please:
