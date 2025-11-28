@@ -19,7 +19,7 @@ import { getAllNotesFromSystem } from './noteStorage';
 import {
  AppSettings,getStoredAppSettings, 
 } from './storageUtil';
-import { aggressiveProcessText } from './textProcessing';
+import { lexicalProcessText as aggressiveProcessText } from './textProcessing';
 
 const MINISEARCH_INDEX_KEY = 'minisearch_chunk_index_v1';
 const CHUNK_CACHE_STORE_KEY = 'minisearch_chunk_cache_v1'; // Used for the inMemoryItemsStore

@@ -12,7 +12,7 @@ import { rebuildChunkIndex, getChunkIndex, setChunksForParent, saveChunkIndex } 
 import { getStoredAppSettings } from './storageUtil';
 
 const DEFAULT_RAG_CONFIG: RagConfig = {
-  model: "Xenova/all-MiniLM-L6-v2",
+  model: "text-embedding-3-small",
   use_gpu: true,
   semantic_top_k: 20,
   similarity_threshold: 0.3,

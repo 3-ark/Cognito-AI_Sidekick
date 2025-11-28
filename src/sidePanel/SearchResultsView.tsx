@@ -21,26 +21,26 @@ const SearchResultsView: React.FC<SearchResultsViewProps> = ({ results, onResult
           {results.map(result => (
             <li
               key={result.id}
-              className="mb-4 p-3 border rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"
+              className="mb-4 p-3 border rounded-lg cursor-pointer hover:brightness-95 transition-colors"
               onClick={() => onResultClick(result)}
             >
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium text-blue-400">
+                <span className="text-sm font-medium text-text">
                   {result.parentTitle || 'Untitled'}
                 </span>
-                <span className="text-xs text-gray-500">Score: {result.score.toFixed(2)}</span>
+                <span className="text-xs text-(--link)">Score: {result.score.toFixed(2)}</span>
               </div>
               {result.originalDescription && (
-                <p className="text-xs text-gray-400 mb-2 italic">{result.originalDescription}</p>
+                <p className="text-xs text-muted-foreground mb-2 italic">{result.originalDescription}</p>
               )}
               {result.originalTags && result.originalTags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
                   {result.originalTags.map(tag => (
-                    <span key={tag} className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded-full">{tag}</span>
+                    <span key={tag} className="text-xs bg-(--link)/20 text-text px-2 py-0.5 rounded-full">{tag}</span>
                   ))}
                 </div>
               )}
-              <p className="text-sm text-gray-300 break-all">{result.content}</p>
+              <p className="text-sm text-text break-all">{result.content}</p>
             </li>
           ))}
         </ul>

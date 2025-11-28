@@ -40,8 +40,8 @@ describe("chatHistoryStorage", () => {
     (storageUtil.getStoredAppSettings as Mock).mockResolvedValue({
       ragConfig: { autoEmbedOnSave: false },
     } as any);
-    (textProcessing.cleanMarkdownForSemantics as Mock).mockImplementation(content => content);
-    (textProcessing.aggressiveProcessText as Mock).mockImplementation(content => content.split(' '));
+    (textProcessing.gentleProcessText as Mock).mockImplementation(content => content);
+    (textProcessing.lexicalProcessText as Mock).mockImplementation(content => content.split(' '));
   });
 
   afterEach(() => {

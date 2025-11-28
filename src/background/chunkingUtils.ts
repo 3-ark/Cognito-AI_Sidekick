@@ -4,7 +4,7 @@
  */
 
 import { getStoredAppSettings } from './storageUtil';
-import { cleanMarkdownForSemantics, generateContextualSummary } from './textProcessing';
+import { lexicalProcessText as cleanMarkdownForSemantics, generateContextualSummary } from './textProcessing';
 import { Config, RagConfig } from '../types/config';
 import {
   NoteInputForChunking,
@@ -91,7 +91,7 @@ export async function chunkNoteContent(noteInput: NoteInputForChunking, ragConfi
     let processedContent = (content || '').replace(/<!--[\s\S]*?-->/g, '').trim();
     // Create a semantically clean version of the full text for the LLM summary context.
     // The `processedContent` variable retains the original markdown for structure-aware chunking.
-    const fullDocumentTextForSummary = cleanMarkdownForSemantics(processedContent);
+    const fullDocumentTextForSummary = cleanMarkdownForSemantics(processedContent).join(' ');
 
     // --- Stage 2: Trivial Case Handling ---
     if (processedContent.length < minChunkChars) {
@@ -268,7 +268,7 @@ export async function chunkNoteContent(noteInput: NoteInputForChunking, ragConfi
         .map(async (chunk, index) => {
             // Prepend tags to each chunk's content before cleaning.
             const contentWithTags = tagsHeader + chunk.content;
-            const chunkContent = cleanMarkdownForSemantics(contentWithTags);
+            const chunkContent = cleanMarkdownForSemantics(contentWithTags).join(' ');
             let chunkSummary: string | undefined;
 
             if (ragConfig.useContextualSummaries) {
@@ -309,16 +309,16 @@ export function chunkJsonContent(jsonInput: NoteInputForChunking, ragConfig: Rag
     parsedJson = JSON.parse(content);
   } catch (error) {
     console.warn(`[chunkJsonContent] Failed to parse JSON for note ${parentId}. Content will be treated as plain text by chunkNoteContent if this was called from chunkNote.`);
-    // Fallback: create a single chunk with the original content if it's parse error
+    // Fallback: create a single chunk with the original content if it's a parse error
     // Or let chunkNote handle it by calling chunkNoteContent
      const rawErrorContent = `Error parsing JSON. Original content: ${content.substring(0, targetSubChunkChars)}...`;
-     const cleanErrorContent = cleanMarkdownForSemantics(rawErrorContent);
+     const cleanErrorContent = cleanMarkdownForSemantics(rawErrorContent).join(' ');
      const chunks: NoteChunk[] = [{
         id: `jsonchunk_${parentId}_error_${globalChunkIndex++}`,
         parentId,
         content: cleanErrorContent,
         charCount: content.length,
-        metadata: { jsonPath: "$", error: "JSON parsing failed" },
+ metadata: { jsonPath: "$", error: "JSON parsing failed" },
         originalUrl,
         originalTags,
         parentTitle,
@@ -337,13 +337,13 @@ export function chunkJsonContent(jsonInput: NoteInputForChunking, ragConfig: Rag
     } else if (typeof data === 'object' && data !== null) {
       const objectString = JSON.stringify(data, null, 2);
       if (objectString.length >= minChunkChars && objectString.length <= maxChunkChars) {
-        const cleanContent = cleanMarkdownForSemantics(objectString);
+        const cleanContent = cleanMarkdownForSemantics(objectString).join(' ');
         finalChunks.push({
           id: `jsonchunk_${parentId}_${globalChunkIndex++}`,
           parentId,
           content: cleanContent,
           charCount: cleanContent.length,
-          metadata: { jsonPath: currentPath },
+          metadata: { jsonPath: currentPath }, // Corrected type for jsonPath
           originalUrl,
           originalTags,
           parentTitle,
@@ -360,7 +360,7 @@ export function chunkJsonContent(jsonInput: NoteInputForChunking, ragConfig: Rag
         console.warn(`[chunkJsonContent] Large JSON object at path ${currentPath} (length: ${objectString.length}) will be stringified and sub-chunked.`);
         const subChunks = splitTextWithOverlap(objectString, parentId, ragConfig, 'jsonsubchunk', globalChunkIndex);
         subChunks.forEach(subChunk => {
-           const cleanContent = cleanMarkdownForSemantics(subChunk.content);
+           const cleanContent = cleanMarkdownForSemantics(subChunk.content).join(' ');
            finalChunks.push({
             id: subChunk.id, // ID from splitTextWithOverlap
             parentId,
@@ -381,7 +381,7 @@ export function chunkJsonContent(jsonInput: NoteInputForChunking, ragConfig: Rag
       // unless it's a leaf node handled by the 'else if (data !== null...' part.
     } else if (typeof data === 'string') {
       if (data.length >= minChunkChars && data.length <= targetSubChunkChars) { // Good size string
-        const cleanContent = cleanMarkdownForSemantics(data);
+        const cleanContent = cleanMarkdownForSemantics(data).join(' ');
         finalChunks.push({
           id: `jsonchunk_${parentId}_${globalChunkIndex++}`,
           parentId,
@@ -398,7 +398,7 @@ export function chunkJsonContent(jsonInput: NoteInputForChunking, ragConfig: Rag
       } else if (data.length > targetSubChunkChars) { // Long string
         const subChunks = splitTextWithOverlap(data, parentId, ragConfig, 'jsonsubchunk', globalChunkIndex);
         subChunks.forEach(subChunk => {
-          const cleanContent = cleanMarkdownForSemantics(subChunk.content);
+          const cleanContent = cleanMarkdownForSemantics(subChunk.content).join(' ');
           finalChunks.push({
             id: subChunk.id,
             parentId,
@@ -419,7 +419,7 @@ export function chunkJsonContent(jsonInput: NoteInputForChunking, ragConfig: Rag
     } else if (data !== null && typeof data !== 'undefined') { // Other primitives (number, boolean)
       const contentStr = data.toString();
       if (contentStr.length >= minChunkChars) {
-         const cleanContent = cleanMarkdownForSemantics(contentStr);
+         const cleanContent = cleanMarkdownForSemantics(contentStr).join(' ');
          finalChunks.push({
             id: `jsonchunk_${parentId}_${globalChunkIndex++}`,
             parentId,
@@ -475,7 +475,7 @@ export function chunkChatMessage(messageInput: ChatMessageInputForChunking): Not
 
     // Create a single chunk for the given content, regardless of length.
     // The grouping of conversational turns is now handled in embeddingManager.
-    const cleanContent = cleanMarkdownForSemantics(processedContent);
+    const cleanContent = cleanMarkdownForSemantics(processedContent).join(' ');
     if (cleanContent.length > 0) {
         chunks.push({
             id: `msgchunk_${parentId}_0`, // Always index 0 as it's one chunk per call

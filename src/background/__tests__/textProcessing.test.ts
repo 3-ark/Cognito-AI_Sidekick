@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import {
-  aggressiveProcessText,
-  cleanMarkdownForSemantics,
+  lexicalProcessText,
+  gentleProcessText,
   generateContextualSummary,
 } from '../textProcessing';
 import * as generationUtils from '../generationUtils';
@@ -22,49 +22,49 @@ describe('textProcessing', () => {
     it('should process English text correctly', () => {
       const text = 'The quick brown fox jumps over the lazy dog';
       const expected = ['quick', 'brown', 'fox', 'jump', 'lazi', 'dog'];
-      expect(aggressiveProcessText(text)).toEqual(expected);
+      expect(lexicalProcessText(text)).toEqual(expected);
     });
 
     it('should handle empty and invalid input', () => {
-      expect(aggressiveProcessText('')).toEqual([]);
-      expect(aggressiveProcessText(null as any)).toEqual([]);
-      expect(aggressiveProcessText(undefined as any)).toEqual([]);
+      expect(lexicalProcessText('')).toEqual([]);
+      expect(lexicalProcessText(null as any)).toEqual([]);
+      expect(lexicalProcessText(undefined as any)).toEqual([]);
     });
 
     it('should process Japanese text', () => {
       const text = '日本語のテキスト';
       const expected = ['日本語', 'の', 'テキスト'];
       // This depends on the mock behavior
-      const result = aggressiveProcessText(text).filter(s => s.trim().length > 0);
+      const result = lexicalProcessText(text).filter(s => s.trim().length > 0);
       expect(result).toEqual(expected);
     });
 
     it('should process Korean text', () => {
       const text = '한국어 텍스트';
       const expected = ['한', '국', '어', '텍', '스', '트'];
-      expect(aggressiveProcessText(text)).toEqual(expected);
+      expect(lexicalProcessText(text)).toEqual(expected);
     });
   });
 
   describe('cleanMarkdownForSemantics', () => {
     it('should remove HTML tags', () => {
       const text = '<p>Hello</p> <b>World</b>';
-      expect(cleanMarkdownForSemantics(text)).toBe('Hello World');
+      expect(gentleProcessText(text)).toBe('Hello World');
     });
 
     it('should remove markdown links but keep the text', () => {
       const text = 'A [link](http://example.com) to something.';
-      expect(cleanMarkdownForSemantics(text)).toBe('A link to something.');
+      expect(gentleProcessText(text)).toBe('A link to something.');
     });
 
     it('should remove markdown images but keep alt text', () => {
       const text = 'An image ![alt text](image.png) here.';
-      expect(cleanMarkdownForSemantics(text)).toBe('An image alt text here.');
+      expect(gentleProcessText(text)).toBe('An image alt text here.');
     });
 
     it('should handle a mix of markdown and HTML', () => {
       const text = '### Title\n\nSome **bold** and `code`.\n\n- item 1\n- item 2';
-      const result = cleanMarkdownForSemantics(text);
+      const result = gentleProcessText(text);
       expect(result).not.toContain('###');
       expect(result).not.toContain('**');
       expect(result).toContain('Title');

@@ -9,7 +9,7 @@ import {
 import { chunkNote } from './chunkingUtils';
 import { getEmbedding } from './embeddingUtils';
 import { getStoredAppSettings } from './storageUtil';
-import { aggressiveProcessText, cleanMarkdownForSemantics } from './textProcessing';
+import { lexicalProcessText as aggressiveProcessText, gentleProcessText as cleanMarkdownForSemantics} from './textProcessing';
 
 const sanitizeTags = (tags: unknown): string[] => {
   if (typeof tags === 'string') {

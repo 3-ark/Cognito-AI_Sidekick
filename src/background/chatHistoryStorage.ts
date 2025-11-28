@@ -8,7 +8,7 @@ import { chunkChatMessage } from './chunkingUtils';
 import { getEmbedding } from './embeddingUtils';
 import { getSearchService } from './searchUtils';
 import { getStoredAppSettings } from './storageUtil';
-import { aggressiveProcessText, cleanMarkdownForSemantics } from './textProcessing';
+import { lexicalProcessText, gentleProcessText as cleanMarkdownForSemantics } from './textProcessing';
 
 // Constants
 export const CONVERSATION_STORAGE_PREFIX = 'conv_';
@@ -105,7 +105,7 @@ export const saveChatMessage = async (messageData: Partial<MessageTurn> & { id?:
   const existingMessage = messageData.id ? await localforage.getItem<MessageTurn>(messageId) : null;
 
   const cleanContent = cleanMarkdownForSemantics(messageData.content || '');
-  const bm25Content = aggressiveProcessText(cleanContent).join(' ');
+  const bm25Content = lexicalProcessText(cleanContent).join(' ');
 
   const message: MessageTurn = {
     ...(existingMessage || {}),

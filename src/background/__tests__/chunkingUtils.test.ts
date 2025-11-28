@@ -31,8 +31,8 @@ const mockRagConfig: RagConfig = {
 
 describe("chunkingUtils", () => {
   beforeEach(() => {
-    vi.spyOn(textProcessing, "aggressiveProcessText").mockImplementation((text) => text.split(/\s+/));
-    vi.spyOn(textProcessing, "cleanMarkdownForSemantics").mockImplementation((text) => text);
+    vi.spyOn(textProcessing, "lexicalProcessText").mockImplementation((text) => text.split(/\s+/));
+    vi.spyOn(textProcessing, "gentleProcessText").mockImplementation((text) => text);
     (storageUtil.getStoredAppSettings as Mock).mockResolvedValue({ ragConfig: mockRagConfig });
   });
 
