@@ -126,41 +126,6 @@ Output:
   }
 };
 
-export const urlRewriteRuntime = async function (domain: string) {
-  try {
-    const url = new URL(domain);
-
-    if (url.protocol === 'chrome:') return;
-
-    const domains = [url.hostname];
-    const origin = `${url.protocol}//${url.hostname}`;
-
-    const rules = [
-      {
-        id: 1,
-        priority: 1,
-        condition: { requestDomains: domains },
-        action: {
-          type: 'modifyHeaders',
-          requestHeaders: [
-            {
-              header: 'Origin',
-              operation: 'set' as chrome.declarativeNetRequest.HeaderOperation,
-              value: origin,
-            },
-          ],
-        },
-      },
-    ];
-
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: rules.map(r => r.id),
-      addRules: rules as chrome.declarativeNetRequest.Rule[],
-    });
-  } catch (error) {
-    console.debug('URL rewrite skipped:', error);
-  }
-};
 
 interface WikiSearchResultBlock {
     document_title: string;
