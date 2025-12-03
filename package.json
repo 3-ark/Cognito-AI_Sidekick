@@ -1,7 +1,7 @@
 {
   "name": "Cognito: Your AI Memory Assistant",
   "version": "5.0.0",
-  "description": "Think less, recall more. The best AI memory assistant for your browser. Cognito helps you remember everything you read, see, and do online.",
+  "description": "Think less, recall more. The best AI memory assistant for your browser.",
   "main": "index.js",
   "scripts": {
     "start": "npm run clear && webpack -w --config config/webpack.config.js",
