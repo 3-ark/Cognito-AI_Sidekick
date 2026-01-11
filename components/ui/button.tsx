@@ -26,19 +26,19 @@ const buttonVariants = cva(
         "ghost-themed":
           "text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
         "outline-themed":
-          "border border-[var(--active)] bg-transparent text-[var(--active)] shadow-xs hover:bg-[var(--active)]/20 focus-visible:bg-[var(--active)]/20 focus-visible:ring-1 focus-visible:ring-[var(--active)]",
+          "border border-(--active) bg-transparent text-(--active) shadow-xs hover:bg-(--active)/20 focus-visible:bg-(--active)/20 focus-visible:ring-1 focus-visible:ring-(--active)",
         "destructive-outline":
           "border border-[var(--error)] bg-transparent text-[var(--error)] shadow-xs hover:bg-[var(--error)]/10 hover:text-white focus-visible:bg-[var(--error)]/10 focus-visible:text-white focus-visible:ring-1 focus-visible:ring-[var(--error)]",
         "copy-button":
           "bg-background text-foreground shadow-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
         "connect":
-          "bg-[var(--input-background)] text-[var(--text)] hover:bg-[var(--active)]/90 shadow-sm focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]",
+          "bg-[var(--input-background)] text-(--text) hover:bg-(--active)/90 shadow-sm focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-(--bg)",
         "active-bordered":
-          "bg-[var(--active)] text-[var(--text)] border border-[var(--text)] hover:brightness-110 focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)] shadow-sm",
+          "bg-(--active) text-(--text) border border-(--text) hover:brightness-110 focus-visible:ring-1 focus-visible:ring-(--active) focus-visible:ring-offset-1 focus-visible:ring-offset-(--bg) shadow-sm",
         "outline-subtle":
-          "border border-[var(--text)]/20 bg-transparent text-[var(--text)] hover:bg-[var(--text)]/10 hover:border-[var(--text)]/70 hover:text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)] shadow-sm",
+          "border border-(--text)/20 bg-transparent text-(--text) hover:bg-(--text)/10 hover:border-(--text)/70 hover:text-(--text) focus-visible:ring-1 focus-visible:ring-(--active) focus-visible:ring-offset-1 focus-visible:ring-offset-(--bg) shadow-sm",
         save:
-          "bg-[var(--active)] text-white dark:text-black shadow-xs hover:bg-[var(--active)]/90 not-focus-visible",
+          "bg-(--active) text-white dark:text-black shadow-xs hover:bg-(--active)/90 not-focus-visible",
       },
       size: {
         default: "h-9 px-2 py-2 has-[>svg]:px-2 [&_svg:not([class*='size-'])]:size-5", // Default icons are size-5 (1.25rem)

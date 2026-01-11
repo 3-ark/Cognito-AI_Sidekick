@@ -20,7 +20,7 @@ export const PageSettings = () => {
         />
         <div className="mt-4">
           <div className="w-full">
-            <p className="text-[var(--text)] text-base font-medium pb-6 text-left">
+            <p className="text-(--text) text-base font-medium pb-6 text-left">
               Char Limit:{' '}
               <span className="font-normal">{size === 128 ? 'inf' : `${size}k`}</span>
             </p>

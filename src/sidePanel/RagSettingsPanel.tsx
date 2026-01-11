@@ -95,24 +95,24 @@ export const RagSettingsPanel: React.FC = () => {
     updateConfig({ ragConfig: { ...currentRagConfig, [key]: valueToSet } });
   };
   
-  const inputStyles = "bg-[var(--input-background)] rounded-xl border-[var(--text)]/20 text-[var(--text)] focus:border-[var(--active)] hide-number-spinners";
-  const labelStyles = "text-base font-medium text-[var(--text)] opacity-90";
+  const inputStyles = "bg-[var(--input-background)] rounded-xl border-(--text)/20 text-(--text) focus:border-(--active) hide-number-spinners";
+  const labelStyles = "text-base font-medium text-(--text) opacity-90";
   const progressPercentage = embeddingProgress.total > 0 ? (embeddingProgress.processed / embeddingProgress.total) * 100 : 0;
 
   return (
-    <div className="relative z-[1] flex flex-col h-full flex-1 overflow-y-auto p-6 text-[var(--text)] no-scrollbar">
+    <div className="relative z-1 flex flex-col h-full flex-1 overflow-y-auto p-6 text-(--text) no-scrollbar">
       <AnimatedBackground />
       <div className="flex flex-col gap-6">
         {/* Data Management */}
-        <div className="space-y-4 p-4 border rounded-lg border-[var(--text)]/20">
-          <h3 className="text-lg font-semibold text-[var(--text)]">Data Management</h3>
+        <div className="space-y-4 p-4 border rounded-lg border-(--text)/20">
+          <h3 className="text-lg font-semibold text-(--text)">Data Management</h3>
           <div className="flex items-center justify-between">
             <Label className={labelStyles} htmlFor="auto-embed-on-save">
               Auto-generate embeddings on save
             </Label>
             <Switch
               checked={currentRagConfig.autoEmbedOnSave}
-              className="[&>span]:bg-[var(--active)]"
+              className="[&>span]:bg-(--active)"
               disabled={isEmbedding || isRebuilding}
               id="auto-embed-on-save"
               onCheckedChange={checked => handleChange('autoEmbedOnSave')(checked)}
@@ -120,20 +120,20 @@ export const RagSettingsPanel: React.FC = () => {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
-              className="px-3 py-1.5 rounded-md bg-[var(--active)] text-white font-semibold hover:bg-opacity-80 transition-colors text-sm disabled:bg-opacity-50"
+              className="px-3 py-1.5 rounded-md bg-(--active) text-white font-semibold hover:bg-opacity-80 transition-colors text-sm disabled:bg-opacity-50"
               disabled={isEmbedding || isRebuilding}
               onClick={() => chrome.runtime.sendMessage({ type: ChannelNames.BUILD_ALL_EMBEDDINGS_REQUEST })}
             >
               Rebuild
             </button>
             <button
-              className="px-3 py-1.5 rounded-md bg-[var(--active)] text-white font-semibold hover:bg-opacity-80 transition-colors text-sm disabled:bg-opacity-50"
+              className="px-3 py-1.5 rounded-md bg-(--active) text-white font-semibold hover:bg-opacity-80 transition-colors text-sm disabled:bg-opacity-50"
               disabled={isEmbedding || isRebuilding}
               onClick={() => chrome.runtime.sendMessage({ type: 'UPDATE_EMBEDDINGS_REQUEST' })}
             >
               Update
             </button>
-            <div className="flex flex-col items-start text-xs text-[var(--text)]/60 flex-1">
+            <div className="flex flex-col items-start text-xs text-(--text)/60 flex-1">
               <div>
                 <span className="mr-2">Notes: {stats.noteCount}</span>
                 <span>Chats: {stats.convoCount}</span>
@@ -144,7 +144,7 @@ export const RagSettingsPanel: React.FC = () => {
           {(isEmbedding || isRebuilding) && (
             <div className="space-y-1">
               {isEmbedding && <Progress value={progressPercentage} />}
-              <p className="variant-themed text-xs text-center text-[var(--text)]/70">
+              <p className="variant-themed text-xs text-center text-(--text)/70">
                 {isEmbedding && `Processing Embeddings: ${embeddingProgress.processed} / ${embeddingProgress.total}`}
                 {isRebuilding && 'Rebuilding search index...'}
               </p>
@@ -165,7 +165,7 @@ export const RagSettingsPanel: React.FC = () => {
               <SelectValue placeholder="Select an embedding model" />
             </SelectTrigger>
             <SelectContent
-              className="bg-[var(--background)] text-[var(--text)] border-[var(--text)]/20"
+              className="bg-[var(--background)] text-(--text) border-(--text)/20"
               variant="settingsPanel"
             >
               <SelectGroup>
@@ -193,7 +193,7 @@ export const RagSettingsPanel: React.FC = () => {
             </Label>
             <Switch
               checked={currentRagConfig.use_gpu}
-              className="[&>span]:bg-[var(--active)]" // Themed switch
+              className="[&>span]:bg-(--active)" // Themed switch
               id="rag-use_gpu"
               onCheckedChange={checked => handleChange('use_gpu')(checked)}
             />
@@ -207,7 +207,7 @@ export const RagSettingsPanel: React.FC = () => {
               </Label>
               <Switch
                 checked={currentRagConfig.useContextualSummaries}
-                className="[&>span]:bg-[var(--active)]"
+                className="[&>span]:bg-(--active)"
                 id="rag-use-contextual-summaries"
                 onCheckedChange={checked => handleChange('useContextualSummaries')(checked)}
               />
@@ -239,7 +239,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-similarity_threshold">
               Similarity Threshold ({currentRagConfig.similarity_threshold.toFixed(2)})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 0.3</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 0.3</span>
             </Label>
             <Slider
               id="rag-similarity_threshold"
@@ -295,7 +295,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-k">
               K ({currentRagConfig.k?.toFixed(1) ?? '1.2'})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 1.2</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 1.2</span>
             </Label>
             <Slider
               id="rag-k"
@@ -315,7 +315,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-b">
               b ({currentRagConfig.b.toFixed(2)})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 0.75</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 0.75</span>
             </Label>
             <Slider
               id="rag-b"
@@ -335,7 +335,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-d">
               D ({currentRagConfig.d?.toFixed(2) ?? '0.50'})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 0.5</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 0.5</span>
             </Label>
             <Slider
               id="rag-d"
@@ -355,7 +355,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-bm25_weight">
               BM25 Weight ({currentRagConfig.bm25_weight.toFixed(2)})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 0.5</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 0.5</span>
             </Label>
             <Slider
               id="rag-bm25_weight"
@@ -375,7 +375,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-lambda">
               Diversity (Lambda) ({currentRagConfig.lambda.toFixed(2)})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 0.5</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 0.5</span>
             </Label>
             <Slider
               id="rag-lambda"
@@ -395,7 +395,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-max-chunk-chars">
               Max Chunk Chars ({currentRagConfig.maxChunkChars})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 2000</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 2000</span>
             </Label>
             <Slider
               id="rag-max-chunk-chars"
@@ -415,7 +415,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-min-chunk-chars">
               Min Chunk Chars ({currentRagConfig.minChunkChars})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 150</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 150</span>
             </Label>
             <Slider
               id="rag-min-chunk-chars"
@@ -435,7 +435,7 @@ export const RagSettingsPanel: React.FC = () => {
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="rag-overlap-chars">
               Overlap Chars ({currentRagConfig.overlapChars})
-              <span className="ml-2 text-xs text-[var(--text)]/60">Default: 50</span>
+              <span className="ml-2 text-xs text-(--text)/60">Default: 50</span>
             </Label>
             <Slider
               id="rag-overlap-chars"

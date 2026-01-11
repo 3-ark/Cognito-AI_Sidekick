@@ -26,16 +26,16 @@ const ConnectionSection: FC<ConnectionProps> = ({
   Component,
   link,
 }) => (
-  <div className="px-4 py-3 border-b border-[var(--text)]/20 last:border-b-0"> {/* Apply bg-[var(--input-background)] on the parent scroll div */}
+  <div className="px-4 py-3 border-b border-(--text)/20 last:border-b-0"> {/* Apply bg-[var(--input-background)] on the parent scroll div */}
     <div className="flex items-center justify-between mb-2">
-      <h4 className="text-base font-medium capitalize text-[var(--text)] opacity-90">
+      <h4 className="text-base font-medium capitalize text-(--text) opacity-90">
         {title}
       </h4>
       {link && (
         <a
           className={cn(
             "text-xs inline-flex items-center gap-1",
-            "text-[var(--link)] hover:text-[var(--active)] hover:underline",
+            "text-[var(--link)] hover:text-(--active) hover:underline",
             "focus-visible:ring-1 focus-visible:ring-[var(--ring)] rounded-sm p-0.5",
           )}
           href={link}
@@ -56,7 +56,7 @@ export const Connect: FC = () => { // Simplified props, onBack removed
   const { config } = useConfig(); // Keep useConfig if sub-components or ConnectionSection might need it implicitly or for styling
 
   return (
-    <div className="relative z-[1] flex flex-col h-full flex-1 overflow-y-auto p-6 text-[var(--text)] no-scrollbar">
+    <div className="relative z-1 flex flex-col h-full flex-1 overflow-y-auto p-6 text-(--text) no-scrollbar">
       <AnimatedBackground />
       <div className="space-y-0"> {/* Use space-y-0 if ConnectionSection already has bottom margin/border, or adjust as needed */}
         <ConnectionSection Component={ConnectOllama} title="Ollama" />

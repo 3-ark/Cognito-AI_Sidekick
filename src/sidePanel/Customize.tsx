@@ -363,7 +363,7 @@ export const Customize = () => {
 
   return (
     <div
-      className="relative z-[1] top-0 w-full h-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent text-foreground p-6 scrollbar-hidden"
+      className="relative z-1 top-0 w-full h-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent text-foreground p-6 scrollbar-hidden"
       id="settings"
     >
       <div className="flex flex-col gap-6">
@@ -419,7 +419,7 @@ export const Customize = () => {
             <Slider className="w-full" max={20} min={7} step={1} value={[currentFontSize]} variant="themed" onValueChange={value => { updateConfig({ fontSize: value[0] }); }} />
           </div>
 
-          <div className="pt-4 mt-4 border-t border-[var(--text)]/20">
+          <div className="pt-4 mt-4 border-t border-(--text)/20">
             <div className="space-y-2 mb-4">
               <h4 className="font-medium leading-none text-foreground">Custom Theme Colors</h4>
               <p className="text-sm text-muted-foreground">Modify colors for your 'custom' theme. Selecting a color will automatically apply the custom theme.</p>
@@ -455,7 +455,7 @@ export const Customize = () => {
                           style={{ backgroundColor: normalizedColor }}
                         />
                       </PopoverTrigger>
-                      <PopoverContent align="start" className="w-auto p-0 bg-popover border border-border shadow-lg z-[51]" side="right" sideOffset={10} onOpenAutoFocus={e => e.preventDefault()} >
+                      <PopoverContent align="start" className="w-auto p-0 bg-popover border border-border shadow-lg z-51" side="right" sideOffset={10} onOpenAutoFocus={e => e.preventDefault()} >
                         {pickerVisibleForKey === key && (
                           <PaletteColorPicker key={`${key}-${colorValue}`} initialColor={colorValue} themeKey={key} onColorChangeComplete={handleColorChange} />
                         )}

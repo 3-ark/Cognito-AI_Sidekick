@@ -533,7 +533,7 @@ export const Input: FC<InputProps> = ({
                 className={cn(
                   "p-2 rounded-md",
                   "not-focus",
-                  isListening ? "text-red-500 hover:text-red-300 hover:bg-destructive/10" : "text-foreground hover:text-foreground hover:bg-[var(--text)]/10",
+                  isListening ? "text-red-500 hover:text-red-300 hover:bg-destructive/10" : "text-foreground hover:text-foreground hover:bg-(--text)/10",
                 )}
                 disabled={isLoading || isRetrieving}
                 size="sm"
@@ -559,7 +559,7 @@ export const Input: FC<InputProps> = ({
             <TooltipTrigger asChild>
               <Button
                 aria-label="AI Edit"
-                className="p-2 rounded-md text-foreground hover:text-foreground hover:bg-[var(--text)]/10"
+                className="p-2 rounded-md text-foreground hover:text-foreground hover:bg-(--text)/10"
                 disabled={isLoading || isRetrieving || isAiEditingNote}
                 size="sm"
                 variant="ghost"
@@ -581,7 +581,7 @@ export const Input: FC<InputProps> = ({
               aria-label="Send"
               className={cn(
                 "p-2 rounded-md",
-                !isLoading && !isRetrieving && "hover:bg-[var(--text)]/10",
+                !isLoading && !isRetrieving && "hover:bg-(--text)/10",
               )}
               disabled={ (isLoading || isRetrieving) || (!isLoading && !isRetrieving && !message.trim())}
               size="sm"
@@ -620,7 +620,7 @@ export const Input: FC<InputProps> = ({
         />
       </div>
       <div className={cn(
-        "flex w-full border border-[var(--active)]/50 mb-1 p-1 bg-[var(--input-background)] shadow-md",
+        "flex w-full border border-(--active)/50 mb-1 p-1 bg-[var(--input-background)] shadow-md",
         isFocused && "input-breathing",
         isMultiline ? "flex-col rounded-xl" : "flex-row items-center rounded-full",
       )}>

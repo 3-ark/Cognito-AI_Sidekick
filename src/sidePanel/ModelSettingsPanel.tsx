@@ -32,16 +32,16 @@ export const ModelSettingsPanel: React.FC = () => { // Simplified props
   const topP = config.topP ?? 0.95;
   const presence_penalty = config.presencePenalty ?? 0;
 
-  const inputStyles = "bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus:border-[var(--active)] hide-number-spinners";
-  const labelStyles = "text-base font-medium text-[var(--text)] opacity-90";
+  const inputStyles = "bg-[var(--input-background)] border-(--text)/20 text-(--text) focus:border-(--active) hide-number-spinners";
+  const labelStyles = "text-base font-medium text-(--text) opacity-90";
 
   return (
 
     // The main div now provides padding and overflow handling for full-page display
     // The sticky header with back button is removed from here.
-    <div className="relative z-[1] flex flex-col h-full flex-1 overflow-y-auto p-6 text-[var(--text)] no-scrollbar">
+    <div className="relative z-1 flex flex-col h-full flex-1 overflow-y-auto p-6 text-(--text) no-scrollbar">
       <AnimatedBackground />
-      <div className="flex flex-col gap-6"> {/* Removed extra text-[var(--text)] as it's on parent */}
+      <div className="flex flex-col gap-6"> {/* Removed extra text-(--text) as it's on parent */}
           <div className="space-y-3">
             <Label className={labelStyles} htmlFor="temperature">
               Temperature ({temperature.toFixed(2)})

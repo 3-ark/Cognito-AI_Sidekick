@@ -22,7 +22,7 @@ function AccordionItem({
         "bg-[var(--input-background)]",
         'shadow-md',
         'rounded-xl',
-        'border-[var(--text)]/20',
+        'border-(--text)/20',
          className)}
       {...props}
     />

@@ -50,15 +50,15 @@ const DotThemeSelector: React.FC<{
             <button
               aria-label={`Set ${theme.name} theme`}
               className={cn(
-                "h-4 w-4 rounded-full border border-[var(--text)]/50 transition-all duration-150 ease-in-out", // Increased size to h-4 w-4
-                "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]",
+                "h-4 w-4 rounded-full border border-(--text)/50 transition-all duration-150 ease-in-out", // Increased size to h-4 w-4
+                "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-(--bg)",
                 config.theme === theme.name ? 'scale-125 shadow-md' : 'hover:scale-110 opacity-70 hover:opacity-100', // Use config.theme
               )}
               style={{ backgroundColor: config.theme === theme.name ? theme.active : theme.bg }} // Use config.theme
               onClick={() => updateConfig({ theme: theme.name })}
             />
           </TooltipTrigger>
-          <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+          <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
             <p className="capitalize">{theme.name}</p>
           </TooltipContent>
         </Tooltip>
@@ -135,7 +135,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
     // Future implementation: open note or chat
   };
 
-  const sharedTooltipContentStyle = "bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]";
+  const sharedTooltipContentStyle = "bg-(--active)/50 text-(--text) border-(--text)";
 
   // Navigation handlers now close the sheet and set app-level page modes
   const navigateToPage = (setter: (mode: boolean) => void) => {
@@ -146,11 +146,11 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
   // Button class for grid items (Model, API, RAG, Notes, History)
   const gridButtonClass = cn(
     "flex flex-col items-center justify-center p-2 h-20", 
-    "text-[var(--text)] rounded-xl shadow-md",
+    "text-(--text) rounded-xl shadow-md",
     "bg-[var(--input-background)]", 
-    "border border-[var(--text)]/20",
-    "hover:border-[var(--active)] hover:brightness-110 active:brightness-95",
-    "focus:ring-1 focus:ring-[var(--active)]",
+    "border border-(--text)/20",
+    "hover:border-(--active) hover:brightness-110 active:brightness-95",
+    "focus:ring-1 focus:ring-(--active)",
     "text-xs font-['Space_Mono',_monospace] break-words whitespace-normal text-center leading-tight", // Allow text wrapping
   );
 
@@ -166,7 +166,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
           "flex flex-col h-full max-h-screen",
           "[&>button]:hidden", 
           "settings-drawer-content",
-          "bg-[var(--bg)]", 
+          "bg-(--bg)", 
         )}
         side="left"
         style={{ height: '100dvh' }}
@@ -180,7 +180,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
           {/* Search Bar */}
           <div className="relative mt-4">
             <Input
-              className="w-full shadow-sm rounded-xl text-[var(--text)] font-['Space_Mono',_monospace] pl-10"
+              className="w-full shadow-sm rounded-xl text-(--text) font-['Space_Mono',_monospace] pl-10"
               placeholder={t('Search from your chat & note...')}
               type="text"
               value={searchQuery}
@@ -204,7 +204,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-0", // Adjusted focus ring
                 activeTab === 'settings'
                   ? "text-[var(--link)] border-b-2 border-[var(--link)]"
-                  : "text-[var(--text)]/70 hover:text-[var(--text)] border-b border-[var(--text)]/20 hover:border-[var(--active)]",
+                  : "text-(--text)/70 hover:text-(--text) border-b border-(--text)/20 hover:border-(--active)",
               )}
               variant="ghost" // Changed variant to ghost to remove default button styling
               onClick={() => setActiveTab('settings')}
@@ -217,7 +217,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 "focus-visible:ring-1 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-0", // Adjusted focus ring
                 activeTab === 'memory'
                   ? "text-[var(--link)] border-b-2 border-[var(--link)]"
-                  : "text-[var(--text)]/70 hover:text-[var(--text)] border-b border-[var(--text)]/20 hover:border-[var(--active)]",
+                  : "text-(--text)/70 hover:text-(--text) border-b border-(--text)/20 hover:border-(--active)",
               )}
               variant="ghost" // Changed variant to ghost
               onClick={() => setActiveTab('memory')}
@@ -306,7 +306,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
             <div className="flex items-center space-x-2">
               <SheetTitle>
                 <div className="flex items-center text-xs font-mono w-fit overflow-hidden rounded-full">
-                  <span className="bg-[var(--active)] text-[var(--text)] pl-2 pr-1.5">Cognito</span>
+                  <span className="bg-(--active) text-(--text) pl-2 pr-1.5">Cognito</span>
                   <span className="bg-[var(--link)] text-white pl-1.5 pr-2">{APP_VERSION}</span>
                 </div>
               </SheetTitle>
@@ -316,7 +316,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 <TooltipTrigger asChild>
                   <Button
                     aria-label="Report bugs"
-                    className="text-[var(--text)] size:4 rounded-xl"
+                    className="text-(--text) size:4 rounded-xl"
                     variant="ghost"
                     onClick={() => window.open("https://github.com/3-ark/Cognito-AI_Sidekick/issues/new", '_blank')}
                   >
@@ -329,7 +329,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
                 <TooltipTrigger asChild>
                   <Button
                     aria-label="Documents"
-                    className="text-[var(--text)] size:4 rounded-xl"
+                    className="text-(--text) size:4 rounded-xl"
                     variant="ghost"
                     onClick={() => window.open("https://example.com/docs", '_blank')}
                   >
@@ -340,7 +340,7 @@ export const SettingsSheet: React.FC<SettingsSheetProps> = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button aria-label="Close Settings" className="text-[var(--text)] size:4 rounded-xl" variant="ghost" onClick={() => onOpenChange(false)}>
+                  <Button aria-label="Close Settings" className="text-(--text) size:4 rounded-xl" variant="ghost" onClick={() => onOpenChange(false)}>
                     <FiX />
                   </Button>
                 </TooltipTrigger>

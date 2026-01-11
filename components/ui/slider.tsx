@@ -21,12 +21,12 @@ const sliderVariants = cva(
         ],
         themed: [
           // Themed Track, Range, Thumb styles
-          "[&>span[data-slot=slider-track]]:bg-[var(--text)]/10",
-          "[&>span[data-slot=slider-track]>span[data-slot=slider-range]]:bg-[var(--active)]",
-          "[&>button[data-slot=slider-thumb]]:bg-[var(--active)]",
-          "[&>button[data-slot=slider-thumb]]:border-[var(--text)]/50",
-          "[&>button[data-slot=slider-thumb]]:ring-offset-[var(--bg)]",
-          "[&>button[data-slot=slider-thumb]]:focus-visible:ring-[var(--active)]",
+          "[&>span[data-slot=slider-track]]:bg-(--text)/10",
+          "[&>span[data-slot=slider-track]>span[data-slot=slider-range]]:bg-(--active)",
+          "[&>button[data-slot=slider-thumb]]:bg-(--active)",
+          "[&>button[data-slot=slider-thumb]]:border-(--text)/50",
+          "[&>button[data-slot=slider-thumb]]:ring-offset-(--bg)",
+          "[&>button[data-slot=slider-thumb]]:focus-visible:ring-(--active)",
         ],
       },
     },

@@ -77,13 +77,13 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
             fetchAllModels();
           }}
           className={cn(
-            "text-[var(--text)] bg-transparent rounded-none w-full justify-start font-medium h-6 font-['Space_Mono',_monospace]", // Removed shadow-md
+            "text-(--text) bg-transparent rounded-none w-full justify-start font-medium h-6 font-['Space_Mono',_monospace]", // Removed shadow-md
             "pr-7" // Add padding to the right for the arrow
           )}
         />
         <FiChevronDown
           className={cn(
-            "absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text)] opacity-70",
+            "absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-(--text) opacity-70",
             "pointer-events-none" // Make icon non-interactive
           )}
         />
@@ -96,7 +96,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
           <div
             className={cn(
               "absolute", // Position will be based on dropdownPosition
-              "bg-[var(--bg)]",
+              "bg-(--bg)",
               "no-scrollbar",
               "shadow-md",
               "overflow-y-auto z-[100]" // Ensure dropdown is above other elements
@@ -118,9 +118,9 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                     className={cn(
                       "w-full text-left",
                       "px-4 py-1.5",
-                      "text-[var(--text)] text-sm",
-                      "hover:bg-[var(--active)]/20",
-                      "focus:bg-[var(--active)]/30",
+                      "text-(--text) text-sm",
+                      "hover:bg-(--active)/20",
+                      "focus:bg-(--active)/30",
                       "transition-colors duration-150",
                       "font-['Space_Mono',_monospace]"
                     )}
@@ -135,7 +135,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                         {model.host ? `(${model.host}) ` : ''}
                         {model.id}
                         {model.context_length && (
-                          <span className="text-xs text-[var(--text)] opacity-50 ml-1">
+                          <span className="text-xs text-(--text) opacity-50 ml-1">
                             [ctx: {model.context_length}]
                           </span>
                         )}
@@ -144,7 +144,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                   </button>
                 ))
               ) : (
-                <div className="px-4 py-1.5 text-[var(--text)] opacity-50 text-sm">
+                <div className="px-4 py-1.5 text-(--text) opacity-50 text-sm">
                   No models found
                 </div>
               )}

@@ -1,6 +1,6 @@
 {
   "name": "Cognito: Your AI Memory Assistant",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Think less, recall more. The best AI memory assistant for your browser.",
   "main": "index.js",
   "scripts": {
@@ -150,6 +150,7 @@
     "postcss-loader": "^8.2.0",
     "prettier": "3.7.4",
     "redux-logger": "^3.0.6",
+    "rimraf": "^6.1.2",
     "sharp": "^0.34.5",
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.4",

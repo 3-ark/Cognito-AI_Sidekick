@@ -436,21 +436,21 @@ export const Themes = () => {
     <AccordionItem
       value="themes"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/20 rounded-xl shadow-md",
+        "bg-[var(--input-background)] border-(--text)/20 rounded-xl shadow-md",
         "transition-all duration-150 ease-in-out",
-        "hover:border-[var(--active)] hover:brightness-105"
+        "hover:border-(--active) hover:brightness-105"
       )}
     >
       <AccordionTrigger
         className={cn(
           "flex items-center justify-between w-full px-3 py-2 hover:no-underline",
-          "text-[var(--text)] font-medium",
+          "text-(--text) font-medium",
           "hover:brightness-95",
         )}
       >
         <SettingTitle icon="🖌️" text="Customize" />
       </AccordionTrigger>
-      <AccordionContent className="px-3 pb-4 pt-2 text-[var(--text)]">
+      <AccordionContent className="px-3 pb-4 pt-2 text-(--text)">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between pr-3">
@@ -492,7 +492,7 @@ export const Themes = () => {
             <Slider value={[currentFontSize]} variant="themed" max={20} min={7} step={1} className="w-full" onValueChange={(value) => { updateConfig({ fontSize: value[0] }); }} />
           </div>
 
-          <div className="pt-4 mt-4 border-t border-[var(--text)]/20">
+          <div className="pt-4 mt-4 border-t border-(--text)/20">
             <div className="space-y-2 mb-4">
               <h4 className="font-medium leading-none text-foreground">Custom Theme Colors</h4>
               <p className="text-sm text-muted-foreground">Modify colors for your 'custom' theme. Selecting a color will automatically apply the custom theme.</p>

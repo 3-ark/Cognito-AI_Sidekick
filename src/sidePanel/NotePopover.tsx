@@ -196,7 +196,7 @@ export const NotePopover = () => {
                 aria-label="Toggle/Edit Memory"
                 className={cn(
                   "rounded-md not-focus-visible",
-                  config.useNote ? "text-[var(--active)] hover:bg-muted/80" : "text-foreground hover:text-foreground hover:bg-[var(--text)]/10",
+                  config.useNote ? "text-(--active) hover:bg-muted/80" : "text-foreground hover:text-foreground hover:bg-(--text)/10",
                 )}
                 size="sm"
                 variant="ghost"
@@ -209,10 +209,10 @@ export const NotePopover = () => {
             <p>Toggle/Edit Memory</p>
           </TooltipContent>
         </Tooltip>
-      <PopoverContent align="end" className="w-[80vw] p-4 bg-[var(--bg)] border-[var(--text)]/20 shadow-lg rounded-md" side="top" sideOffset={5}>
+      <PopoverContent align="end" className="w-[80vw] p-4 bg-(--bg) border-(--text)/20 shadow-lg rounded-md" side="top" sideOffset={5}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-[var(--text)] font-medium cursor-pointer" htmlFor="use-note-switch">
+              <Label className="text-(--text) font-medium cursor-pointer" htmlFor="use-note-switch">
                 Use Memory
               </Label>
               <Switch
@@ -223,7 +223,7 @@ export const NotePopover = () => {
             </div>
             <div>  
               <Textarea
-                className="mt-2 min-h-[25vh] max-h-[60vh] overflow-y-auto bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] resize-none thin-scrollbar"
+                className="mt-2 min-h-[25vh] max-h-[60vh] overflow-y-auto bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active) resize-none thin-scrollbar"
                 id="note-popover-textarea"
                 placeholder="Persistent notes for the AI..."
                 value={editableNote}
@@ -237,8 +237,8 @@ export const NotePopover = () => {
                     aria-label={isSpeakingNote ? "Stop reading note" : "Read note aloud"}
                     className={cn(
                       "p-1.5 rounded-md",
-                      "text-[var(--text)] hover:bg-[var(--text)]/10",
-                      "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]",
+                      "text-(--text) hover:bg-(--text)/10",
+                      "focus-visible:ring-1 focus-visible:ring-(--active) focus-visible:ring-offset-1 focus-visible:ring-offset-(--bg)",
                     )}
                     disabled={!editableNote.trim()}
                     size="sm"

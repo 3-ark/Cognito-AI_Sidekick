@@ -18,9 +18,9 @@ const checkboxVariants = cva(
           "focus-visible:border-ring focus-visible:ring-ring/50",
         ],
         themed: [
-          "border-[var(--text)]", // Unchecked border
-          "data-[state=checked]:bg-[var(--active)] data-[state=checked]:text-[var(--text)] data-[state=checked]:border-[var(--active)]", // Checked state
-          "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-0 focus-visible:border-[var(--active)]", // Focus state (added focus-visible:border for consistency)
+          "border-(--text)", // Unchecked border
+          "data-[state=checked]:bg-(--active) data-[state=checked]:text-(--text) data-[state=checked]:border-(--active)", // Checked state
+          "focus-visible:ring-1 focus-visible:ring-(--active) focus-visible:ring-offset-0 focus-visible:border-(--active)", // Focus state (added focus-visible:border for consistency)
         ],
       },
     },

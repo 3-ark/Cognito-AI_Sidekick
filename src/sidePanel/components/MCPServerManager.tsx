@@ -59,22 +59,22 @@ export const MCPServerManager: React.FC = () => {
     <AccordionItem
       value="mcp-servers"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/20 rounded-xl shadow-md",
+        "bg-[var(--input-background)] border-(--text)/20 rounded-xl shadow-md",
         "transition-all duration-150 ease-in-out",
-        "hover:border-[var(--active)] hover:brightness-105"
+        "hover:border-(--active) hover:brightness-105"
       )}
     >
       <AccordionTrigger
         className={cn(
           "flex items-center justify-between w-full px-3 py-2 hover:no-underline",
-          "text-[var(--text)] font-medium",
+          "text-(--text) font-medium",
           "hover:brightness-95",
         )}
       >
         <SettingTitle icon="🔌" text="MCP Servers" />
       </AccordionTrigger>
       <AccordionContent
-        className="px-3 pb-4 pt-2 text-[var(--text)]"
+        className="px-3 pb-4 pt-2 text-(--text)"
       >
         <div className="space-y-4">
           <div>

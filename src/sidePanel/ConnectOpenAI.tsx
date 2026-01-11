@@ -94,7 +94,7 @@ export const ConnectOpenAI = () => {
         />
         <Button
             aria-label={visibleApiKey ? "Hide API key" : "Show API key"}
-className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-[var(--text)]/70 hover:text-[var(--text)]")}
+className={cn("absolute inset-y-0 right-0 flex items-center justify-center", "w-8 text-(--text)/70 hover:text-(--text)")}
             disabled={isLoading}
             size="sm"
             variant="ghost"

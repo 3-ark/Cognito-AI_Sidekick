@@ -146,20 +146,20 @@ const PersonaModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("bg-[var(--bg)] text-[var(--text)]")} // Adjusted width
+        className={cn("bg-(--bg) text-(--text)")} // Adjusted width
         onCloseAutoFocus={e => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>{modalTitle}</DialogTitle>
         </DialogHeader>
-        <DialogDescription className="text-[var(--text)]/80 pt-2">
+        <DialogDescription className="text-(--text)/80 pt-2">
         "{effectiveName || 'New Persona'}" will be created with the provided instructions and avatar.
         </DialogDescription>
         <div className="grid gap-4 py-4">
           {/* Avatar and Name Input */}
           <div className="flex items-start gap-4">
             <div className="flex flex-col items-center gap-2">
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-[var(--input-background)] border border-[var(--text)]/20">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-(--input-background) border border-(--text)/20">
                 {avatarPreview ? (
                   <img alt="Preview" className="w-full h-full object-cover" src={avatarPreview} />
                 ) : (
@@ -172,12 +172,12 @@ const PersonaModal = ({
               <input ref={fileInputRef} accept="image/*" className="hidden" type="file" onChange={handleFileChange} />
             </div>
             <div className="flex-1 space-y-2">
-              <Label className="text-sm font-medium text-[var(--text)] opacity-90" htmlFor="persona-name-modal">
+              <Label className="text-sm font-medium text-(--text) opacity-90" htmlFor="persona-name-modal">
                 Persona Name
               </Label>
               <Input
                 className={cn(
-                  "bg-[var(--input-background)] rounded-xl border-[var(--text)]/20 text-[var(--text)] focus:border-[var(--active)]",
+                  "bg-(--input-background) rounded-xl border-(--text)/20 text-(--text) focus:border-(--active)",
                 )}
                 id="persona-name-modal"
                 placeholder="Enter persona name"
@@ -188,15 +188,15 @@ const PersonaModal = ({
           </div>
           {/* Persona Instructions Textarea */}
           <div>
-            <Label className="text-sm font-medium text-[var(--text)] opacity-90 mb-1 block" htmlFor="persona-prompt-modal">
+            <Label className="text-sm font-medium text-(--text) opacity-90 mb-1 block" htmlFor="persona-prompt-modal">
               Persona Instructions
             </Label>
             <Textarea
               className={cn(
-                "min-h-[80px] px-3 py-2 text-sm ring-offset-[var(--bg)] placeholder:text-[var(--muted-foreground)] rounded-xl",
-                "text-[var(--text)]",
+                "min-h-20 px-3 py-2 text-sm ring-offset-(--bg) placeholder:text-muted-foreground rounded-xl",
+                "text-(--text)",
                 "overflow-y-auto",
-                "break-words whitespace-pre-wrap",
+                "wrap-break-word whitespace-pre-wrap",
               )}
               id="persona-prompt-modal"
               maxRows={8}
@@ -269,10 +269,10 @@ const DeleteModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-[var(--bg)] border border-[var(--text)]/20 text-[var(--text)]">
+      <DialogContent className="sm:max-w-106.25 bg-(--bg) border border-(--text)/20 text-(--text)">
         <DialogHeader>
           <DialogTitle>Delete "{persona}"</DialogTitle>
-          <DialogDescription className="text-[var(--text)]/80 pt-2">
+          <DialogDescription className="text-(--text)/80 pt-2">
             Are you sure you want to delete this persona? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
@@ -328,13 +328,13 @@ export const Persona: React.FC<PersonaProps> = () => {
   return (
       <div className="flex items-center rounded-xl justify-between gap-4">
         {/* Persona Select Dropdown */}
-        <div className="flex-grow text-sm font-medium text-[var(--text)] opacity-90 whitespace-nowrap">
+        <div className="grow text-sm font-medium text-(--text) opacity-90 whitespace-nowrap">
           <Select
               value={currentPersonaName}
               onValueChange={handlePersonaSelectChange}
           >
               <SelectTrigger
-              className="w-full data-[placeholder]:text-muted-foreground bg-[var(--input-background)] border-[var(--text)]/20 hover:border-[var(--active)] h-8 text-sm"
+              className="w-full data-placeholder:text-muted-foreground bg-(--input-background) border-(--text)/20 hover:border-(--active) h-8 text-sm"
               variant="settings"
               >
               <div className="flex items-center">
@@ -346,13 +346,13 @@ export const Persona: React.FC<PersonaProps> = () => {
               </div>
               </SelectTrigger>
               <SelectContent 
-              className="bg-[var(--popover)] border-[var(--text)]/20 text-[var(--text)]"
+              className="bg-popover border-(--text)/20 text-(--text)"
               variant="settingsPanel"
               >
               {Object.keys(personas).map(p => (
                   <SelectItem
                   key={p}
-className="hover:bg-[var(--active)]/20 focus:bg-[var(--active)]/30 text-sm"
+className="hover:bg-(--active)/20 focus:bg-(--active)/30 text-sm"
                   focusVariant="activeTheme"
                   value={p}
                   > 
@@ -372,7 +372,7 @@ className="hover:bg-[var(--active)]/20 focus:bg-[var(--active)]/30 text-sm"
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                  className={cn(iconButtonClass, "text-[var(--text)]/80 hover:text-[var(--active)] hover:border-[var(--active)]/50")}
+                  className={cn(iconButtonClass, "text-(--text)/80 hover:text-(--active) hover:border-(--active)/50")}
                   size="sm"
                   variant="ghost"
                   onClick={() => handleOpenModal('edit', currentPersonaName)}
@@ -380,14 +380,14 @@ className="hover:bg-[var(--active)]/20 focus:bg-[var(--active)]/30 text-sm"
                   <FiEdit2 />
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+            <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
               <p>Edit Persona</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
             <Button
-                className={cn(iconButtonClass, "text-[var(--text)]/80 hover:text-[var(--active)] hover:border-[var(--active)]/50")}
+                className={cn(iconButtonClass, "text-(--text)/80 hover:text-(--active) hover:border-(--active)/50")}
                 size="sm"
                 variant="ghost"
                 onClick={() => handleOpenModal('create')}
@@ -395,14 +395,14 @@ className="hover:bg-[var(--active)]/20 focus:bg-[var(--active)]/30 text-sm"
                 <FiPlus />
             </Button>
             </TooltipTrigger>
-            <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+            <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
               <p>New Persona</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
             <Button
-                className={cn(iconButtonClass, "text-[var(--error)] hover:text-[var(--error)]/80 hover:border-[var(--error)]/50")}
+                className={cn(iconButtonClass, "text-(--error) hover:text-(--error)/80 hover:border-(--error)/50")}
                 disabled={(currentPersonaName === 'Ein' && Object.keys(personas).length <= 1) || Object.keys(personas).length === 0}
                 size="sm"
                 variant="ghost"
@@ -411,7 +411,7 @@ className="hover:bg-[var(--active)]/20 focus:bg-[var(--active)]/30 text-sm"
                 <FiTrash2 />
             </Button>
             </TooltipTrigger>
-            <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+            <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
               <p>Delete Persona</p>
             </TooltipContent>
           </Tooltip>

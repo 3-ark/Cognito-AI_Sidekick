@@ -659,7 +659,7 @@ const Cognito = () => {
         ref={containerRef}
         className={cn(
           "w-full h-dvh p-0 overflow-hidden",
-          "flex flex-col bg-[var(--bg)]",
+          "flex flex-col bg-(--bg)",
         )}
       >
           <Header

@@ -121,7 +121,7 @@ export const AddToChat = ({
               aria-label="Switch Chat Mode"
               className={cn(
                 "border-none shadow-none bg-transparent",
-                "hover:bg-[var(--text)]/10",
+                "hover:bg-(--text)/10",
                 "hover:rounded-full",
                 "text-foreground",
                 "px-2 h-9 w-fit",
@@ -131,7 +131,7 @@ export const AddToChat = ({
               )}
             >
               <span>
-                <Plus className="text-[var(--text)]" size={20} />
+                <Plus className="text-(--text)" size={20} />
               </span>
             </SelectTrigger>
           </TooltipTrigger>
@@ -146,8 +146,8 @@ export const AddToChat = ({
         <SelectContent
           align="end"
           className={cn(
-            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]/20 font-semibold rounded-md shadow-lg",
-            "min-w-[80px] z-50",
+            "bg-(--bg) text-(--text) border border-(--text)/20 font-semibold rounded-md shadow-lg",
+            "min-w-20 z-50",
           )}
           sideOffset={5}
         >
@@ -155,8 +155,8 @@ export const AddToChat = ({
             <SelectItem
               key={option.value}
               className={cn(
-                "text-[var(--text)]",
-                "hover:brightness-95 focus:bg-[var(--active)] focus:text-[var(--active-foreground)]",
+                "text-(--text)",
+                "hover:brightness-95 focus:bg-(--active) focus:text-[var(--active-foreground)]",
               )}
               value={option.value}
             >

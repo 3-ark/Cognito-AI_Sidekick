@@ -85,7 +85,7 @@ export const MCPPopover: React.FC = () => {
           </Tooltip>
         </div>
       </TooltipProvider>
-      <DialogContent className="themedPanel w-[80dvw] max-w-[400px] bg-[var(--bg)] text-[var(--text)] border-[var(--text)]">
+      <DialogContent className="themedPanel w-[80dvw] max-w-[400px] bg-(--bg) text-(--text) border-(--text)">
         <div className="grid gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-1">

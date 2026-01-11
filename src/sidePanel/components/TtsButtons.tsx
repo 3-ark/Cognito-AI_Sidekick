@@ -26,10 +26,10 @@ export const TtsButtons: React.FC<TtsButtonsProps> = ({
           onClick={isPaused ? onPlay : onPause}
           title={isPaused ? "Resume speech" : "Pause speech"}
         >
-          {isPaused ? <FiPlay className="text-[var(--text)]" /> : <FiPause className="text-[var(--text)]" />}
+          {isPaused ? <FiPlay className="text-(--text)" /> : <FiPause className="text-(--text)" />}
         </Button>
         <Button aria-label="Stop" variant="message-action" size="xs" onClick={onStop} title="Stop speech">
-          <FiSquare className="text-[var(--text)]" />
+          <FiSquare className="text-(--text)" />
         </Button>
       </>
     );
@@ -37,7 +37,7 @@ export const TtsButtons: React.FC<TtsButtonsProps> = ({
 
   return (
     <Button aria-label="Speak" variant="message-action" size="xs" onClick={onPlay} title="Speak message">
-      <FiPlay className="text-[var(--text)]" />
+      <FiPlay className="text-(--text)" />
     </Button>
   );
 };

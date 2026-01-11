@@ -146,7 +146,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onDismiss }) => {
         <DialogDescription asChild>
           <div className="p-4 text-left text-sm"> {/* Changed text-center to text-left */}
             <TypewriterLinesWordByWord
-              className="text-[var(--text)] mt-1 mb-3"
+              className="text-(--text) mt-1 mb-3"
               delay={50}
               lines={updatedGuideLines}
             />
@@ -162,7 +162,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, onDismiss }) => {
                     <IoFingerPrint color="var(--active)" size="3rem" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
                   {t('gotItDismiss')}
                 </TooltipContent>
               </Tooltip>
@@ -211,20 +211,20 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
         variant="themedPanel"
       >
         <DialogHeader className="p-4">
-          <DialogTitle className="text-lg font-semibold text-[var(--text)]">{t('editProfile')}</DialogTitle>
-          <DialogDescription className="text-sm text-[var(--text)] opacity-80">
+          <DialogTitle className="text-lg font-semibold text-(--text)">{t('editProfile')}</DialogTitle>
+          <DialogDescription className="text-sm text-(--text) opacity-80">
             {t('setDisplayName')}
           </DialogDescription>
         </DialogHeader>
         <div className="px-4 space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-[var(--text)] opacity-90" htmlFor="username">
+            <Label className="text-sm font-medium text-(--text) opacity-90" htmlFor="username">
               {t('username')}
             </Label>
             <Input
               className={cn(
-                "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-                "hover:border-[var(--active)] hover:brightness-98",
+                "focus:border-(--active) focus:ring-1 focus:ring-(--active)",
+                "hover:border-(--active) hover:brightness-98",
               )}
               id="username"
               value={currentUserName}
@@ -232,20 +232,20 @@ const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-[var(--text)] opacity-90" htmlFor="userprofile">
+            <Label className="text-sm font-medium text-(--text) opacity-90" htmlFor="userprofile">
               {t('userProfile')}
             </Label>
             <Textarea
               className={cn(
-                "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-                "hover:border-[var(--active)] hover:brightness-98",
+                "focus:border-(--active) focus:ring-1 focus:ring-(--active)",
+                "hover:border-(--active) hover:brightness-98",
                 "overflow-y-auto",
                 "rounded-md",
-                "border border-[var(--text)]/20 dark:border-0",
+                "border border-(--text)/20 dark:border-0",
                 "whitespace-pre-wrap",
                 "px-3 py-2",
-                "break-words",
-                "bg-[var(--input-background)] placeholder:text-muted-foreground",
+                "wrap-break-word",
+                "bg-(--input-background) placeholder:text-muted-foreground",
               )}
               id="userprofile"
               maxRows={8}
@@ -331,7 +331,7 @@ const EditableTitle = ({ title, onTitleChange }: { title: string, onTitleChange:
 
   return (
     <p
-      className="text-xs text-[var(--muted-foreground)] whitespace-nowrap overflow-hidden text-ellipsis text-center w-full cursor-pointer"
+      className="text-xs text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis text-center w-full cursor-pointer"
       onClick={() => setIsEditing(true)}
     >
       {title}
@@ -483,20 +483,20 @@ export const Header: React.FC<HeaderProps> = ({
       ts => (
         <div
           className={cn(
-            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]/20",
+            "bg-(--bg) text-(--text) border border-(--text)/20",
             "p-4 rounded-xl shadow-xl max-w-sm w-full",
             "flex flex-col space-y-3",
           )}
         >
-          <h4 className="text-lg font-semibold text-[var(--text)]">{t('confirmDeletion')}</h4>
-          <p className="text-sm text-[var(--text)] opacity-90">
+          <h4 className="text-lg font-semibold text-(--text)">{t('confirmDeletion')}</h4>
+          <p className="text-sm text-(--text) opacity-90">
             {t('confirmDeletionDesc')}
           </p>
           <div className="flex justify-end space-x-3 pt-2">
             <Button
               className={cn(
-                "bg-transparent text-[var(--text)] border-[var(--text)]",
-                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]",
+                "bg-transparent text-(--text) border-(--text)",
+                "hover:bg-(--active)/30 focus:ring-1 focus:ring-(--active)",
                 )}
               size="sm"
               variant="outline"
@@ -506,7 +506,7 @@ export const Header: React.FC<HeaderProps> = ({
             </Button>
             <Button
               className={cn(
-                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]",
+                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-(--bg)",
                 )}
               size="sm"
               variant="destructive"
@@ -560,7 +560,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Button
                   aria-label={leftButtonLabel}
                   className={cn(
-                    "text-[var(--text)] rounded-md p-0 h-8 w-8 flex items-center justify-center",
+                    "text-(--text) rounded-md p-0 h-8 w-8 flex items-center justify-center",
                   )}
                   size={isAnyPageModeActive ? "sm" : undefined} // Use isAnyPageModeActive
                   variant="ghost"
@@ -571,20 +571,20 @@ export const Header: React.FC<HeaderProps> = ({
                   ) : (
 
                     // This is the button to open SettingsSheet
-                    <Avatar className="h-8 w-8 border border-[var(--active)]">
+                    <Avatar className="h-8 w-8 border border-(--active)">
                       <AvatarImage alt={currentPersona} src={currentPersonaAvatar} />
                       <AvatarFallback>{currentPersona.substring(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+              <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
                 {leftButtonLabel}
               </TooltipContent>
             </Tooltip>
             {!isAnyPageModeActive && ( // Show Persona name and status only if not in a page mode
               <div className="flex flex-col justify-center ml-1">
-                <span className="text-[0.8125rem] font-medium text-[var(--text)] leading-tight">
+                <span className="text-[0.8125rem] font-medium text-(--text) leading-tight">
                   {currentPersona === 'default' ? 'Jet' : currentPersona}
                 </span>
                 <span className="text-[0.625rem] text-muted-foreground font-semibold leading-tight flex items-center pt-0.5">
@@ -598,7 +598,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Middle Content Area - Title Display Logic */}
-          <div className="flex-grow flex flex-col justify-center items-center overflow-hidden px-1 py-1">
+          <div className="grow flex flex-col justify-center items-center overflow-hidden px-1 py-1">
             {!isAnyPageModeActive ? (
               <>
                 <div className="w-full max-w-xs">
@@ -625,18 +625,18 @@ export const Header: React.FC<HeaderProps> = ({
                   <TooltipTrigger asChild>
                     <Button
                       aria-label="Reset Chat"
-                      className="text-[var(--text)] hover:bg-black/10 dark:hover:bg-white/10 rounded-md group"
+                      className="text-(--text) hover:bg-black/10 dark:hover:bg-white/10 rounded-md group"
                       size="sm"
                       variant="ghost"
                       onClick={reset}
                     >
                       <TbReload 
-                        className="transition-transform duration-300 rotate-0 group-hover:rotate-180 text-[var(--text)]" 
+                        className="transition-transform duration-300 rotate-0 group-hover:rotate-180 text-(--text)" 
                         size="18px" 
                       />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                  <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
                     {t('resetChat')}
                   </TooltipContent>
                 </Tooltip>
@@ -648,7 +648,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <DropdownMenuPrimitive.Trigger asChild>
                         <Button
                           aria-label={t('shareOptions')}
-                          className="text-[var(--text)] rounded-md"
+                          className="text-(--text) rounded-md"
                           size="sm"
                           variant="ghost"
                         >
@@ -656,7 +656,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </Button>
                       </DropdownMenuPrimitive.Trigger>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                    <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
                       {t('shareOptions')}
                     </TooltipContent>
                   </Tooltip>
@@ -665,7 +665,7 @@ export const Header: React.FC<HeaderProps> = ({
                       align="start"
                       className={cn(
                         dropdownContentClasses,
-                        "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl",
+                        "bg-(--bg) text-(--text) border-(--text)/20 shadow-xl",
                       )}
                       sideOffset={5}
                     >
@@ -673,7 +673,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className={cn(
                           dropdownItemClasses,
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                          "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer",
                         )}
                         onSelect={() => setIsEditProfileDialogOpen(true)}
                       >
@@ -683,7 +683,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <DropdownMenuPrimitive.Separator
                         className={cn(
                           dropdownSeparatorClasses,
-                          "bg-[var(--text)]/10",
+                          "bg-(--text)/10",
                         )}
                       />
                       <DropdownMenuPrimitive.Sub>
@@ -691,7 +691,7 @@ export const Header: React.FC<HeaderProps> = ({
                           className={cn(
                             dropdownSubTriggerClasses,
                             "gap-2",
-                            "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                            "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer",
                           )}
                         >
                         <FiChevronLeft className="mr-2 h-4 w-4" />
@@ -702,33 +702,33 @@ export const Header: React.FC<HeaderProps> = ({
                             alignOffset={-5}
                             className={cn(
                               dropdownContentClasses,
-                              "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-lg",
+                              "bg-(--bg) text-(--text) border-(--text)/20 shadow-lg",
                             )}
                             sideOffset={2}
                           >
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer")}
                               onSelect={downloadMarkdown}
                             >
                              <BsFiletypeMd className="mr-2 h-4 w-4" />
                               .md
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer")}
                               onSelect={downloadText}
                             >
                              <IoTextOutline className="mr-2 h-4 w-4" />
                               .txt
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer")}
                               onSelect={downloadJson}
                             >
                              <TbJson className="mr-2 h-4 w-4" />
                               .json
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer")}
                               onSelect={downloadImage}
                             >
                              <IoImageOutline className="mr-2 h-4 w-4" />
@@ -740,7 +740,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <DropdownMenuPrimitive.Separator
                         className={cn(
                           dropdownSeparatorClasses,
-                          "bg-[var(--text)]/10",
+                          "bg-(--text)/10",
                         )}
                       />
                       <DropdownMenuPrimitive.Sub>
@@ -748,7 +748,7 @@ export const Header: React.FC<HeaderProps> = ({
                           className={cn(
                             dropdownSubTriggerClasses,
                             "gap-2",
-                            "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                            "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer",
                           )}
                         >
                         <FiChevronLeft className="mr-2 h-4 w-4" />
@@ -759,19 +759,19 @@ export const Header: React.FC<HeaderProps> = ({
                             alignOffset={-5}
                             className={cn(
                               dropdownContentClasses,
-                              "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-lg",
+                              "bg-(--bg) text-(--text) border-(--text)/20 shadow-lg",
                             )}
                             sideOffset={2}
                           >
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer")}
                               onSelect={exportData}
                             >
                               <Download className="mr-2 h-4 w-4" />
                               Export Data
                             </DropdownMenuPrimitive.Item>
                             <DropdownMenuPrimitive.Item
-                              className={cn(dropdownItemClasses, "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer")}
+                              className={cn(dropdownItemClasses, "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer")}
                               onSelect={importData}
                             >
                               <Upload className="mr-2 h-4 w-4" />
@@ -790,7 +790,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <TooltipTrigger asChild>
                   <Button
                     aria-label={t("deleteAllHistory")}
-                    className="text-[var(--text)] rounded-md"
+                    className="text-(--text) rounded-md"
                     size="sm"
                     variant="ghost"
                     onClick={handleDeleteAllWithConfirmation}
@@ -798,7 +798,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <FiTrash2 size="18px" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
                   {t('deleteAll')}
                 </TooltipContent>
               </Tooltip>
@@ -810,7 +810,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <DropdownMenuPrimitive.Trigger asChild>
                       <Button
                         aria-label="Note Options"
-                        className="text-[var(--text)] rounded-md"
+                        className="text-(--text) rounded-md"
                         size="sm"
                         variant="ghost"
                       >
@@ -818,7 +818,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </Button>
                     </DropdownMenuPrimitive.Trigger>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="bottom">
+                  <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="bottom">
                     {t('noteOptions')}
                   </TooltipContent>
                 </Tooltip>
@@ -827,7 +827,7 @@ export const Header: React.FC<HeaderProps> = ({
                     align="start"
                     className={cn(
                       dropdownContentClasses,
-                      "bg-[var(--bg)] text-[var(--text)] border-[var(--text)]/20 shadow-xl",
+                      "bg-(--bg) text-(--text) border-(--text)/20 shadow-xl",
                     )}
                     sideOffset={5}
                   >
@@ -836,7 +836,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className={cn(
                           dropdownItemClasses, 
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                          "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer",
                         )}
                         onSelect={onAddNewNoteRequest}
                       >
@@ -849,7 +849,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className={cn(
                           dropdownItemClasses,
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                          "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer",
                         )}
                         onSelect={onImportNoteRequest}
                       >
@@ -862,7 +862,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className={cn(
                           dropdownItemClasses,
                           "gap-2",
-                          "hover:bg-[var(--active)]/30 focus:bg-[var(--active)]/30 cursor-pointer",
+                          "hover:bg-(--active)/30 focus:bg-(--active)/30 cursor-pointer",
                         )}
                         onSelect={onSelectNotesRequest}
                       >

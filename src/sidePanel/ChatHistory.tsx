@@ -147,7 +147,7 @@ export const ChatHistory = ({
         <div className="p-0">
           <div className="relative">
             <Input
-              className="w-full bg-background border-b border-[var(--text)]/20 rounded-none text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10"
+              className="w-full bg-background border-b border-(--text)/20 rounded-none text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10"
               placeholder="Search chat history..."
               type="text"
               value={searchQuery}
@@ -257,7 +257,7 @@ export const ChatHistory = ({
       </ScrollArea>
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center h-8 space-x-2 p-2 border-t border-[var(--text)]/20 font-['Space_Mono',_monospace]">
+        <div className="flex justify-center items-center h-8 space-x-2 p-2 border-t border-(--text)/20 font-['Space_Mono',_monospace]">
           <Button className="h-8 font-['Space_Mono',_monospace]" disabled={currentPage === 1} variant="ghost" onClick={handlePrevPage}>Prev</Button>
           <span className="text-md">Page {currentPage} of {totalPages}</span>
           <Button className="h-8 font-['Space_Mono',_monospace]" disabled={currentPage === totalPages} variant="ghost" onClick={handleNextPage}>Next</Button>

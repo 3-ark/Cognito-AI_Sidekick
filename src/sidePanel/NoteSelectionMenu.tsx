@@ -22,7 +22,7 @@ const NoteSelectionMenu: React.FC<NoteSelectionMenuProps> = ({
   if (notes.length === 0) {
     return (
       <div 
-        className="border border-[var(--text)]/20 rounded-md thin-scrollbar mb-1 p-2 text-center text-[var(--text-muted)] bg-[var(--card,var(--bg-secondary))] shadow-md"
+        className="border border-(--text)/20 rounded-md thin-scrollbar mb-1 p-2 text-center text-[var(--text-muted)] bg-[var(--card,var(--bg-secondary))] shadow-md"
       >
         No notes found.
       </div>
@@ -31,13 +31,13 @@ const NoteSelectionMenu: React.FC<NoteSelectionMenuProps> = ({
 
   return (
     <div 
-      className="border border-[var(--text)]/20 rounded-md mb-1 thin-scrollbar max-h-40 overflow-y-auto bg-[var(--card,var(--bg-secondary))] shadow-md"
+      className="border border-(--text)/20 rounded-md mb-1 thin-scrollbar max-h-40 overflow-y-auto bg-[var(--card,var(--bg-secondary))] shadow-md"
     >
       {notes.map((note, index) => (
         <div
           key={note.id}
-          className={`p-2 cursor-pointer text-[var(--text)] ${
-            index === selectedIndex ? 'bg-[var(--active)]/30' : 'hover:bg-[var(--active)]/20'
+          className={`p-2 cursor-pointer text-(--text) ${
+            index === selectedIndex ? 'bg-(--active)/30' : 'hover:bg-(--active)/20'
           }`}
           onClick={() => onSelectNote(note)}
         >

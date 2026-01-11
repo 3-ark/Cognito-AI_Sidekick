@@ -20,21 +20,21 @@ const WebSearchIconButton = ({
       <div
         aria-label={title}
         className={cn(
-          "border rounded-lg text-[var(--text)]",
+          "border rounded-lg text-(--text)",
           "cursor-pointer flex items-center justify-center",
           "p-2 place-items-center relative",
           "w-8 h-8 flex-shrink-0",
           "transition-colors duration-200 ease-in-out",
           isActive
-            ? "bg-[var(--active)] text-[var(--text)] border-[var(--active)] hover:brightness-95"
-            : "bg-transparent border-[var(--text)]/50 hover:bg-[rgba(var(--text-rgb),0.1)]",
+            ? "bg-(--active) text-(--text) border-(--active) hover:brightness-95"
+            : "bg-transparent border-(--text)/50 hover:bg-[rgba(var(--text-rgb),0.1)]",
         )}
         onClick={onClick}
       >
         {children}
       </div>
     </TooltipTrigger>
-    <TooltipContent className="bg-[var(--active)]/80 text-[var(--text)] border-[var(--text)]/50" side="top">
+    <TooltipContent className="bg-(--active)/80 text-(--text) border-(--text)/50" side="top">
       <p>{title}</p>
     </TooltipContent>
   </Tooltip>

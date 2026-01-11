@@ -30,7 +30,7 @@ export const ActionButtons = ({ config, updateConfig }: ActionButtonsProps) => {
         <TooltipTrigger asChild>
           <Button
             aria-label={t('addWebSearchResultsToLlmContext')}
-            className="text-[var(--text)] hover:bg-secondary/70"
+            className="text-(--text) hover:bg-secondary/70"
             size="icon"
             variant="ghost"
             onClick={() => {
@@ -43,7 +43,7 @@ export const ActionButtons = ({ config, updateConfig }: ActionButtonsProps) => {
             <TbWorldSearch />
           </Button>
         </TooltipTrigger>
-        <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="right">
+        <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="right">
           <p>{t('addWebSearchResultsToLlmContext')}</p>
         </TooltipContent>
       </Tooltip>
@@ -51,7 +51,7 @@ export const ActionButtons = ({ config, updateConfig }: ActionButtonsProps) => {
         <TooltipTrigger asChild>
           <Button
             aria-label={t('addCurrentWebPageToLlmContext')}
-            className="text-[var(--text)] hover:bg-secondary/70"
+            className="text-(--text) hover:bg-secondary/70"
             size="icon"
             variant="ghost"
             onClick={() => { updateConfig({ chatMode: 'page' }); }}
@@ -59,7 +59,7 @@ export const ActionButtons = ({ config, updateConfig }: ActionButtonsProps) => {
             <TbBrowserPlus />
           </Button>
         </TooltipTrigger>
-        <TooltipContent className="bg-[var(--active)]/50 text-[var(--text)] border-[var(--text)]" side="right">
+        <TooltipContent className="bg-(--active)/50 text-(--text) border-(--text)" side="right">
           <p>{t('addCurrentWebPageToLlmContext')}</p>
         </TooltipContent>
       </Tooltip>

@@ -15,7 +15,7 @@ interface ContextLimitSliderProps {
 
 const ContextLimitSlider = ({ size, updateConfig }: ContextLimitSliderProps) => (
   <div className="w-full">
-    <p className="text-[var(--text)] text-base font-medium pb-6 text-left">
+    <p className="text-(--text) text-base font-medium pb-6 text-left">
       Char Limit:{' '}
       <span className="font-normal">{size === 128 ? 'inf' : `${size}k`}</span>
     </p>
@@ -38,16 +38,16 @@ export const PageContext = () => {
     <AccordionItem
       value="page-context"
       className={cn(
-        "bg-[var(--input-background)] border-[var(--text)]/20 rounded-xl shadow-md",
+        "bg-[var(--input-background)] border-(--text)/20 rounded-xl shadow-md",
         "overflow-hidden",
         "transition-all duration-150 ease-in-out",
-        "hover:border-[var(--active)] hover:brightness-105"
+        "hover:border-(--active) hover:brightness-105"
       )}
     >
       <AccordionTrigger
         className={cn(
           "flex items-center justify-between w-full px-3 py-2 hover:no-underline",
-          "text-[var(--text)] font-medium",
+          "text-(--text) font-medium",
           "hover:brightness-95",
         )}
       >
@@ -56,7 +56,7 @@ export const PageContext = () => {
           text="Page Context"
         />
       </AccordionTrigger>
-      <AccordionContent className="px-3 pb-4 pt-2 text-[var(--text)]">
+      <AccordionContent className="px-3 pb-4 pt-2 text-(--text)">
         <ContextLimitSlider size={size} updateConfig={updateConfig} />
       </AccordionContent>
     </AccordionItem>

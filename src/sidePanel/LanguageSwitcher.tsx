@@ -33,7 +33,7 @@ export const LanguageSwitcher: React.FC = () => {
 
   return (
     <Select value={i18n.language} onValueChange={changeLanguage}>
-      <SelectTrigger className="w-[120px] border-[var(--text)]/20 h-6 rounded-full">
+      <SelectTrigger className="w-[120px] border-(--text)/20 h-6 rounded-full">
         <span>🌎</span>
         <SelectValue placeholder="Language" />
       </SelectTrigger>

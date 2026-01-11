@@ -7,7 +7,7 @@ import { cn } from "@/src/background/util";
 const MessageTemplate = ({ children, onClick }: { children: React.ReactNode, onClick: () => void }) => (
   <div
     className={cn(
-      "bg-[var(--active)] border border-[var(--text)] rounded-[16px] text-[var(--text)]",
+      "bg-(--active) border border-(--text) rounded-[16px] text-(--text)",
       "cursor-pointer flex items-center justify-center",
       "text-md font-extrabold p-0.5 place-items-center relative text-center",
       "w-16 flex-shrink-0",
@@ -52,7 +52,7 @@ export const PageActionButtons = ({
               {t('tldr')}
             </MessageTemplate>
           </TooltipTrigger>
-          <TooltipContent className=" text-[var(--text)] border-[var(--text)]/50" side="top">
+          <TooltipContent className=" text-(--text) border-(--text)/50" side="top">
             <p>{t('quickSummary')}</p>
           </TooltipContent>
         </Tooltip>
@@ -62,7 +62,7 @@ export const PageActionButtons = ({
               {t('facts')}
             </MessageTemplate>
           </TooltipTrigger>
-          <TooltipContent className=" text-[var(--text)] border-[var(--text)]/50" side="top">
+          <TooltipContent className=" text-(--text) border-(--text)/50" side="top">
             <p>{t('numbersEventsNames')}</p>
           </TooltipContent>
         </Tooltip>
@@ -72,7 +72,7 @@ export const PageActionButtons = ({
               {t('yay')}
             </MessageTemplate>
           </TooltipTrigger>
-          <TooltipContent className=" text-[var(--text)] border-[var(--text)]/50" side="top">
+          <TooltipContent className=" text-(--text) border-(--text)/50" side="top">
             <p>{t('goodNews')}</p>
           </TooltipContent>
         </Tooltip>
@@ -82,7 +82,7 @@ export const PageActionButtons = ({
               {t('oops')}
             </MessageTemplate>
           </TooltipTrigger>
-          <TooltipContent className=" text-[var(--text)] border-[var(--text)]/50" side="top">
+          <TooltipContent className=" text-(--text) border-(--text)/50" side="top">
             <p>{t('badNews')}</p>
           </TooltipContent>
         </Tooltip>

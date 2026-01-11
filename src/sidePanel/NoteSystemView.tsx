@@ -225,8 +225,8 @@ const NoteListItem: FC<NoteListItemProps> = ({
     <div
       ref={itemRef}
       className={cn(
-        "px-2 border-b border-[var(--text)]/20 rounded-none hover:shadow-lg transition-shadow w-full",
-        isSelected && "bg-[var(--active)]/10", // Highlight if selected
+        "px-2 border-b border-(--text)/20 rounded-none hover:shadow-lg transition-shadow w-full",
+        isSelected && "bg-(--active)/10", // Highlight if selected
       )}
       onClick={() => isSelectionModeActive && onToggleSelect(note.id)} // Allow clicking anywhere on the item to select
     >
@@ -237,7 +237,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
               <Checkbox
                 aria-label={`Select note ${note.title}`}
                 checked={isSelected}
-                className="border-[var(--text)]/50 data-[state=checked]:bg-[var(--active)] data-[state=checked]:border-[var(--active)]"
+                className="border-(--text)/50 data-[state=checked]:bg-(--active) data-[state=checked]:border-(--active)"
                 onCheckedChange={() => onToggleSelect(note.id)}
                 onClick={e => e.stopPropagation()} // <-- Add this line
               />
@@ -245,7 +245,7 @@ const NoteListItem: FC<NoteListItemProps> = ({
           )}
           <HoverCardTrigger asChild>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {note.pinned && <GoPin className="flex-shrink-0 text-[var(--active)]" />}
+              {note.pinned && <GoPin className="flex-shrink-0 text-(--active)" />}
               <h3 className={cn(
               "font-semibold text-md cursor-pointer hover:underline whitespace-normal break-words",
               isSelectionModeActive && "cursor-default hover:no-underline", // No underline when in selection mode
@@ -259,7 +259,7 @@ onDoubleClick={handleDoubleClick}>{note.title}</h3>
                 <PopoverTrigger asChild>
                   <Button size="sm" variant="ghost" onClick={e => { e.stopPropagation(); setIsPopoverOpen(true); }}><LuEllipsis /></Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-30 bg-[var(--popover)] border-[var(--text)]/20 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
+                <PopoverContent className="w-30 bg-[var(--popover)] border-(--text)/20 text-[var(--popover-foreground)] mr-1 p-1 space-y-1 shadow-md">
                   <Button className="w-full justify-start text-md h-8 px-2 font-normal" variant="ghost" onClick={e => { e.stopPropagation(); onTogglePin(note); setIsPopoverOpen(false); }}><GoPin className="mr-2 size-4" /> {note.pinned ? 'Unpin' : 'Pin'}</Button>
                   <Button className="w-full justify-start text-md h-8 px-2 font-normal" variant="ghost" onClick={e => { e.stopPropagation(); onEdit(note); setIsPopoverOpen(false); }}><GoPencil className="mr-2 size-4" /> Edit</Button>
                   <Button className="w-full justify-start text-md h-8 px-2 font-normal" variant="ghost" onClick={e => { e.stopPropagation(); handleDownload(); setIsPopoverOpen(false); }}><GoDownload className="mr-2 size-4" /> ObsidianMD</Button>
@@ -277,7 +277,7 @@ onDoubleClick={handleDoubleClick}>{note.title}</h3>
         <HoverCardContent
           align="start"
           className={cn(
-            "bg-[var(--popover)] border-[var(--active)] text-[var(--popover-foreground)] markdown-body w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw] max-w-lg",
+            "bg-[var(--popover)] border-(--active) text-[var(--popover-foreground)] markdown-body w-[80vw] sm:w-[70vw] md:w-[50vw] lg:w-[40vw] max-w-lg",
             "p-0 flex flex-col", // Use flexbox for the main layout, remove padding to allow content to fill edges.
           )}
           side={popoverSide}
@@ -300,7 +300,7 @@ onDoubleClick={handleDoubleClick}>{note.title}</h3>
               </div>
               {note.tags && note.tags.length > 0 && (
                 <div className="p-4 pt-2 mt-2 border-t border-[var(--border)] flex-shrink-0"> {/* Footer area with padding */}
-                  <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
+                  <p className="text-xs font-semibold text-(--text) mb-1">Tags:</p>
                   <div className="flex flex-wrap gap-1">
                     {note.tags.map(tag => (<span key={tag} className="text-xs bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded">{tag}</span>))}
                   </div>
@@ -319,7 +319,7 @@ onDoubleClick={handleDoubleClick}>{note.title}</h3>
                 </div>
                 {note.tags && note.tags.length > 0 && (
                   <div className="border-t border-[var(--border)] pt-2 mt-2">
-                    <p className="text-xs font-semibold text-[var(--text)] mb-1">Tags:</p>
+                    <p className="text-xs font-semibold text-(--text) mb-1">Tags:</p>
                     <div className="flex flex-wrap gap-1">
                       {note.tags.map(tag => (<span key={tag} className="text-xs bg-[var(--muted)] text-[var(--muted-foreground)] px-2 py-0.5 rounded">{tag}</span>))}
                     </div>
@@ -620,20 +620,20 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       t => (
         <div
           className={cn(
-            "bg-[var(--bg)] text-[var(--text)] border border-[var(--text)]",
+            "bg-(--bg) text-(--text) border border-(--text)",
             "p-4 rounded-xl shadow-xl max-w-sm w-full",
             "flex flex-col space-y-3",
           )}
         >
-          <h4 className="text-lg font-semibold text-[var(--text)]">Confirm Deletion</h4>
-          <p className="text-sm text-[var(--text)] opacity-90">
+          <h4 className="text-lg font-semibold text-(--text)">Confirm Deletion</h4>
+          <p className="text-sm text-(--text) opacity-90">
             Are you sure you want to delete {selectedNoteIds.length} selected note(s)? This action cannot be undone.
           </p>
           <div className="flex justify-end space-x-3 pt-2">
             <Button
               className={cn(
-                "bg-transparent text-[var(--text)] border-[var(--text)]",
-                "hover:bg-[var(--active)]/30 focus:ring-1 focus:ring-[var(--active)]",
+                "bg-transparent text-(--text) border-(--text)",
+                "hover:bg-(--active)/30 focus:ring-1 focus:ring-(--active)",
               )}
               size="sm"
               variant="outline"
@@ -643,7 +643,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
             </Button>
             <Button
               className={cn(
-                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-[var(--bg)]",
+                "focus:ring-1 focus:ring-red-400 focus:ring-offset-1 focus:ring-offset-(--bg)",
               )}
               size="sm"
               variant="destructive"
@@ -932,7 +932,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
 
   return (
     <TooltipProvider delayDuration={500}>
-    <div className="flex flex-col h-full text-[var(--text)]">
+    <div className="flex flex-col h-full text-(--text)">
       <input
         ref={fileInputRef}
         accept=".txt,.md,.html,.htm,.pdf,.csv,.tsv,.json,.jsonl,.zip,.epub"
@@ -945,7 +945,7 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
         <div className="relative">
           <Input
             className={cn(
-              "w-full bg-background border-b border-[var(--text)]/20 text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10 rounded-none",
+              "w-full bg-background border-b border-(--text)/20 text-foreground placeholder:text-muted-foreground font-['Space_Mono',_monospace] pl-10 rounded-none",
             )}
             placeholder="Search notes (titles & content & tags)..."
             type="text"
@@ -980,9 +980,9 @@ export const NoteSystemView: React.FC<NoteSystemViewProps> = ({
       </ScrollArea>
 
       {isSelectionModeActive && selectedNoteIds.length > 0 && (
-        <div className="sticky bottom-0 z-10 p-2 bg-[var(--bg)] border-t border-[var(--text)]/20 shadow-md">
+        <div className="sticky bottom-0 z-10 p-2 bg-(--bg) border-t border-(--text)/20 shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-[var(--text)]">
+            <span className="text-sm text-(--text)">
               {selectedNoteIds.length} note{selectedNoteIds.length > 1 ? 's' : ''} selected
             </span>
             <div className="space-x-2">
@@ -1027,14 +1027,14 @@ onOpenChange={isOpen => {
       }}>
         <DialogContent 
           className={cn(
-            "bg-[var(--bg)] border-[var(--text)]/20 w-[90vw] max-w-3xl text-[var(--text)] overflow-hidden",
+            "bg-(--bg) border-(--text)/20 w-[90vw] max-w-3xl text-(--text) overflow-hidden",
             "flex flex-col max-h-[85vh]",
             "p-4",
           )}
         >
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Create New Note'}</DialogTitle>
-            <DialogDescription className="text-[var(--text)]/80 pt-1">
+            <DialogDescription className="text-(--text)/80 pt-1">
               {editingNote ? 'Update the title or content of your note.' : 'Provide a title (optional) and content for your new note.'}
             </DialogDescription>
           </DialogHeader>
@@ -1043,7 +1043,7 @@ onOpenChange={isOpen => {
           <div className="flex flex-col min-h-0 space-y-4">
             <div>
               <Input
-                className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                className="bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active)"
                 placeholder="Note Title (optional)"
                 value={noteTitle}
                 onChange={e => setNoteTitle(e.target.value)}
@@ -1053,18 +1053,18 @@ onOpenChange={isOpen => {
             {editingNote && !isEditingNoteContent ? (
               <div className="flex flex-col min-h-0 space-y-2">
                 <div className="flex justify-end">
-                  <Button className="border-[var(--border)] text-[var(--text)] hover:bg-[var(--text)]/10 focus-visible:ring-1 focus-visible:ring-[var(--active)]" size="sm" variant="outline" onClick={() => setIsEditingNoteContent(true)}>Edit Content</Button>
+                  <Button className="border-[var(--border)] text-(--text) hover:bg-(--text)/10 focus-visible:ring-1 focus-visible:ring-(--active)" size="sm" variant="outline" onClick={() => setIsEditingNoteContent(true)}>Edit Content</Button>
                 </div>
-                <div className="h-full border rounded-md border-[var(--text)]/20 bg-[var(--input-background)]">
+                <div className="h-full border rounded-md border-(--text)/20 bg-[var(--input-background)]">
                   <VirtualizedContent
                     content={noteContent}
-                    textClassName="text-[var(--text)]"
+                    textClassName="text-(--text)"
                   />
                 </div>
               </div>
             ) : (
               <Textarea
-                className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] resize-none"
+                className="w-full min-h-[25vh] max-h-[55vh] overflow-y-auto thin-scrollbar border-1 bg-[var(--input-background)] border-(--text)/20 text-(--text) resize-none"
                 minRows={5}
                 placeholder="Your note content..."
                 value={noteContent}
@@ -1073,7 +1073,7 @@ onOpenChange={isOpen => {
             )}
             <div>
               <Input
-                className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)]"
+                className="bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active)"
                 placeholder="Tags (comma-separated)"
                 value={noteTags}
                 onChange={e => setNoteTags(e.target.value)}
@@ -1090,8 +1090,8 @@ onOpenChange={isOpen => {
                       aria-label={isSpeakingNoteInDialog ? "Stop reading note" : "Read note aloud"}
                       className={cn(
                         "p-1.5 rounded-md h-8 w-8", 
-                        "text-[var(--text)] hover:bg-[var(--text)]/10",
-                        "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)]",
+                        "text-(--text) hover:bg-(--text)/10",
+                        "focus-visible:ring-1 focus-visible:ring-(--active) focus-visible:ring-offset-1 focus-visible:ring-offset-(--bg)",
                       )} 
                       disabled={!noteContent.trim()}
                       size="sm"

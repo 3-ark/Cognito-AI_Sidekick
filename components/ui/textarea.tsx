@@ -26,11 +26,11 @@ const Textarea = ({
   ...props
 }: TextareaProps) => {
   const commonClasses = cn(
-    "flex w-full rounded-md border border-[var(--text)]/20 bg-[var(--input-background)]",
+    "flex w-full rounded-md border border-(--text)/20 bg-[var(--input-background)]",
     "px-3 py-2 text-sm placeholder:text-muted-foreground",
     "transition-all duration-200 ease-in-out",
-    "outline-none focus:border-[var(--active)] hover:border-[var(--active)]/70",
-    "focus:ring-1 focus:ring-[var(--active)]/30",
+    "outline-none focus:border-(--active) hover:border-(--active)/70",
+    "focus:ring-1 focus:ring-(--active)/30",
     "disabled:cursor-not-allowed disabled:opacity-50",
     "whitespace-pre-wrap break-words",
     "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",

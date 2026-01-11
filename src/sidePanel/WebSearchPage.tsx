@@ -30,7 +30,7 @@ const WebSearchModeSelector = ({ webMode, updateConfig }: WebSearchModeSelectorP
           variant="themed"
         />
         <Label
-          className="text-[var(--text)] text-base font-medium cursor-pointer"
+          className="text-(--text) text-base font-medium cursor-pointer"
           htmlFor={`webMode-${mode}`}
         >
           {mode === 'GoogleCustomSearch' ? 'Google Custom API' : mode}
@@ -52,7 +52,7 @@ const SerpSettingsPanel = ({ config, updateConfig }: SerpSettingsPanelProps) => 
   return (
     <div className="w-full space-y-4">
       <div>
-        <p className="text-[var(--text)] text-base font-medium pb-2 text-left">
+        <p className="text-(--text) text-base font-medium pb-2 text-left">
           Max Links to Visit: <span className="font-normal">{maxLinks}</span>
         </p>
         <Slider
@@ -63,13 +63,13 @@ const SerpSettingsPanel = ({ config, updateConfig }: SerpSettingsPanelProps) => 
           variant="themed"
           onValueChange={value => updateConfig({ serpMaxLinksToVisit: value[0] })}
         />
-        <p className="text-[var(--text)]/70 text-xs pt-1">
+        <p className="text-(--text)/70 text-xs pt-1">
           Number of search result links to fetch.
         </p>
       </div>
 
       <div className="pt-2">
-        <p className="text-[var(--text)] text-base font-medium pb-2 text-left">
+        <p className="text-(--text) text-base font-medium pb-2 text-left">
           Content Char Limit:{' '}
           <span className="font-normal">{charLimit === 128 ? 'Unlimited (Full)' : `${charLimit}k`}</span>
         </p>
@@ -81,7 +81,7 @@ const SerpSettingsPanel = ({ config, updateConfig }: SerpSettingsPanelProps) => 
           variant="themed"
           onValueChange={value => updateConfig({ webLimit: value[0] })}
         />
-         <p className="text-[var(--text)]/70 text-xs pt-1">
+         <p className="text-(--text)/70 text-xs pt-1">
           Max characters (in thousands) of content to use. 128k for 'Unlimited'.
         </p>
       </div>
@@ -102,7 +102,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
   return (
     <div className="w-full space-y-4">
       <div>
-        <p className="text-[var(--text)] text-base font-medium pb-2 text-left">
+        <p className="text-(--text) text-base font-medium pb-2 text-left">
           Results Num: <span className="font-normal">{numBlocks}</span>
         </p>
         <Slider
@@ -123,7 +123,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
           onCheckedChange={checked => updateConfig({ wikiRerank: !!checked })}
         />
         <Label
-          className="text-[var(--text)] text-base font-medium cursor-pointer"
+          className="text-(--text) text-base font-medium cursor-pointer"
           htmlFor="wikiRerank"
         >
           Enable LLM Reranking
@@ -132,7 +132,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
 
       {rerankEnabled && (
         <div>
-          <p className="text-[var(--text)] text-base font-medium pb-2 text-left pt-2">
+          <p className="text-(--text) text-base font-medium pb-2 text-left pt-2">
             Rerank Num: <span className="font-normal">{numBlocksToRerank}</span>
           </p>
           <Slider
@@ -144,7 +144,7 @@ const WikipediaSettingsPanel = ({ config, updateConfig }: WikipediaSettingsPanel
             variant="themed"
             onValueChange={value => updateConfig({ wikiNumBlocksToRerank: value[0] })}
           />
-           <p className="text-[var(--text)]/70 text-xs pt-1">
+           <p className="text-(--text)/70 text-xs pt-1">
             More items for reranking can improve quality but takes longer.
           </p>
         </div>
@@ -181,12 +181,12 @@ const GoogleCustomSearchSettingsPanel = ({ config, updateConfig }: GoogleCustomS
     updateConfig({ googleCx: newCx });
   };
 
-  const linkClass = "text-[var(--active)] hover:underline text-xs";
+  const linkClass = "text-(--active) hover:underline text-xs";
 
   return (
     <div className="w-full space-y-4">
       <div>
-        <Label className="text-[var(--text)] text-base font-medium pb-1 block" htmlFor="googleApiKey">
+        <Label className="text-(--text) text-base font-medium pb-1 block" htmlFor="googleApiKey">
           Google API Key
         </Label>
         <Input
@@ -197,7 +197,7 @@ const GoogleCustomSearchSettingsPanel = ({ config, updateConfig }: GoogleCustomS
           value={apiKey}
           onChange={handleApiKeyChange}
         />
-        <p className="text-[var(--text)]/70 text-xs pt-1">
+        <p className="text-(--text)/70 text-xs pt-1">
           Your Google Cloud API Key for Custom Search.
           <a
             className={cn(linkClass, "ml-1")}
@@ -210,7 +210,7 @@ const GoogleCustomSearchSettingsPanel = ({ config, updateConfig }: GoogleCustomS
         </p>
       </div>
       <div className="pt-2">
-        <Label className="text-[var(--text)] text-base font-medium pb-1 block" htmlFor="googleCx">
+        <Label className="text-(--text) text-base font-medium pb-1 block" htmlFor="googleCx">
           Search Engine ID (CX)
         </Label>
         <Input
@@ -221,7 +221,7 @@ const GoogleCustomSearchSettingsPanel = ({ config, updateConfig }: GoogleCustomS
           value={cx}
           onChange={handleCxChange}
         />
-        <p className="text-[var(--text)]/70 text-xs pt-1">
+        <p className="text-(--text)/70 text-xs pt-1">
           Your Programmable Search Engine ID.
           <a
             className={cn(linkClass, "ml-1")}
@@ -233,7 +233,7 @@ const GoogleCustomSearchSettingsPanel = ({ config, updateConfig }: GoogleCustomS
           </a>
         </p>
       </div>
-       <p className="text-[var(--text)]/70 text-xs pt-2">
+       <p className="text-(--text)/70 text-xs pt-2">
           Note: Custom Search JSON API provides 100 search queries per day for free.
           The API returns up to 10 snippets.
           Ensure your Programmable Search Engine is configured to search the entire web if desired.
@@ -327,7 +327,7 @@ export const WebSearchPage = () => {
       default:
         return (
           <div className="w-[45%] pl-4">
-            <p className="text-[var(--text)]/70">Select a search mode to see its options.</p>
+            <p className="text-(--text)/70">Select a search mode to see its options.</p>
           </div>
         );
     }
@@ -335,7 +335,7 @@ export const WebSearchPage = () => {
 
   return (
     <div
-      className="relative z-[1] top-0 w-full h-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent text-foreground p-6 scrollbar-hidden"
+      className="relative z-1 top-0 w-full h-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent text-foreground p-6 scrollbar-hidden"
       id="settings"
     >
       <div className="flex">

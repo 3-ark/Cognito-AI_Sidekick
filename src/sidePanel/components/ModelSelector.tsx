@@ -134,9 +134,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               <button
                 aria-label={t('selectedModel', { modelName: selectedModelDisplay })}
                 className={cn(
-                  "text-[var(--text)] w-full flex items-center justify-between font-medium h-6 px-2 text-center",
+                  "text-(--text) w-full flex items-center justify-between font-medium h-6 px-2 text-center",
                   "font-['Space_Mono',_monospace]",
-                  "bg-transparent border-[var(--text)]/20",
+                  "bg-transparent border-(--text)/20",
                   "cursor-pointer",
                 )}
                 type="button"
@@ -158,9 +158,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           ref={inputRef}
           autoComplete="off"
           className={cn(
-            "text-[var(--text)] rounded-sm w-full justify-start font-medium h-6 font-['Space_Mono',_monospace]",
-            "focus:border-[var(--active)] focus:ring-1 focus:ring-[var(--active)]",
-            "bg-transparent border-[var(--text)]/20"
+            "text-(--text) rounded-sm w-full justify-start font-medium h-6 font-['Space_Mono',_monospace]",
+            "focus:border-(--active) focus:ring-1 focus:ring-(--active)",
+            "bg-transparent border-(--text)/20"
           )}
           id="model-selector-input"
           placeholder={t('searchModels')}
@@ -179,8 +179,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           ref={dropdownRef}
           className={cn(
             "fixed z-50",
-            "bg-[var(--bg)]",
-            "border border-[var(--active)]/50",
+            "bg-(--bg)",
+            "border border-(--active)/50",
             "rounded-md shadow-lg",
             "no-scrollbar",
             "overflow-y-auto",
@@ -202,9 +202,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                         className={cn(
                           "w-full text-left",
                     "px-2 py-1.5",
-                    "text-[var(--text)] text-xs",
-                    "hover:bg-[var(--active)]/20",
-                    "focus:bg-[var(--active)]/30 focus:outline-none",
+                    "text-(--text) text-xs",
+                    "hover:bg-(--active)/20",
+                    "focus:bg-(--active)/30 focus:outline-none",
                     "transition-colors duration-150",
                     "font-['Space_Mono',_monospace]",
                   )}
@@ -223,7 +223,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                       {model.host ? `(${getHostDisplayName(model.host)}) ` : ''}
                       {model.name || model.id}
                       {typeof model.context_length === 'number' && (
-                        <span className="text-xs text-[var(--text)] opacity-60 ml-1.5">
+                        <span className="text-xs text-(--text) opacity-60 ml-1.5">
                           {`(${t('ctx')}: ${model.context_length >= 100000 ? `${model.context_length / 1000}k` : model.context_length})`}
                         </span>
                       )}
@@ -238,7 +238,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
             </Tooltip>
               ))
             ) : (
-              <div className="px-2 py-1.5 text-[var(--text)] opacity-60 text-xs">
+              <div className="px-2 py-1.5 text-(--text) opacity-60 text-xs">
                 {searchQuery ? t('noModelsMatch') : t('noModelsAvailable')}
               </div>
             )}

@@ -27,9 +27,9 @@ const radioGroupItemVariants = cva(
           "border-input dark:bg-input/30 text-primary focus-visible:border-ring focus-visible:ring-ring/50",
         ],
         themed: [
-          "border-[var(--text)] text-[var(--active)]", // Base border and text (for icon)
-          "focus-visible:ring-1 focus-visible:ring-[var(--active)] focus-visible:ring-offset-0 focus-visible:border-[var(--active)]", // Themed focus
-          "data-[state=checked]:border-[var(--active)]", // Themed checked border
+          "border-(--text) text-(--active)", // Base border and text (for icon)
+          "focus-visible:ring-1 focus-visible:ring-(--active) focus-visible:ring-offset-0 focus-visible:border-(--active)", // Themed focus
+          "data-[state=checked]:border-(--active)", // Themed checked border
         ],
       },
     },
@@ -61,7 +61,7 @@ const RadioGroupItem = ({
         {/* Conditional fill for CircleIcon based on variant */}
         <CircleIcon className={cn(
           "absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2",
-          variant === "themed" ? "fill-[var(--active)]" : "fill-primary",
+          variant === "themed" ? "fill-(--active)" : "fill-primary",
         )} />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>

@@ -23,7 +23,7 @@ const sheetContentVariants = {
     side === "bottom" && "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t",
 
     // Theming from header.tsx
-    "bg-[var(--bg)] text-[var(--text)] shadow-xl", // Added shadow-xl from header
+    "bg-(--bg) text-(--text) shadow-xl", // Added shadow-xl from header
   ),
 };
 

@@ -58,7 +58,7 @@ const ThinkingBlock = ({ content }: { content: string }) => {
         <CollapsibleTrigger asChild>
           <Button
             className={cn(
-              "border-[var(--text)]/20 text-foreground hover:text-accent-foreground",
+              "border-(--text)/20 text-foreground hover:text-accent-foreground",
             )}
             size="sm"
             variant="outline"
@@ -147,7 +147,7 @@ const SourcesDisplay: FC<{ retrieverResults: RetrieverResult; onLoadChat: (conve
       <Collapsible className="w-full" open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <Button
-            className="border-[var(--text)]/20 text-foreground hover:text-accent-foreground"
+            className="border-(--text)/20 text-foreground hover:text-accent-foreground"
             size="sm"
             variant="outline"
           >
@@ -303,7 +303,7 @@ export const EditableMessage: FC<MessageProps> = memo(({
             "border rounded-xl max-w-[95%] w-fit shadow-md text-left relative",
             !isEditing && "px-3 py-1", 
 
-            'bg-gradient-to-br from-primary/60 to-primary/30 border-[var(--active)]/20 rounded-br-none',
+            'bg-linear-to-br from-primary/60 to-primary/30 border-(--active)/20 rounded-br-none',
             'chatMessage',
           ],
       )}
@@ -316,7 +316,7 @@ export const EditableMessage: FC<MessageProps> = memo(({
               "border-input",
               "text-foreground",
               "hover:border-primary focus-visible:border-primary focus-visible:ring-0",
-              "min-h-[60px]",
+              "min-h-15",
               "w-full",
             )} 
             minRows={3}
@@ -348,7 +348,7 @@ export const EditableMessage: FC<MessageProps> = memo(({
       ) : turn.role === 'tool' ? (
         <ToolDisplay turn={turn} />
       ) : (
-        <div className="message-markdown markdown-body relative z-[1] text-foreground">
+        <div className="message-markdown markdown-body relative z-1 text-foreground">
           {shouldRendercontentAsMain && (
             <>
               {turn.role === 'assistant' && turn.webDisplayContent && (
@@ -411,7 +411,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
             <Button
               className={cn(
                 "rounded-xl",
-                "border-[var(--text)]/20",
+                "border-(--text)/20",
                 "bg-text-foreground hover:text-accent-foreground",
               )}
               size="sm"
@@ -447,7 +447,7 @@ const ToolDisplay: FC<{ turn: MessageTurn }> = ({ turn }) => {
 
   // Fallback for other tools or if turn.name is undefined
   return (
-    <div className="message-markdown markdown-body relative z-[1] text-foreground">
+    <div className="message-markdown markdown-body relative z-1 text-foreground">
       <Markdown components={createMessageMarkdownComponents()} remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
         {turn.content || ''}
       </Markdown>

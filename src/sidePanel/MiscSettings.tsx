@@ -117,7 +117,7 @@ export const MiscSettings = () => {
 
           {loadingVoices ? (
             <div className="flex justify-center items-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-[var(--text)]" />
+              <Loader2 className="h-6 w-6 animate-spin text-(--text)" />
             </div>
           ) : errorLoading ? (
             <p className="text-[var(--error)] text-base font-medium">{errorLoading}</p>
@@ -170,7 +170,7 @@ export const MiscSettings = () => {
                       Custom Voices (comma-separated)
                     </Label>
                     <Input
-                      className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] rounded-full"
+                      className="bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active) rounded-full"
                       placeholder="e.g., voice1,voice2,voice3"
                       value={config.tts?.customVoices || ''}
                       onChange={e => updateConfig({ tts: { ...config.tts, customVoices: e.target.value } })}
@@ -199,7 +199,7 @@ export const MiscSettings = () => {
               <div className="space-y-3">
                 <Label className="text-base font-medium text-foreground">Endpoint URL</Label>
                 <Input
-                  className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] rounded-full"
+                  className="bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active) rounded-full"
                   placeholder={DEFAULT_OPENAI_ENDPOINT}
                   value={config.tts?.endpoint || ''}
                   onChange={e => updateConfig({ tts: { ...config.tts, endpoint: e.target.value } })}
@@ -208,7 +208,7 @@ export const MiscSettings = () => {
               <div className="space-y-3">
                 <Label className="text-base font-medium text-foreground">TTS Model</Label>
                 <Input
-                  className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] rounded-full"
+                  className="bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active) rounded-full"
                   placeholder="e.g., tts-1"
                   value={config.tts?.model || ''}
                   onChange={e => updateConfig({ tts: { ...config.tts, model: e.target.value } })}
@@ -269,7 +269,7 @@ export const MiscSettings = () => {
           <div className="space-y-3">
             <Label className="text-base font-medium text-foreground">Stop Word</Label>
             <Input
-              className="bg-[var(--input-background)] border-[var(--text)]/20 text-[var(--text)] focus-visible:ring-1 focus-visible:ring-[var(--active)] rounded-full"
+              className="bg-[var(--input-background)] border-(--text)/20 text-(--text) focus-visible:ring-1 focus-visible:ring-(--active) rounded-full"
               placeholder="e.g., 'stop'"
               value={config.asr?.stopWord || ''}
               onChange={e => updateConfig({ asr: { ...config.asr, stopWord: e.target.value } })}

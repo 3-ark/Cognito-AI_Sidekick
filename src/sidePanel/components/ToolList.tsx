@@ -25,7 +25,7 @@ export const ToolList: React.FC = () => {
     <Dialog>
       <TooltipProvider>
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-[var(--text)]/70 font-mono">Browse available tools</span>
+          <span className="text-xs text-(--text)/70 font-mono">Browse available tools</span>
           <Tooltip>
             <TooltipTrigger asChild>
               <DialogTrigger asChild>
@@ -54,14 +54,14 @@ export const ToolList: React.FC = () => {
           </Tooltip>
         </div>
       </TooltipProvider>
-      <DialogContent className="themedPanel w-[80dvw] max-w-[300px] bg-[var(--bg)] text-[var(--text)] border-[var(--text)]">
+      <DialogContent className="themedPanel w-[80dvw] max-w-[300px] bg-(--bg) text-(--text) border-(--text)">
         <DialogHeader>
           <DialogTitle>Available Tools</DialogTitle>
-          <DialogDescription className="text-xs text-[var(--text)]/70">
+          <DialogDescription className="text-xs text-(--text)/70">
             These tools can be used by the AI to help answer your questions or perform actions.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="h-72 w-full rounded-md border border-[var(--text)]/20 p-2 bg-[var(--bg)]/30">
+        <ScrollArea className="h-72 w-full rounded-md border border-(--text)/20 p-2 bg-(--bg)/30">
           <div className="p-4">
             <ul className="space-y-4">
               {toolDefinitions.map((tool) => (
