@@ -595,7 +595,15 @@ export const Input: FC<InputProps> = ({
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="bg-secondary/50 text-foreground" side="top"><p>{isLoading || isRetrieving ? "Stop" : "Send"}</p></TooltipContent>
+          <TooltipContent className="bg-secondary/50 text-foreground" side="top">
+            <p>
+              {isLoading || isRetrieving
+                ? "Stop"
+                : !message.trim()
+                  ? "Cannot send an empty message"
+                  : "Send"}
+            </p>
+          </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </div>
