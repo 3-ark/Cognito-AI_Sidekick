@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { FiCheck, FiX } from 'react-icons/fi';
 import Markdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
@@ -226,7 +226,10 @@ interface MessageProps {
   onLoadChat: (conversation: Conversation) => void;
 }
 
-export const EditableMessage: FC<MessageProps> = ({
+// Using React.memo to prevent unnecessary re-renders of individual messages.
+// This is crucial for performance in long conversations, as it ensures that only
+// the messages that have actually changed will be re-rendered, rather than the entire list.
+export const EditableMessage: FC<MessageProps> = memo(({
   turn, index, isEditing, editText, onStartEdit, onSetEditText, onSaveEdit, onCancelEdit, onDelete, onContinue, onLoadChat
 }) => {
   const { config } = useConfig();
@@ -384,7 +387,7 @@ export const EditableMessage: FC<MessageProps> = ({
       )}
     </div>
   );
-};
+});
 
 const COLLAPSIBLE_TOOLS: Record<string, string> = {
   fetcher: 'Fetched Content',
