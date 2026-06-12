@@ -63,7 +63,7 @@
     "@types/katex": "^0.16.8",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/redux-logger": "^3.0.13",
-    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/coverage-v8": "^4.1.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -137,7 +137,7 @@
     "@types/react-resizable": "^3.0.8",
     "@types/turndown": "^5.0.6",
     "@typescript-eslint/eslint-plugin": "^8.52.0",
-    "@vitejs/plugin-react": "^5.1.2",
+    "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.23",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
@@ -156,7 +156,7 @@
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.52.0",
-    "vitest": "^4.0.16",
+    "vitest": "^4.1.8",
     "webpack": "^5.104.1",
     "webpack-cli": "^6.0.1"
   }
