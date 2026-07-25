@@ -151,7 +151,7 @@
     "prettier": "3.7.4",
     "redux-logger": "^3.0.6",
     "rimraf": "^6.1.2",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.0",
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
