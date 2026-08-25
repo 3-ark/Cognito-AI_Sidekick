@@ -158,7 +158,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.52.0",
     "vitest": "^4.1.8",
+    "webpack-cli": "^7.2.2"
     "webpack": "^5.109.2",
-    "webpack-cli": "^6.0.1"
+
   }
 }
