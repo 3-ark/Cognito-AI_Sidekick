@@ -137,7 +137,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-resizable": "^3.0.8",
     "@types/turndown": "^5.0.6",
-    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
     "@vitejs/plugin-react": "^5.2.0",
     "autoprefixer": "^10.4.23",
     "eslint": "^9.39.2",
