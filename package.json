@@ -90,7 +90,7 @@
     "mini-css-extract-plugin": "^2.9.4",
     "minisearch": "^7.2.0",
     "motion": "^12.25.0",
-    "openai": "^6.16.0",
+    "openai": "^7.5.0",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^5.4.530",
     "prop-types": "^15.8.1",
