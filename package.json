@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "npm run clear && webpack -w --config config/webpack.config.js",
+    "build": "npm run clear && webpack --config config/webpack.config.js",
     "clear": "rimraf dist && rimraf node_modules/.cache",
     "test": "vitest"
   },
