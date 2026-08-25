@@ -159,8 +159,28 @@ export function gentleProcessText(text: string): string {
     // Replace image markdown (with or without title) with alt text.
     cleanedText = cleanedText.replace(/!\[(.*?)\]\([^)"']+(?:["'][^"']*["'])?\)/g, '$1');
 
+    // Replace link markdown with its visible text.
+    cleanedText = cleanedText.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+
     // Remove HTML comments.
     cleanedText = cleanedText.replace(/<!--[\s\S]*?-->/g, '');
+
+    // Strip remaining HTML tags, keeping their text content.
+    cleanedText = cleanedText.replace(/<\/?[a-zA-Z][^>]*>/g, ' ');
+
+    // Remove markdown heading markers (e.g. "### Title" → "Title").
+    cleanedText = cleanedText.replace(/^#{1,6}\s+/gm, '');
+
+    // Remove bold/italic emphasis markers, keeping the wrapped text.
+    // (Single "*"/"_" markers are intentionally left alone since they also
+    // occur inside snake_case identifiers and multiplication like "a * b".)
+    cleanedText = cleanedText
+        .replace(/(\*\*\*|___)(.+?)\1/g, '$2')
+        .replace(/(\*\*|__)(.+?)\1/g, '$2');
+
+    // Remove inline code backticks, keeping the code text. Scoped to a
+    // single line so it doesn't pair backticks across a fenced code block.
+    cleanedText = cleanedText.replace(/`([^`\n]+)`/g, '$1');
 
     // Decode common HTML entities.
     cleanedText = cleanedText
