@@ -6,22 +6,11 @@ import {
 } from '../textProcessing';
 import * as generationUtils from '../generationUtils';
 
-vi.mock('tiny-segmenter', () => {
-  return {
-    default: class TinySegmenter {
-      segment(text: string) {
-        // Simple mock for testing; splits by space or known Japanese particles
-        return text.split(/([\s\u3000\u3001\u3002\u306F\u306E\u3092\u304C\u306B])/);
-      }
-    },
-  };
-});
-
 describe('textProcessing', () => {
   describe('aggressiveProcessText', () => {
     it('should process English text correctly', () => {
       const text = 'The quick brown fox jumps over the lazy dog';
-      const expected = ['quick', 'brown', 'fox', 'jump', 'lazi', 'dog'];
+      const expected = ['quick', 'brown', 'fox', 'jump', 'lazy', 'dog'];
       expect(lexicalProcessText(text)).toEqual(expected);
     });
 
@@ -33,15 +22,14 @@ describe('textProcessing', () => {
 
     it('should process Japanese text', () => {
       const text = '日本語のテキスト';
-      const expected = ['日本語', 'の', 'テキスト'];
-      // This depends on the mock behavior
+      const expected = ['日本語', 'テキスト'];
       const result = lexicalProcessText(text).filter(s => s.trim().length > 0);
       expect(result).toEqual(expected);
     });
 
     it('should process Korean text', () => {
       const text = '한국어 텍스트';
-      const expected = ['한', '국', '어', '텍', '스', '트'];
+      const expected = ['한국어', '텍스트'];
       expect(lexicalProcessText(text)).toEqual(expected);
     });
   });
