@@ -1,4 +1,6 @@
 declare module '*.module.css';
+declare module '*.css';
+declare module 'react-color-palette/css';
 
 interface FileSystemHandle {
   kind: 'file' | 'directory';

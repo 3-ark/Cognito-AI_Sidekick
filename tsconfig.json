@@ -7,7 +7,6 @@
       "esnext",
       "webworker"
     ],
-    "baseUrl": ".",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "strict": true,
@@ -22,17 +21,17 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "sourceMap": true,
     "paths": {
       "src/*": [
-        "src/*"
+        "./src/*"
       ],
       "@/*": [
         "./*"
       ],
       "@/utils": [
-        "src/background/util"
+        "./src/background/util"
       ]
     }
   },
