@@ -85,7 +85,7 @@
     "jsdom": "^30.0.1",
     "katex": "^0.18.5",
     "localforage": "^1.10.0",
-    "lucide-react": "^1.40.0",
+    "lucide-react": "^1.42.0",
     "mermaid": "^11.17.2",
     "mini-css-extract-plugin": "^2.10.2",
     "minisearch": "^7.2.0",
