@@ -145,7 +145,7 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.12.0",
-    "happy-dom": "^20.14.0",
+    "happy-dom": "^20.14.5",
     "image-minimizer-webpack-plugin": "^5.0.0",
     "postcss": "^8.5.28",
     "postcss-loader": "^8.2.1",
