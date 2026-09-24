@@ -140,7 +140,7 @@
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
-    "eslint": "^10.10.0",
+    "eslint": "^10.11.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
