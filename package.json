@@ -92,7 +92,7 @@
     "motion": "^14.0.0",
     "openai": "^7.23.0",
     "papaparse": "^5.7.0",
-    "pdfjs-dist": "^6.3.289",
+    "pdfjs-dist": "^6.4.299",
     "prop-types": "^15.8.1",
     "react": "19.3.0",
     "react-color-palette": "^7.3.1",
