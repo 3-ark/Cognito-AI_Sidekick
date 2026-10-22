@@ -54,7 +54,7 @@
     "@radix-ui/react-radio-group": "^1.5.0",
     "@radix-ui/react-scroll-area": "^1.4.0",
     "@radix-ui/react-select": "^2.4.0",
-    "@radix-ui/react-slider": "^1.6.0",
+    "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-switch": "^1.4.0",
     "@radix-ui/react-toggle": "^1.2.0",
