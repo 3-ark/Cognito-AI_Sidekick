@@ -89,7 +89,7 @@
     "mermaid": "^12.2.0",
     "mini-css-extract-plugin": "^2.10.2",
     "minisearch": "^7.2.0",
-    "motion": "^14.4.0",
+    "motion": "^14.6.0",
     "openai": "^7.44.0",
     "papaparse": "^5.7.0",
     "pdfjs-dist": "^6.4.299",
