@@ -59,7 +59,7 @@
     "@radix-ui/react-switch": "^1.4.1",
     "@radix-ui/react-toggle": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
-    "@reduxjs/toolkit": "^2.13.0",
+    "@reduxjs/toolkit": "^2.14.0",
     "@types/js-yaml": "^4.0.9",
     "@types/katex": "^0.16.8",
     "@types/react-syntax-highlighter": "^15.5.13",
