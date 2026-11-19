@@ -91,7 +91,7 @@
     "minisearch": "^7.2.0",
     "motion": "^14.14.0",
     "openai": "^7.57.0",
-    "papaparse": "^5.7.0",
+    "papaparse": "^5.7.1",
     "pdfjs-dist": "^6.5.438",
     "prop-types": "^15.8.1",
     "react": "19.3.1",
