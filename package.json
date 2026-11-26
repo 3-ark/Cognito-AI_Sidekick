@@ -148,7 +148,7 @@
     "happy-dom": "^21.0.4",
     "image-minimizer-webpack-plugin": "^5.0.0",
     "postcss": "^8.5.33",
-    "postcss-loader": "^8.2.1",
+    "postcss-loader": "^8.2.2",
     "prettier": "3.10.1",
     "redux-logger": "^3.0.6",
     "rimraf": "^6.1.4",
